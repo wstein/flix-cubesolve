@@ -21,7 +21,8 @@ Under construction. What works today:
 |---|---|---|---|---|
 | model, moves, notation | ✅ | ✅ | — | — |
 | slice, wide and rotation notation | rotations only | ✅ | — | — |
-| validation | ✅ | ✅ | — | — |
+| reachability validation | ✅ | ✅ | — | — |
+| uniform random state | ✅ | ✅ | — | — |
 | solving | — | — | — | — |
 | scrambling | — | — | — | — |
 
