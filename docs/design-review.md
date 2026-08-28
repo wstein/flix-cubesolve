@@ -183,6 +183,26 @@ quietly running nothing.
 **Amended gates.** 4.1 exhaustive over all 3,674,160 states, both projections.
 4.2 stratified as above, with the stratification and its cost named in the test.
 
+## What the implementation confirmed
+
+Two of the plan's decoded figures were checkable without building the reference
+jars, and both came out exactly right — which is the strongest evidence
+available that the coordinate conventions here match min2phase's.
+
+| table | plan's decoded maximum | measured here |
+|---|---|---|
+| `UDSliceTwistPrun` — raw `Twist × UDSlice` | 9 | **9** |
+| `UDSliceFlipPrun` — raw `Flip × UDSlice` | 9 | **9** |
+| `TwistFlipPrun` — raw `Flip × Twist` | 9 | **9** |
+| `MCPermPrun` — raw `CPerm × MPerm` | 14 | **14** |
+| `EPermCCombPrun` — raw `EPerm × CComb` | 13 | **13** |
+
+The plan's figures are for the *symmetry-reduced* tables and these are raw.
+Symmetry compresses equivalent states without changing a pruning value, so the
+two had to agree — and Motion 4's warning still stands: this is a differential
+result precisely because none of this code was ported from the program the
+figures came from.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be
