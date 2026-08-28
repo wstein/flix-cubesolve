@@ -25,8 +25,14 @@ Under construction. What works today:
 | uniform random state | ✅ | ✅ | — | — |
 | exact distance oracle | ✅ | — | — | — |
 | optimal solving | ✅ | — | — | — |
+| random-state scrambling | ✅ | — | — | — |
+| exact-difficulty scrambling | ✅ | n/a | n/a | n/a |
 | solving | — | — | — | — |
 | scrambling | — | — | — | — |
+
+Exact-difficulty scrambling is marked `n/a` above rather than missing: it needs
+the whole distance table in memory, which only the 2×2×2 admits. Larger cubes
+can certify bounds but not an exact distance.
 
 `CubeSolve.supportedSizes()` reports this at runtime and is covered by a test
 that builds and turns every size it lists, so the list cannot drift ahead of the
