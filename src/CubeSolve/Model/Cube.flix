@@ -16,6 +16,9 @@ mod CubeSolve.Model.Cube {
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
     use CubeSolve.Model.Move.Move.Turn
+    use CubeSolve.Model.Notation
+    use CubeSolve.Model.Notation.Op.{Layer, Frame}
+    use CubeSolve.Model.Rotation
     use Orbit64.Coord.Coord
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord, WingCoord, CenterCoord}
 
@@ -36,7 +39,7 @@ mod CubeSolve.Model.Cube {
     /// the answer in the frame the caller used.
     ///
     pub enum Cube with Eq, ToString {
-        case Cube(Int32, Int32, List[Coord])
+        case Cube(Int32, Rotation.Rotation, List[Coord])
     }
 
     ///
@@ -45,9 +48,15 @@ mod CubeSolve.Model.Cube {
     pub def size(c: Cube): Int32 = let Cube(n, _, _) = c; n
 
     ///
-    /// The whole-cube rotation `c` is expressed in, one of 24. `0` is canonical.
+    /// The whole-cube rotation `c` has undergone, relative to the canonical
+    /// frame in which its `orbits` are stated.
     ///
-    pub def orientation(c: Cube): Int32 = let Cube(_, o, _) = c; o
+    /// The orbit coordinates always describe the cube as it would look rotated
+    /// back to canonical, so this is the only record of how it is actually
+    /// sitting -- and it is what a layer turn is resolved through, and what a
+    /// solution is re-expressed with.
+    ///
+    pub def orientation(c: Cube): Rotation.Rotation = let Cube(_, o, _) = c; o
 
     ///
     /// The orbit coordinates, in `Orbit64.Orbit.layout` order.
@@ -63,9 +72,16 @@ mod CubeSolve.Model.Cube {
     ///
     pub def solved(n: Int32): Result[String, Cube] =
         if (n < 2)
-            Err("there is no ${n}x${n}x${n}: the smallest cube with anything to permute is the 2x2x2")
+            Err(noSuchSize(n))
         else
-            Ok(Cube(n, 0, Orbit64.solved(n)))
+            Ok(Cube(n, Rotation.identity(), Orbit64.solved(n)))
+
+    ///
+    /// What to say about a size with nothing to permute.
+    ///
+    def noSuchSize(n: Int32): String =
+        "there is no ${n}x${n}x${n}: the smallest cube with anything to "
+            + "permute is the 2x2x2"
 
     ///
     /// The cube `orbits` describes, or the first rule it breaks.
@@ -78,21 +94,26 @@ mod CubeSolve.Model.Cube {
     pub def ofOrbits(n: Int32, orbits: List[Coord]): Result[String, Cube] =
         let expected = Orbit64.Orbit.layout(n);
         if (List.isEmpty(expected))
-            Err("there is no ${n}x${n}x${n}: the smallest cube with anything to permute is the 2x2x2")
+            Err(noSuchSize(n))
         else if (List.map(Orbit64.Coord.kind, orbits) != expected)
             Err("a ${n}x${n}x${n} has the orbits ${expected}, but these are "
                 + "${List.map(Orbit64.Coord.kind, orbits)}")
         else
             match List.filterMap(Orbit64.Coord.faultOf, orbits) {
                 case why :: _ => Err(why)
-                case Nil      => Ok(Cube(n, 0, orbits))
+                case Nil      => Ok(Cube(n, Rotation.identity(), orbits))
             }
 
     ///
-    /// Whether `c` is solved: every orbit at its identity, in the canonical frame.
+    /// Whether `c` is solved: every piece with its neighbours, every orbit at
+    /// its identity.
     ///
-    pub def isSolved(c: Cube): Bool =
-        orientation(c) == 0 and orbits(c) == Orbit64.solved(size(c))
+    /// The frame is deliberately not part of this. A solved cube held at an
+    /// angle is still solved -- no piece has moved relative to any other -- and
+    /// a solver that insisted otherwise would demand rotations at the end of
+    /// every solution.
+    ///
+    pub def isSolved(c: Cube): Bool = orbits(c) == Orbit64.solved(size(c))
 
     // ---------- turning ----------
 
@@ -104,37 +125,73 @@ mod CubeSolve.Model.Cube {
     /// move table for the Wings orbit" is not.
     ///
     pub def apply(m: Move.Move, c: Cube): Result[String, Cube] =
-        let f = Move.face(m);
-        let k = Move.amount(m);
+        let inFrame = Rotation.reframe(m, orientation(c));
+        let f = Move.face(inFrame);
+        let k = Move.amount(inFrame);
         orbits(c)
             |> Result.traverse(o -> turn(size(c), f, k, o))
             |> Result.map(os -> Cube(size(c), orientation(c), os))
 
     ///
+    /// `c` rotated bodily by `r`. No piece moves relative to any other.
+    ///
+    pub def rotate(r: Rotation.Rotation, c: Cube): Cube =
+        Cube(size(c), Rotation.andThen(orientation(c), r), orbits(c))
+
+    ///
+    /// `c` after one step of a written sequence.
+    ///
+    pub def applyOp(op: Notation.Op, c: Cube): Result[String, Cube] = match op {
+        case Layer(m) => apply(m, c)
+        case Frame(r) => Ok(rotate(r, c))
+    }
+
+    ///
     /// `c` after every move of `ms`, in order.
     ///
     pub def applyAll(ms: List[Move.Move], c: Cube): Result[String, Cube] =
-        List.foldLeft((acc, m) -> Result.flatMap(x -> apply(m, x), acc), Ok(c), ms)
+        let step = (acc, m) -> Result.flatMap(x -> apply(m, x), acc);
+        List.foldLeft(step, Ok(c), ms)
 
     ///
     /// `c` after the moves `notation` names, or why it names none.
     ///
+    /// Accepts the full written alphabet -- face turns, slice moves, whole-cube
+    /// rotations and wide turns -- not only the eighteen face turns a search
+    /// works in. See `CubeSolve.Model.Notation`.
+    ///
     pub def applyNotation(notation: String, c: Cube): Result[String, Cube] =
-        Move.parse(notation) |> Result.flatMap(ms -> applyAll(ms, c))
+        let step = (acc, op) -> Result.flatMap(x -> applyOp(op, x), acc);
+        Notation.parse(size(c), notation)
+            |> Result.flatMap(ops -> List.foldLeft(step, Ok(c), ops))
+
+    ///
+    /// `ms`, named in `c`'s current frame, renamed into the frame `c` started in.
+    ///
+    /// A solver works in the canonical frame, so its answer is a sequence of
+    /// canonical face turns. If the caller's scramble contained a rotation, the
+    /// faces they can reach are named differently, and handing back the
+    /// canonical names would tell them to turn the wrong side of the cube.
+    ///
+    pub def reframeSolution(ms: List[Move.Move], c: Cube): List[Move.Move] =
+        ms |> List.map(m -> Rotation.reframe(m, orientation(c)))
 
     ///
     /// One orbit after `k` clockwise quarter turns of `f`.
     ///
     def turn(n: Int32, f: Face, k: Int32, o: Coord): Result[String, Coord] = match o {
         case CornerCoord(p, t) =>
-            let (p1, t1) = repeatTurn(k, (p, t), turnCorners(f));
+            let step = turnOriented(Move.cornerPermutation(f), Move.cornerTwist(f), 3);
+            let (p1, t1) = repeatTurn(k, (p, t), step);
             Ok(CornerCoord(p1, t1))
         case MidgeCoord(p, t) =>
-            let (p1, t1) = repeatTurn(k, (p, t), turnMidges(f));
+            let step = turnOriented(Move.edgePermutation(f), Move.edgeFlip(f), 2);
+            let (p1, t1) = repeatTurn(k, (p, t), step);
             Ok(MidgeCoord(p1, t1))
         case _ =>
-            Err("turning a ${n}x${n}x${n} is not implemented: this engine has move "
-                + "tables for the corner and midge orbits, so for the 2x2x2 and 3x3x3")
+            Err("turning a ${n}x${n}x${n} is not implemented: this engine has "
+                + "move tables for the corner and midge orbits, so for the "
+                + "2x2x2 and 3x3x3")
     }
 
     ///
@@ -148,32 +205,29 @@ mod CubeSolve.Model.Cube {
         if (k <= 0) s else repeatTurn(k - 1, step(s), step)
 
     ///
-    /// One clockwise quarter turn of `f`, on the corner orbit.
+    /// One clockwise quarter turn on an orbit whose pieces carry orientation.
     ///
     /// Slot-indexed throughout: the new occupant of slot `i` is whatever sat in
     /// slot `perm[i]`, and it arrives carrying that slot's orientation plus the
-    /// twist the turn imposes.
+    /// change the turn imposes.
     ///
-    def turnCorners(f: Face): ((Vector[Int32], Vector[Int32])) -> (Vector[Int32], Vector[Int32]) =
-        let perm = Move.cornerPermutation(f);
-        let delta = Move.cornerTwist(f);
+    /// Corners and midges differ only in how many slots they have and in what
+    /// their orientation counts modulo, so they share this rather than each
+    /// carrying its own copy of the same two lines.
+    ///
+    def turnOriented(
+        perm: Vector[Int32],
+        delta: Vector[Int32],
+        modulus: Int32
+    ): ((Vector[Int32], Vector[Int32])) -> (Vector[Int32], Vector[Int32]) =
+        let slots = Vector.length(perm);
         match (p, t) ->
-            ( Vector.init(i -> Vector.get(Vector.get(i, perm), p), 8)
-            , Vector.init(i ->
-                Int32.modulo(Vector.get(Vector.get(i, perm), t) + Vector.get(i, delta), 3), 8)
-            )
-
-    ///
-    /// One clockwise quarter turn of `f`, on the midge orbit.
-    ///
-    def turnMidges(f: Face): ((Vector[Int32], Vector[Int32])) -> (Vector[Int32], Vector[Int32]) =
-        let perm = Move.edgePermutation(f);
-        let delta = Move.edgeFlip(f);
-        match (p, t) ->
-            ( Vector.init(i -> Vector.get(Vector.get(i, perm), p), 12)
-            , Vector.init(i ->
-                Int32.modulo(Vector.get(Vector.get(i, perm), t) + Vector.get(i, delta), 2), 12)
-            )
+            let moved = Vector.init(i -> Vector.get(Vector.get(i, perm), p), slots);
+            let turned = Vector.init(i -> {
+                let carried = Vector.get(Vector.get(i, perm), t);
+                Int32.modulo(carried + Vector.get(i, delta), modulus)
+            }, slots);
+            (moved, turned)
 
     // ---------- interchange ----------
 
@@ -185,6 +239,12 @@ mod CubeSolve.Model.Cube {
     /// derivation rather than a restatement, and it is what pins turn
     /// *direction* -- a table with every cycle reversed satisfies every group
     /// law and fails here.
+    ///
+    /// The rendering is of the *arrangement*, in the canonical frame -- the
+    /// cube as it would look rotated back upright. The frame itself is reported
+    /// by `orientation`, which is the only place it lives. Splitting the two is
+    /// not a shortcut: orbit64's own format excludes the fixed centres for
+    /// exactly this reason, so "arrangement plus frame" is the whole state.
     ///
     pub def facelets(c: Cube): Result[String, Vector[Int32]] =
         Orbit64.Net.toFacelets(size(c), orbits(c))

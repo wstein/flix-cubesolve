@@ -145,6 +145,30 @@ the API boundary:
 
 The canonical frame is **U on top, F in front** — orientation index 0.
 
+## Coordinates are canonical-frame, and slice moves look odd because of it
+
+The orbit coordinates always describe the cube **as it would look rotated back
+upright**. The frame is carried separately, by the whole-cube orientation. The
+pair is faithful; neither half is.
+
+This has one consequence that surprises everybody who meets it. A slice move
+physically turns the middle layer: four edges and four centres move, and no
+corner does. But a slice move also rotates the frame, and undoing that rotation
+to get back to canonical coordinates carries the two outer layers with it. So in
+canonical coordinates:
+
+```
+M  =  R L'   together with the frame rotation  x'
+```
+
+— and all eight corners have moved. That is correct, not a bug. `M` and `R L'`
+agree on the arrangement and differ only in the frame, which is exactly why the
+frame cannot be dropped.
+
+`TestNotation.aSliceMoveShowsAsOuterLayersInCanonicalCoordinates` pins this, so
+that a reader who notices the surprising corner motion and "fixes" it fails a
+test that explains why.
+
 ## What a table header records
 
 Magic; schema version; source and generator version; cube size; table

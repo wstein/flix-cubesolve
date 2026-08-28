@@ -20,6 +20,7 @@ Under construction. What works today:
 | | 2×2×2 | 3×3×3 | 4×4×4 | 5×5×5 |
 |---|---|---|---|---|
 | model, moves, notation | ✅ | ✅ | — | — |
+| slice, wide and rotation notation | rotations only | ✅ | — | — |
 | validation | ✅ | ✅ | — | — |
 | solving | — | — | — | — |
 | scrambling | — | — | — | — |

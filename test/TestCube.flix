@@ -2,6 +2,7 @@ mod TestCube {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
+    use CubeSolve.Model.Rotation
     use CubeSolve.Model.Move.Face.{U, R, F, D, L, B}
     use CubeSolve.Model.Move.Move.Turn
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
@@ -10,7 +11,9 @@ mod TestCube {
     def scrambled(n: Int32, notation: String): Cube.Cube \ Assert =
         match Result.flatMap(c -> Cube.applyNotation(notation, c), Cube.solved(n)) {
             case Ok(c)  => c
-            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a cube"); unreachable!()
+            case Err(e) =>
+                Assert.assertEqWithMsg(expected = "", e, "expected a cube");
+                unreachable!()
         }
 
     // ---------- construction ----------
@@ -19,8 +22,9 @@ mod TestCube {
     def solvedCubesAreSolvedAndCarryTheRightOrbits(): Unit \ Assert =
         Assert.assertEq(expected = Ok(true), Cube.solved(2) |> Result.map(Cube.isSolved));
         Assert.assertEq(expected = Ok(true), Cube.solved(3) |> Result.map(Cube.isSolved));
-        Assert.assertEq(expected = Ok(1), Cube.solved(2) |> Result.map(c -> List.length(Cube.orbits(c))));
-        Assert.assertEq(expected = Ok(2), Cube.solved(3) |> Result.map(c -> List.length(Cube.orbits(c))))
+        let orbitCount = c -> List.length(Cube.orbits(c));
+        Assert.assertEq(expected = Ok(1), Cube.solved(2) |> Result.map(orbitCount));
+        Assert.assertEq(expected = Ok(2), Cube.solved(3) |> Result.map(orbitCount))
 
     @Test
     def solvedRefusesSizesWithNoOrbits(): Unit \ Assert =
@@ -29,7 +33,10 @@ mod TestCube {
 
     @Test
     def aSolvedCubeIsInTheCanonicalFrame(): Unit \ Assert =
-        Assert.assertEq(expected = Ok(0), Cube.solved(3) |> Result.map(Cube.orientation))
+        Assert.assertEq(
+            expected = Ok(Rotation.identity()),
+            Cube.solved(3) |> Result.map(Cube.orientation)
+        )
 
     // ---------- group laws ----------
 

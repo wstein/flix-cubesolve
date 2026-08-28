@@ -170,7 +170,9 @@ mod CubeSolve.Model.Move {
         let letter = String.takeLeft(1, token);
         let rest = String.dropLeft(1, token);
         match parseFace(letter) {
-            case None => Err("'${token}' does not name a move: '${letter}' is not one of U R F D L B")
+            case None =>
+                Err("'${token}' does not name a move: '${letter}' is not one "
+                    + "of U R F D L B")
             case Some(f) => match rest {
                 case ""  => Ok(Turn(f, 1))
                 case "2" => Ok(Turn(f, 2))
