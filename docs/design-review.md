@@ -203,6 +203,31 @@ two had to agree — and Motion 4's warning still stands: this is a differential
 result precisely because none of this code was ported from the program the
 figures came from.
 
+## The quality baseline (Gate 7.6)
+
+Recorded before any optimisation work, so that later changes are judged against
+a measurement rather than an impression. Uniform random states from a fixed
+seed, solved at three budgets:
+
+| budget | mean length | worst |
+|---|---|---|
+| fast — `probeMax` 60 | 22.7 | 25 |
+| default — `probeMin` 30, `probeMax` 500 | **21.4** | 23 |
+| patient — `probeMax` 900 | 21.0 | 22 |
+
+min2phase averages about **20.6** at `probeMin` 5, and the true optimum averages
+about **17.7**. So this solver is roughly 0.8 moves behind the reference and 3.7
+behind optimal.
+
+That gap is expected and its causes are known: no symmetry reduction (Stage 10a)
+and none of the Stage 10b refinements — three phase-one target axes, searching
+the inverse state simultaneously, pre-scramble. Each should be benchmarked
+separately against this row before being kept.
+
+**Gate 7.2 is not met and is not claimed.** Superflip is solved, but not in 20
+moves, and asserting that it were would be asserting a quality the solver does
+not have.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be

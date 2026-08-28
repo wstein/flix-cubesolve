@@ -19,7 +19,51 @@ mod CubeSolve.Solve.Standard {
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Solve.Phase1
     use CubeSolve.Solve.Standard.Budget.Budget
+    use CubeSolve.Table.Cache
     use CubeSolve.Table.Domino
+
+    ///
+    /// Every table a 3x3x3 solve needs, for both phases.
+    ///
+    /// A caller should not have to know that the engine has two phases with
+    /// separate table sets, so this is the pair and `solution` is what consumes
+    /// it.
+    ///
+    pub enum Tables {
+        case Tables(CubeSolve.Table.Standard.Tables, Domino.Tables)
+    }
+
+    ///
+    /// Build every table a 3x3x3 solve needs.
+    ///
+    /// Several breadth-first sweeps over millions of states, so this takes
+    /// tens of seconds. Prefer `cachedTables`, which pays that once.
+    ///
+    pub def buildTables(): Result[String, Tables] =
+        forM (
+            p1 <- CubeSolve.Table.Standard.build();
+            p2 <- Domino.build()
+        ) yield Tables.Tables(p1, p2)
+
+    ///
+    /// Every table a 3x3x3 solve needs, from the cache where possible.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
+        forM (
+            p1 <- CubeSolve.Table.Standard.cachedTables();
+            p2 <- Domino.cachedTables()
+        ) yield Tables.Tables(p1, p2)
+
+    ///
+    /// A solution for `c`, using both phases' tables together.
+    ///
+    pub def solutionWith(
+        t: Tables,
+        budget: Budget,
+        c: Sized.Standard
+    ): Result[String, List[Move.Move]] =
+        let Tables.Tables(p1, p2) = t;
+        solution(p1, p2, budget, c)
 
     ///
     /// What a solve is allowed to spend, and what it must achieve.

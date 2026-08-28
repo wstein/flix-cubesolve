@@ -2,17 +2,18 @@ mod TestTwoPhase {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
+    use CubeSolve.Model.Random
     use CubeSolve.Model.Sized
     use CubeSolve.Solve.Standard
     use CubeSolve.Solve.Standard.Budget
 
-    /// Both sets of tables. Five breadth-first sweeps between them, so they are
-    /// built once and asserted against thoroughly.
-    def tables(): (CubeSolve.Table.Standard.Tables, CubeSolve.Table.Domino.Tables) \ Assert =
-        match (CubeSolve.Table.Standard.build(), CubeSolve.Table.Domino.build()) {
-            case (Ok(a), Ok(b)) => (a, b)
-            case _ =>
-                Assert.assertTrueWithMsg(false, "expected both sets of tables");
+    /// Every table a 3x3x3 solve needs. Five breadth-first sweeps between them,
+    /// so they are built once and asserted against thoroughly.
+    def tables(): Standard.Tables \ Assert =
+        match Standard.buildTables() {
+            case Ok(t)  => t
+            case Err(e) =>
+                Assert.assertEqWithMsg(expected = "", e, "expected the tables");
                 unreachable!()
         }
 
@@ -66,12 +67,12 @@ mod TestTwoPhase {
     /// one.
     @Test
     def theTwoPhaseSolverSolvesReplaysAndRespectsItsBudget(): Unit \ Assert =
-        let (p1, p2) = tables();
+        let t = tables();
         let budget = Standard.defaultBudget();
 
         corpus() |> List.forEach(alg -> {
             let cube = scrambled(alg);
-            match Standard.solution(p1, p2, budget, cube) {
+            match Standard.solutionWith(t, budget, cube) {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
                 case Ok(ms) =>
                     Assert.assertTrueWithMsg(
@@ -89,13 +90,13 @@ mod TestTwoPhase {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved exists")
             case Ok(c)  =>
                 Assert.assertEqWithMsg(
-                    expected = Ok(Nil), Standard.solution(p1, p2, budget, c),
+                    expected = Ok(Nil), Standard.solutionWith(t, budget, c),
                     "a solved cube should need no moves")
         };
 
         let starved = Standard.Budget.Budget({ probeMin = 1, probeMax = 1, maxDepth = 4 });
         let hard = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        match Standard.solution(p1, p2, starved, hard) {
+        match Standard.solutionWith(t, starved, hard) {
             case Ok(ms) =>
                 Assert.assertTrueWithMsg(false,
                     "four moves cannot solve that: ${Move.showAll(ms)}")
@@ -108,8 +109,8 @@ mod TestTwoPhase {
         let patient = Standard.Budget.Budget({ probeMin = 80, probeMax = 400, maxDepth = 25 });
         corpus() |> List.forEach(alg -> {
             let cube = scrambled(alg);
-            match (Standard.solution(p1, p2, quick, cube),
-                   Standard.solution(p1, p2, patient, cube)) {
+            match (Standard.solutionWith(t, quick, cube),
+                   Standard.solutionWith(t, patient, cube)) {
                 case (Ok(fast), Ok(slow)) =>
                     Assert.assertTrueWithMsg(
                         List.length(slow) <= List.length(fast),
@@ -121,9 +122,57 @@ mod TestTwoPhase {
         });
 
         let repeatable = scrambled("R U2 F' L D B2 R' U");
-        let once = Standard.solution(p1, p2, budget, repeatable) |> Result.map(Move.showAll);
-        let twice = Standard.solution(p1, p2, budget, repeatable) |> Result.map(Move.showAll);
+        let once = Standard.solutionWith(t, budget, repeatable) |> Result.map(Move.showAll);
+        let twice = Standard.solutionWith(t, budget, repeatable) |> Result.map(Move.showAll);
         Assert.assertEqWithMsg(
-            expected = once, twice, "the same budget should give the same solution")
+            expected = once, twice, "the same budget should give the same solution");
+
+        // ---- the quality baseline ----
+        //
+        // A quality property, not a correctness one: a two-phase solver is
+        // suboptimal by design, finding a good solution quickly rather than the
+        // shortest. Measured at the default budget over sixteen uniform states
+        // from a fixed seed, and recorded in docs/design-review.md:
+        //
+        //     fast     probeMax 60    mean 22.7   worst 25
+        //     default                 mean 21.4   worst 23
+        //     patient  probeMax 900   mean 21.0   worst 22
+        //
+        // min2phase averages about 20.6 and the true optimum about 17.7. The
+        // gap is what symmetry reduction and the Stage 10b refinements would
+        // close, and none of those are implemented. The band is loose enough
+        // not to trip on ordinary variation and tight enough that losing a move
+        // would show.
+        let samples = 16;
+        def loop(i, seed, total, worst) =
+            if (i <= 0) (total, worst)
+            else match Random.sampleDeterministic(seed, 3) {
+                case Err(e) =>
+                    Assert.assertEqWithMsg(expected = "", e, "sampling");
+                    (total, worst)
+                case Ok((c, next)) =>
+                    let solved = Sized.standardOf(c)
+                        |> Result.flatMap(s -> Standard.solutionWith(t, budget, s));
+                    match solved {
+                        case Err(e) =>
+                            Assert.assertEqWithMsg(expected = "", e, "solving a uniform state");
+                            (total, worst)
+                        case Ok(ms) =>
+                            let n = List.length(ms);
+                            loop(i - 1, next, total + n, Int32.max(worst, n))
+                    }
+            };
+        let (total, worst) = loop(samples, 4242i64, 0, 0);
+        // tenths, to avoid floating point in a gate
+        let mean = total * 10 / samples;
+        Assert.assertTrueWithMsg(mean <= 225,
+            "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
+                + "above the recorded baseline of 21.4 by more than the margin");
+        Assert.assertTrueWithMsg(mean >= 150,
+            "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
+                + "below the true optimum of about 17.7 -- which is impossible, so "
+                + "something is not solving what it claims");
+        Assert.assertTrueWithMsg(worst <= 25,
+            "the worst solution was ${worst} moves, over the recorded worst of 23")
 
 }
