@@ -46,6 +46,7 @@ implementation. The rest of this README describes the engine being built.
 ./flixw check        # type-check; the fast feedback loop
 ./flixw test         # run every @Test function under test/
 ./flixw doc          # API documentation for this project and the stdlib
+./flixw metrics --format md   # code-smell report; run it before committing
 ```
 
 The only prerequisite is a JDK, Java 21 or newer. You do not need Flix

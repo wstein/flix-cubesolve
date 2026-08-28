@@ -21,6 +21,9 @@ use `.\flixw.cmd` wherever these say `./flixw`.
   check-only mode, so CI does not gate on formatting
 - `./flixw doc` — write API documentation for the standard library and this
   project to `build/doc/`
+- `./flixw metrics --format md` — code-smell report: over-long and crammed
+  lines, complexity, nesting, coupling, doc coverage. **Run it before every
+  commit and fix what it finds**; it needs the project to compile first
 
 `./flixw run` does **not** work here and should not be made to. Flix allows one
 `main` per program, so a library that ships one cannot be depended on. A command
@@ -157,4 +160,16 @@ nothing.
 ## Commits
 
 Conventional commits, single-purpose, with the type and scope naming the primary
-change. Run `./flixw format` and `./flixw test` before committing.
+change.
+
+Before every commit, in this order:
+
+```sh
+./flixw format                  # no check-only mode, so this must run first
+./flixw test                    # every @Test under test/
+./flixw metrics --format md     # code smells; fix them, do not carry them
+```
+
+`metrics` reports against a working tree, so a run with uncommitted changes
+describes a state no commit contains — it says so itself. Fix the findings and
+re-run rather than reasoning about which ones the commit will keep.
