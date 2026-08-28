@@ -6,3 +6,4 @@ build/
 lib/
 site/
 crash_report_*.txt
+tmp/
