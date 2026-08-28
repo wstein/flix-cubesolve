@@ -1,0 +1,9 @@
+[package]
+name        = "flix-template"
+description = "A Flix project template that carries its own compiler via flixw"
+version     = "0.1.0"
+# Exactly x.y.z, three integers: "0.75" or a -suffix is rejected. The compiler checks
+# the shape and ignores the value; flixw enforces it as the floor the lock satisfies.
+flix        = "0.75.0"
+license     = "Apache-2.0"
+authors     = ["John Doe <john@example.com>"]

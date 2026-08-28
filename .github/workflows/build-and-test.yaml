@@ -1,0 +1,141 @@
+name: Build and Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The POSIX shim and the cmd.exe trampoline are separate files with
+          # separate logic, so each one is exercised on the platform it serves.
+          - os: ubuntu-latest
+            flixw: ./flixw
+            shell: bash
+          - os: macos-latest
+            flixw: ./flixw
+            shell: bash
+          - os: windows-latest
+            flixw: .\flixw.cmd
+            shell: cmd
+
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # flixw is itself a Java program, so it needs one JDK to start; from there
+      # it fetches the compiler pinned in .flixw/lock.toml and verifies it
+      # against the committed digest before running it. 21 is the lowest Java
+      # the wrapper supports, so CI runs on the oldest JDK this project claims.
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The wrapper's cache at its per-platform default location. It is
+      # deliberately not redirected with FLIX_CACHE_HOME: pointing it somewhere
+      # uniform would be tidier here and would stop CI from ever exercising the
+      # path resolution a contributor actually gets.
+      #
+      # Caching something the build will execute is normally a smell. It is safe
+      # here for the one reason that makes flixw worth demonstrating: the digest
+      # in the lock is re-verified on every run, so a restored -- or tampered --
+      # cache cannot substitute a different compiler, only save a download.
+      - name: Restore the pinned compiler
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/flixw
+            ~/Library/Caches/flixw
+            ~\AppData\Local\flixw
+          # The lock names the compiler, its digest and the wrapper version, so
+          # it alone decides whether an entry is usable. No restore-keys: a
+          # partial hit could only hold a compiler this project no longer pins,
+          # which is a download either way.
+          key: ${{ runner.os }}-flixw-${{ hashFiles('.flixw/lock.toml') }}
+
+      # Wrapper integrity first: the shims match the committed stage 0, the lock
+      # satisfies flix.toml, and every generated file is tracked by git. A
+      # failure here means the rest of the run would prove nothing.
+      - name: Validate the wrapper
+        run: ${{ matrix.flixw }} validate
+
+      - name: Check
+        run: ${{ matrix.flixw }} check
+
+      - name: Test
+        run: ${{ matrix.flixw }} test
+
+      # Last on purpose: a stale badge is metadata, and failing earlier would
+      # hide the build result behind it. Repository-wide rather than per-OS, so
+      # it runs once.
+      #
+      # A renamed repository keeps working through GitHub's redirect while
+      # raw.githubusercontent.com does not follow one, so a wrong badge URL is
+      # invisible from inside the repository -- it renders as a badge that has
+      # simply stopped saying anything. This is what makes it visible, here and
+      # in every copy made from this template.
+      - name: Badge URLs name this repository
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # %2F is how the shields.io url= parameter spells a slash. Normalising
+          # once lets one set of patterns cover both spellings.
+          normalised=$(sed 's/%2F/\//g' README.md)
+
+          # Only self-referencing URLs count. A plain github.com/<owner>/<repo>
+          # link is not one -- this README links to wstein/flixw deliberately --
+          # so the Actions pattern requires the /actions/ path that only this
+          # repository's own workflow badge carries.
+          #
+          # Each grep may match nothing: a README with no badges is a valid
+          # README, and under pipefail an unmatched grep would otherwise abort
+          # the step before the comparison below runs.
+          refs=$(
+            {
+              grep -oE 'github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/' <<<"$normalised" |
+                sed -E 's#^github\.com/##; s#/actions/$##' || true
+              grep -oE 'raw\.githubusercontent\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/' <<<"$normalised" |
+                sed -E 's#^raw\.githubusercontent\.com/##; s#/$##' || true
+              grep -oE 'shields\.io/github/[a-z-]+/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' <<<"$normalised" |
+                sed -E 's#^shields\.io/github/[a-z-]+/##' || true
+              grep -oE '[A-Za-z0-9-]+\.github\.io/[A-Za-z0-9_.-]+' <<<"$normalised" |
+                sed -E 's#^([A-Za-z0-9-]+)\.github\.io/#\1/#' || true
+            } | sort -u
+          )
+          [ -n "$refs" ] || exit 0
+
+          # Case-insensitively: a Pages host is always lowercase, while
+          # github.repository carries the owner's canonical capitalisation, and
+          # the two differing is not a stale URL.
+          stale=$(grep -vixF "$REPO" <<<"$refs" || true)
+          [ -n "$stale" ] || exit 0
+
+          echo "::error file=README.md::URLs name a repository other than $REPO"
+          while IFS= read -r ref; do
+            echo "  $ref  ->  $REPO"
+          done <<<"$stale"
+          exit 1
