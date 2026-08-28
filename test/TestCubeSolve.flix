@@ -1,14 +1,29 @@
 mod TestCubeSolve {
 
+    /// The list says what is implemented, not what is planned. A size listed
+    /// here must be one every layer can actually handle, because callers branch
+    /// on it.
     @Test
-    def supportsTheImplementedSizes(): Unit \ Assert =
+    def supportsTheSizesThatAreImplemented(): Unit \ Assert =
+        Assert.assertEq(expected = Vector#{2, 3}, CubeSolve.supportedSizes());
         Assert.assertEq(expected = true, CubeSolve.supports(2));
-        Assert.assertEq(expected = true, CubeSolve.supports(5))
+        Assert.assertEq(expected = true, CubeSolve.supports(3))
 
     @Test
-    def rejectsSizesWithNoReduction(): Unit \ Assert =
+    def doesNotClaimSizesItCannotTurn(): Unit \ Assert =
         Assert.assertEq(expected = false, CubeSolve.supports(1));
-        Assert.assertEq(expected = false, CubeSolve.supports(6))
+        Assert.assertEq(expected = false, CubeSolve.supports(4));
+        Assert.assertEq(expected = false, CubeSolve.supports(5))
+
+    /// Every supported size is one the model can actually build and turn --
+    /// the list cannot drift ahead of the implementation without failing here.
+    @Test
+    def everySupportedSizeCanBeBuiltAndTurned(): Unit \ Assert =
+        CubeSolve.supportedSizes() |> Vector.forEach(n ->
+            Assert.assertOk(
+                CubeSolve.Model.Cube.solved(n)
+                    |> Result.flatMap(c -> CubeSolve.Model.Cube.applyNotation("R U F' D2", c))
+            ))
 
     ///
     /// The dependency is reachable and agrees with the arithmetic the plan

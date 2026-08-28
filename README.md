@@ -13,7 +13,22 @@ This is a **library**. It declares no top-level `main`, so a program can depend
 on it; everything it defines nests under `CubeSolve`, so nothing it defines
 collides with a consumer's names.
 
-## What it does
+## Status
+
+Under construction. What works today:
+
+| | 2×2×2 | 3×3×3 | 4×4×4 | 5×5×5 |
+|---|---|---|---|---|
+| model, moves, notation | ✅ | ✅ | — | — |
+| validation | ✅ | ✅ | — | — |
+| solving | — | — | — | — |
+| scrambling | — | — | — | — |
+
+`CubeSolve.supportedSizes()` reports this at runtime and is covered by a test
+that builds and turns every size it lists, so the list cannot drift ahead of the
+implementation. The rest of this README describes the engine being built.
+
+## What it will do
 
 - **Solves.** An exact optimal solver for the 2×2×2, and a two-phase solver for
   the 3×3×3. Larger sizes reduce to the 3×3×3.

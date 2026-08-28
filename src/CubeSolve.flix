@@ -28,17 +28,22 @@
 mod CubeSolve {
 
     ///
-    /// The cube sizes this engine solves.
+    /// The cube sizes this engine implements, in full.
     ///
-    /// The floor is the 2x2x2 because a 1x1x1 has nothing to permute. The
-    /// ceiling is the 5x5x5 because that is the largest size for which a
-    /// reduction is implemented; `Orbit64.Orbit.layout` keeps answering above
-    /// it, but nothing here would know what to do with the answer.
+    /// This says what works, not what is intended. Callers branch on it, so a
+    /// size appears here only once every layer -- model, moves, tables and
+    /// search -- can handle it. The 4x4x4 and 5x5x5 are the project's goal and
+    /// reduce to the 3x3x3, but their wing and centre orbits have no move
+    /// tables yet, so listing them would be a promise the engine cannot keep.
     ///
-    pub def supportedSizes(): Vector[Int32] = Vector#{2, 3, 4, 5}
+    /// The floor is the 2x2x2 because a 1x1x1 has nothing to permute.
+    /// `Orbit64.Orbit.layout` keeps answering below and above this range, but
+    /// nothing here would know what to do with the answer.
+    ///
+    pub def supportedSizes(): Vector[Int32] = Vector#{2, 3}
 
     ///
-    /// Whether this engine can solve an `n x n x n`.
+    /// Whether this engine implements an `n x n x n`.
     ///
     pub def supports(n: Int32): Bool = Vector.memberOf(n, supportedSizes())
 
