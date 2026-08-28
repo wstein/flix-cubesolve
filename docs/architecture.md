@@ -69,10 +69,17 @@ CubeState = { n, orbits }
 ```
 
 The cost of a generic core is that nothing stops a 4×4×4 state reaching the
-3×3×3 solver. The boundary is therefore wrapped in per-size newtypes —
-`Pocket`, `Standard`, `Revenge`, `Professor` — constructed only by validating
-smart constructors. Not sophisticated, but it turns a size mismatch into a
-compile error while keeping one generic implementation underneath.
+3×3×3 solver. The boundary is therefore wrapped in per-size newtypes in
+`CubeSolve.Model.Sized` — `Pocket` and `Standard` today, one per size the engine
+implements — built by validating smart constructors that name the mismatch. They
+are newtypes over the same `Cube`, so there is no second representation and no
+conversion cost; what they add is that the two are different types and cannot be
+passed for one another.
+
+One caveat, stated rather than glossed: Flix has no private enum case, so the
+constructors are reachable. The guarantee the wrappers give is that a size
+mismatch is a *type* error at every call site, not that every value was built
+through a smart constructor.
 
 ### Whole-cube orientation
 

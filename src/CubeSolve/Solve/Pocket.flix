@@ -21,7 +21,7 @@
 mod CubeSolve.Solve.Pocket {
 
     use CubeSolve.Model.Cube
-    use CubeSolve.Model.Cube.Cube
+    use CubeSolve.Model.Sized
     use CubeSolve.Model.Move
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Solve.IdaStar.Phase
@@ -126,8 +126,8 @@ mod CubeSolve.Solve.Pocket {
     ///
     /// A shortest solution for `c`, or why there is none.
     ///
-    pub def solution(t: Pocket.Tables, c: Cube): Result[String, List[Move.Move]] =
-        Pocket.encode(c) |> Result.flatMap(s -> solutionForState(t, s))
+    pub def solution(t: Pocket.Tables, c: Sized.Pocket): Result[String, List[Move.Move]] =
+        Pocket.encode(Sized.cubeOfPocket(c)) |> Result.flatMap(s -> solutionForState(t, s))
 
     ///
     /// A shortest solution for the state with coordinate `state`.

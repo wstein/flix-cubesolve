@@ -15,7 +15,7 @@
 ///
 mod CubeSolve.Scramble.Pocket {
 
-    use CubeSolve.Model.Cube.Cube
+    use CubeSolve.Model.Sized
     use CubeSolve.Model.Move
     use CubeSolve.Model.Random
     use CubeSolve.Scramble.Pocket.Index.Index
@@ -31,7 +31,7 @@ mod CubeSolve.Scramble.Pocket {
     /// difficulty needs to see what it actually got.
     ///
     pub enum Scramble {
-        case Scramble({ moves = List[Move.Move], state = Cube, distance = Int32 })
+        case Scramble({ moves = List[Move.Move], state = Sized.Pocket, distance = Int32 })
     }
 
     ///
@@ -42,7 +42,7 @@ mod CubeSolve.Scramble.Pocket {
     ///
     /// The state the scramble produces.
     ///
-    pub def state(s: Scramble): Cube = let Scramble(r) = s; r#state
+    pub def state(s: Scramble): Sized.Pocket = let Scramble(r) = s; r#state
 
     ///
     /// The exact number of moves needed to solve it again.
@@ -171,7 +171,7 @@ mod CubeSolve.Scramble.Pocket {
     def scrambleOf(t: CubeSolve.Table.Pocket.Tables, at: Int32): Result[String, Scramble] =
         forM (
             solution <- CubeSolve.Solve.Pocket.solutionForState(t, at);
-            cube <- CubeSolve.Table.Pocket.decode(at)
+            cube <- CubeSolve.Table.Pocket.decode(at) |> Result.flatMap(Sized.pocketOf)
         ) yield Scramble({
             moves = Move.inverseOf(solution),
             state = cube,

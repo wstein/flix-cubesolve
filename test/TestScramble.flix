@@ -1,6 +1,7 @@
 mod TestScramble {
 
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Sized
     use CubeSolve.Model.Validate
     use CubeSolve.Scramble.Pocket
     use CubeSolve.Table
@@ -19,11 +20,11 @@ mod TestScramble {
         let apply = c -> Cube.applyAll(Pocket.moves(s), c);
         let built = Cube.solved(2) |> Result.flatMap(apply);
         Assert.assertEqWithMsg(
-            expected = Ok(Cube.orbits(Pocket.state(s))),
+            expected = Ok(Cube.orbits(Sized.cubeOfPocket(Pocket.state(s)))),
             built |> Result.map(Cube.orbits),
             "the scramble '${Pocket.show(s)}' did not produce the state it reports");
         Assert.assertEqWithMsg(
-            expected = None, Validate.faultOf(Pocket.state(s)),
+            expected = None, Validate.faultOf(Sized.cubeOfPocket(Pocket.state(s))),
             "the scramble '${Pocket.show(s)}' produced an unreachable state")
 
     // ---------- exact difficulty ----------
@@ -70,7 +71,7 @@ mod TestScramble {
             case Err(e)     => Assert.assertEqWithMsg(expected = "", e, "distance 0")
             case Ok((s, _)) =>
                 Assert.assertEq(expected = Nil, Pocket.moves(s));
-                Assert.assertTrue(Cube.isSolved(Pocket.state(s)))
+                Assert.assertTrue(Cube.isSolved(Sized.cubeOfPocket(Pocket.state(s))))
         };
 
         match Pocket.atDistance(t, ix, 12, 1i64) {

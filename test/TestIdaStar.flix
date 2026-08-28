@@ -155,10 +155,12 @@ mod TestIdaStar {
     /// The two ends of the range, and the refusal in between.
     ///
     /// A depth too small to hold any solution is reported as exhaustion naming
-    /// the depth -- not a hang, and not a wrong answer. The solved state needs
-    /// no moves and says so rather than returning a pair that cancels. And a
-    /// cube scrambled through the model is solved back through the model, so
-    /// the coordinate layer and the model layer agree end to end.
+    /// the depth -- not a hang, and not a wrong answer. And the solved state
+    /// needs no moves, rather than returning a pair that cancels.
+    ///
+    /// The end-to-end check that a cube scrambled through the model is solved
+    /// back through it lives in `TestScramble`, which already works in the
+    /// model's terms.
     @Test
     def theEdgesOfTheSearchAreReportedProperly(): Unit \ Assert =
         let t = tables();
@@ -174,20 +176,7 @@ mod TestIdaStar {
         match CubeSolve.Solve.Pocket.solutionForState(t, Table.Pocket.solvedIndex()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved is solvable")
             case Ok(ms) => Assert.assertEq(expected = Nil, ms)
-        };
+        }
 
-        List.forEach(scramble ->
-            match Cube.solved(2) |> Result.flatMap(c -> Cube.applyNotation(scramble, c)) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "scramble applies")
-                case Ok(c)  =>
-                    match CubeSolve.Solve.Pocket.solution(t, c) {
-                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${scramble}'")
-                        case Ok(ms) => Assert.assertEqWithMsg(
-                            expected = Ok(true),
-                            Cube.applyAll(ms, c) |> Result.map(Cube.isSolved),
-                            "the solution for '${scramble}' did not solve it")
-                    }
-            },
-            "R U F" :: "R U2 F' R' U F2" :: "U R' F U2 R F' U' R2" :: "F" :: Nil)
 
 }
