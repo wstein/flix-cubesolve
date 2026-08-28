@@ -336,8 +336,8 @@ mod CubeSolve.Table.Pocket {
             pm <- permMoves();
             om <- oriMoves();
             full <- fullDistances(pm, om);
-            oriD <- quotientDistances(om, oriCount());
-            permD <- quotientDistances(pm, permCount())
+            oriD <- quotientDistancesOf(om, oriCount());
+            permD <- quotientDistancesOf(pm, permCount())
         ) yield Tables({
             permMoves = pm,
             oriMoves = om,
@@ -449,11 +449,15 @@ mod CubeSolve.Table.Pocket {
     ///
     /// Distance to solved in a quotient with its own move table.
     ///
+    /// Public because it is cheap -- 729 or 5040 states -- and a caller that
+    /// wants only a heuristic should not have to pay for the 3.6 million-state
+    /// sweep that `build` does.
+    ///
     /// Both projections are homomorphic -- a move acts on either without
     /// reference to the other -- so a sweep of the quotient gives an admissible
     /// heuristic for the full space.
     ///
-    def quotientDistances(moves: TableView, states: Int32): Result[String, TableView] =
+    pub def quotientDistancesOf(moves: TableView, states: Int32): Result[String, TableView] =
         breadthFirst(states, (s, m) -> Table.get(s * moveCount() + m, moves))
 
 }

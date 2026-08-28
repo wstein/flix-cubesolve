@@ -57,6 +57,11 @@ derivations wherever available"* — applied to its heuristic.
 
 **Amendment.** Adopt `max(h_ori, h_perm)`.
 
+**Confirmed in the implementation.** Measured on the Flix search over the
+deepest states, where the heuristic matters most: **225,715** nodes with both
+projections against **2,498,447** with orientation alone — a factor of **11.1**,
+corroborating the 12.8× measured on random states beforehand.
+
 ## Motion 3 — §7 contradicts Stage 1 about whether the region question blocks
 
 §7 closes with *"`TableView` keeps the question from blocking anything."* Stage 1
@@ -156,18 +161,27 @@ With `max(h_ori, h_perm)`, an exhaustive sweep drops from ≈ 64 minutes to
 The distance histogram is extremely non-uniform, so stratify along it: test
 exhaustively where the class is small, sample where it is large.
 
-- **Exhaustive**: `d ≤ 6` (62,360 states) and `d = 11` (2,644 states). The
-  latter matters most — it is IDA\*'s worst case and there are only 2,644 of
-  them.
-- **Fixed-seed sample**: `d ∈ {7, 8, 9, 10}`.
-- **Nightly**: the full sweep.
+**Revised again once the implementation could be measured.** Even the deepest
+class alone is too expensive to run exhaustively *in Flix*: at 225,715 nodes per
+state, all 2,644 of them are roughly 6 × 10⁸ nodes and some three minutes. So
+the stratification actually shipped is:
 
-Those 65,004 states are *exactly* the bucket set Stage 5 already builds for
-`exactDistance`, so the gate's hardest and cheapest cases come free from a table
-the scrambler needs anyway.
+- **Exhaustive**: `d ≤ 4`, all 2,232 states — the classes small enough to be
+  complete rather than sampled.
+- **A fixed stride** of 600 states across the whole space, covering every class
+  in proportion to its size. A stride rather than a random sample because it
+  reproduces without carrying a seed, and because the coordinate's ordering has
+  nothing to do with distance.
+- **60 of the 2,644 deepest states**, which is where the search works hardest.
+- **Nightly**: the full sweep, at the cost recorded above.
 
-**Amended gates.** 4.1 exhaustive over all 3,674,160 states, run once per
-projection. 4.2 stratified as above, with the stratification named in the test.
+The whole suite, including the exhaustive 3,674,160-state oracle sweep, runs in
+about 28 seconds. The point of the amendment survives: name the stratification
+and its measured cost in the test, rather than writing "exhaustively" and
+quietly running nothing.
+
+**Amended gates.** 4.1 exhaustive over all 3,674,160 states, both projections.
+4.2 stratified as above, with the stratification and its cost named in the test.
 
 ## Undisputed, and worth keeping
 

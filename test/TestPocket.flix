@@ -121,26 +121,72 @@ mod TestPocket {
 
     // ---------- the exhaustive oracle ----------
 
-    /// Gates 3.1, 3.2 and 3.4 together, in one sweep of all 3,674,160 states.
+    /// Everything the exhaustive sweep establishes, in one pass over all
+    /// 3,674,160 states.
     ///
-    /// - every state is reached, so the space is exactly 3,674,160;
-    /// - the distance histogram matches the independently computed one, to the
-    ///   digit;
-    /// - the diameter is 11 under the nine half-turn moves;
-    /// - and no entry is left at the "not reached" marker, which is what makes
-    ///   using the width's largest value as that marker sound.
+    /// These are separate properties and would read better as separate tests.
+    /// They share one test because building the tables takes seconds and
+    /// sweeping the space takes seconds more, and paying that four times to
+    /// gain four test names is a bad trade in a gate that runs on every commit.
+    /// Each assertion carries its own message, so a failure still says which
+    /// property broke.
+    ///
+    /// - **Exhaustive.** Every state is reached, so the space is exactly
+    ///   3,674,160, and the distance histogram matches the independently
+    ///   computed one to the digit across all twelve classes.
+    /// - **Nothing left unvisited.** No entry still holds the marker, which is
+    ///   what makes using the width's largest value as that marker sound.
+    /// - **A real distance.** A move changes it by at most one, and every
+    ///   unsolved state has a neighbour one step closer. Together these say the
+    ///   table is a distance and not merely a labelling.
+    /// - **Both projections admissible**, over every state, with the maxima
+    ///   that make the case for using them together.
     @Test
-    def theOracleIsExhaustiveAndMatchesTheKnownHistogram(): Unit \ Assert =
-        let d = Pocket.distanceTable(tables());
+    def theOracleIsExhaustiveConsistentAndAdmissible(): Unit \ Assert =
+        let t = tables();
+        let d = Pocket.distanceTable(t);
+        let pm = Pocket.permMoveTable(t);
+        let om = Pocket.oriMoveTable(t);
+        let oriD = Pocket.oriDistanceTable(t);
+        let permD = Pocket.permDistanceTable(t);
+        let n = Pocket.oriCount();
+        let k = Pocket.moveCount();
         Assert.assertEq(expected = Pocket.stateCount(), Table.entries(d));
-        let counts = region rc {
-            let tally = Array.repeat(rc, 16, 0);
-            Vector.range(0, Pocket.stateCount()) |> Vector.forEach(i -> {
-                let v = Table.get(i, d);
-                Array.put(Array.get(v, tally) + 1, v, tally)
+
+        let report = region rc {
+            let histogram = Array.repeat(rc, 16, 0);
+            // 0: a move changed the distance by more than one
+            // 1: an unsolved state had no neighbour closer to solved
+            // 2: the orientation heuristic overestimated
+            // 3: the permutation heuristic overestimated
+            // 4: the largest value the two heuristics jointly take
+            let faults = Array.repeat(rc, 5, -1);
+            Array.put(0, 4, faults);
+            Vector.range(0, Pocket.stateCount()) |> Vector.forEach(s -> {
+                let here = Table.get(s, d);
+                Array.put(Array.get(here, histogram) + 1, here, histogram);
+                let pi = s / n;
+                let oi = Int32.modulo(s, n);
+                let closer = Vector.range(0, k) |> Vector.count(m -> {
+                    let perm = Table.get(pi * k + m, pm);
+                    let to = perm * n + Table.get(oi * k + m, om);
+                    let there = Table.get(to, d);
+                    if (Int32.abs(here - there) > 1) Array.put(s, 0, faults) else ();
+                    there == here - 1
+                });
+                if (here > 0 and closer == 0) Array.put(s, 1, faults) else ();
+                let ho = Table.get(oi, oriD);
+                let hp = Table.get(pi, permD);
+                if (ho > here) Array.put(s, 2, faults) else ();
+                if (hp > here) Array.put(s, 3, faults) else ();
+                let best = Int32.max(ho, hp);
+                if (best > Array.get(4, faults)) Array.put(best, 4, faults) else ()
             });
-            Array.toVector(tally)
+            (Array.toVector(histogram), Array.toVector(faults))
         };
+        let (counts, faults) = report;
+
+        // The histogram, computed independently before any of this was written.
         let expected = Vector#{
             1, 9, 54, 321, 1847, 9992, 50136, 227536, 870072, 1887748, 623800, 2644
         };
@@ -152,86 +198,43 @@ mod TestPocket {
             Assert.assertEqWithMsg(
                 expected = 0, Vector.get(i, counts),
                 "nothing should sit at distance ${i}, including the unvisited marker"));
-        Assert.assertEq(expected = 0, Table.get(Pocket.solvedIndex(), d))
+        Assert.assertEq(expected = 0, Table.get(Pocket.solvedIndex(), d));
 
-    /// Gate 3.2, exhaustively: a move changes the distance by at most one, and
-    /// every unsolved state has a neighbour one step closer. Together these say
-    /// the table really is a distance and not merely a labelling.
-    @Test
-    def everyStateHasAConsistentNeighbourhood(): Unit \ Assert =
-        let t = tables();
-        let d = Pocket.distanceTable(t);
-        let pm = Pocket.permMoveTable(t);
-        let om = Pocket.oriMoveTable(t);
-        let bad = region rc {
-            let faults = Array.repeat(rc, 2, -1);
-            Vector.range(0, Pocket.stateCount()) |> Vector.forEach(s -> {
-                let here = Table.get(s, d);
-                let pi = s / Pocket.oriCount();
-                let oi = Int32.modulo(s, Pocket.oriCount());
-                let closer = Vector.range(0, Pocket.moveCount()) |> Vector.count(m -> {
-                    let to = Table.get(pi * Pocket.moveCount() + m, pm) * Pocket.oriCount()
-                           + Table.get(oi * Pocket.moveCount() + m, om);
-                    let there = Table.get(to, d);
-                    if (Int32.abs(here - there) > 1) Array.put(s, 0, faults) else ();
-                    there == here - 1
-                });
-                if (here > 0 and closer == 0) Array.put(s, 1, faults) else ()
-            });
-            Array.toVector(faults)
-        };
-        Assert.assertEqWithMsg(expected = -1, Vector.get(0, bad),
+        Assert.assertEqWithMsg(expected = -1, Vector.get(0, faults),
             "a move changed the distance by more than one");
-        Assert.assertEqWithMsg(expected = -1, Vector.get(1, bad),
-            "an unsolved state had no neighbour closer to solved")
-
-    // ---------- the two admissible projections ----------
-
-    /// Gate 4.1, exhaustively and once per projection: both heuristics are
-    /// admissible, and their maximum is too.
-    ///
-    /// Admissible because each projection is homomorphic -- a move acts on it
-    /// without reference to what was projected away -- so distance in the
-    /// quotient can only be shorter.
-    @Test
-    def bothProjectionsAreAdmissibleEverywhere(): Unit \ Assert =
-        let t = tables();
-        let d = Pocket.distanceTable(t);
-        let oriD = Pocket.oriDistanceTable(t);
-        let permD = Pocket.permDistanceTable(t);
-        let worst = region rc {
-            let seen = Array.repeat(rc, 3, 0);
-            Vector.range(0, Pocket.stateCount()) |> Vector.forEach(s -> {
-                let exact = Table.get(s, d);
-                let ho = Table.get(Int32.modulo(s, Pocket.oriCount()), oriD);
-                let hp = Table.get(s / Pocket.oriCount(), permD);
-                if (ho > exact) Array.put(1, 0, seen) else ();
-                if (hp > exact) Array.put(1, 1, seen) else ();
-                let best = Int32.max(ho, hp);
-                if (best > Array.get(2, seen)) Array.put(best, 2, seen) else ()
-            });
-            Array.toVector(seen)
-        };
-        Assert.assertEqWithMsg(expected = 0, Vector.get(0, worst),
+        Assert.assertEqWithMsg(expected = -1, Vector.get(1, faults),
+            "an unsolved state had no neighbour closer to solved");
+        Assert.assertEqWithMsg(expected = -1, Vector.get(2, faults),
             "the orientation heuristic overestimated some state");
-        Assert.assertEqWithMsg(expected = 0, Vector.get(1, worst),
+        Assert.assertEqWithMsg(expected = -1, Vector.get(3, faults),
             "the permutation heuristic overestimated some state");
-        // Measured independently: the orientation projection tops out at 6 and
-        // the permutation projection at 7, against a diameter of 11. That gap
-        // is why the two are used together rather than either alone.
-        Assert.assertEq(expected = 7, Vector.get(2, worst))
+        // Measured independently: orientation tops out at 6 and permutation at
+        // 7, against a diameter of 11. That gap is why both are used.
+        Assert.assertEqWithMsg(expected = 7, Vector.get(4, faults),
+            "the two heuristics together should reach 7 and no further")
 
-    /// The projections really are coarser than the full space, so a search
-    /// still has work to do and the heuristics are not secretly the oracle.
+    /// The projections are genuinely coarser than the full space, so the
+    /// heuristics are not secretly the oracle and a search still has work to do.
     @Test
     def theProjectionsHaveTheirKnownMaxima(): Unit \ Assert =
-        let t = tables();
         let maxOf = (table, count) ->
             Vector.range(0, count)
                 |> Vector.foldLeft((acc, i) -> Int32.max(acc, Table.get(i, table)), 0);
-        Assert.assertEq(
-            expected = 6, maxOf(Pocket.oriDistanceTable(t), Pocket.oriCount()));
-        Assert.assertEq(
-            expected = 7, maxOf(Pocket.permDistanceTable(t), Pocket.permCount()))
+        match Pocket.oriMoves() {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "ori moves")
+            case Ok(om) =>
+                match Pocket.quotientDistancesOf(om, Pocket.oriCount()) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "ori distances")
+                    case Ok(od) => Assert.assertEq(expected = 6, maxOf(od, Pocket.oriCount()))
+                }
+        };
+        match Pocket.permMoves() {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "perm moves")
+            case Ok(pm) =>
+                match Pocket.quotientDistancesOf(pm, Pocket.permCount()) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "perm distances")
+                    case Ok(pd) => Assert.assertEq(expected = 7, maxOf(pd, Pocket.permCount()))
+                }
+        }
 
 }

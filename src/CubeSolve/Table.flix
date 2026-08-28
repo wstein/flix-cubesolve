@@ -198,9 +198,24 @@ mod CubeSolve.Table {
         count: Int32,
         value: Int32
     ): Array[Int8, r] \ r =
-        let payload = emptyPayload(rc, bits, count);
-        Vector.range(0, count) |> Vector.forEach(i -> putEntry(payload, bits, i, value));
-        payload
+        if (bits < 8)
+            // Every entry in a byte holds the same value, so the byte is the
+            // same for all of them and the whole array is one repeat. Writing
+            // entry by entry here costs millions of read-modify-writes to
+            // produce a constant.
+            Array.repeat(rc, payloadBytes(bits, count), narrow(repeatedByte(bits, value)))
+        else {
+            let payload = emptyPayload(rc, bits, count);
+            Vector.range(0, count) |> Vector.forEach(i -> putEntry(payload, bits, i, value));
+            payload
+        }
+
+    ///
+    /// The byte whose every `bits`-wide field holds `value`.
+    ///
+    def repeatedByte(bits: Int32, value: Int32): Int32 =
+        let place = (acc, k) -> Int32.bitwiseOr(acc, Int32.leftShift(value, k * bits));
+        Vector.range(0, 8 / bits) |> Vector.foldLeft(place, 0)
 
     ///
     /// The largest value `bits` bits can hold.

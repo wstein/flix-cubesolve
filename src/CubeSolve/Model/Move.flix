@@ -127,6 +127,28 @@ mod CubeSolve.Model.Move {
         Vector.init(i -> ofIndex(i) |> Option.getWithDefault(Turn(U, 1)), 18)
 
     ///
+    /// Whether move `next` may follow move `last` in a half-turn-metric search.
+    ///
+    /// Both are move indices; `last` is negative at the root, where everything
+    /// is allowed. Two rules, and both are sound only for this alphabet:
+    ///
+    /// - **Never the same face twice.** Over the half-turn alphabet any two
+    ///   consecutive turns of one face are a single turn of it, so nothing is
+    ///   lost. Over a clockwise-only alphabet this rule is *wrong*: forbidding
+    ///   `R` after `R` makes `R2` inexpressible.
+    /// - **A fixed order within each commuting pair.** `U D` and `D U` reach
+    ///   the same state, so only the lower-numbered face may go first. Because
+    ///   opposite faces are three apart, both rules are the one test below.
+    ///
+    pub def htmPruningAllows(last: Int32, next: Int32): Bool =
+        last < 0 or {
+            let lastFace = last / 3;
+            let nextFace = next / 3;
+            not (Int32.modulo(lastFace, 3) == Int32.modulo(nextFace, 3)
+                 and lastFace >= nextFace)
+        }
+
+    ///
     /// The move that undoes `m`.
     ///
     pub def inverse(m: Move): Move = Turn(face(m), 4 - amount(m))
