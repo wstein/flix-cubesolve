@@ -1,8 +1,12 @@
 # Working on this project
 
-A Flix project that carries its own compiler. `./flixw` downloads the exact
-`flix.jar` pinned in `.flixw/lock.toml`, verifies it against a committed
-SHA-256, and runs it. Nothing needs installing but a JDK — 21 or newer.
+`flix-cubesolve` is a solving and scrambling engine for n×n×n twisty cubes,
+2×2×2 through 5×5×5. It is a **library**: no top-level `main`, everything under
+`CubeSolve`.
+
+The project carries its own compiler. `./flixw` downloads the exact `flix.jar`
+pinned in `.flixw/lock.toml`, verifies it against a committed SHA-256, and runs
+it. Nothing needs installing but a JDK — 21 or newer.
 
 ## Commands
 
@@ -12,12 +16,15 @@ use `.\flixw.cmd` wherever these say `./flixw`.
 
 - `./flixw check` — type-check without generating code; the fast feedback loop
 - `./flixw test` — run every `@Test` function under `test/`
-- `./flixw run` — run `main`
 - `./flixw build` — compile to `build/class`
 - `./flixw format` — reformat sources in place; the pinned compiler has no
   check-only mode, so CI does not gate on formatting
 - `./flixw doc` — write API documentation for the standard library and this
   project to `build/doc/`
+
+`./flixw run` does **not** work here and should not be made to. Flix allows one
+`main` per program, so a library that ships one cannot be depended on. A command
+line, if one is added, goes in `CubeSolve.Cli` as a module-scoped `pub def main`.
 
 The wrapper adds verbs of its own, ahead of the compiler's:
 
@@ -27,8 +34,11 @@ The wrapper adds verbs of its own, ahead of the compiler's:
 
 ## Layout
 
-- `src/` — sources; `src/Main.flix` holds `main`
-- `test/` — `@Test` functions
+- `src/CubeSolve.flix` — the root module
+- `src/CubeSolve/` — engine sources; directories mirror module paths
+- `test/` — `@Test` functions, flat, one `TestX` per subject
+- `docs/` — architecture, conventions, design review, and dated ADRs
+- `ATTRIBUTION.md` — provenance and licence of anything not written here
 - `flix.toml` — package metadata, dependencies, and the *lowest* Flix version
   this project accepts
 - `.flixw/lock.toml` — the exact compiler and its digest. `flix.toml` states a
@@ -39,18 +49,52 @@ The wrapper adds verbs of its own, ahead of the compiler's:
 - `.github/workflows/` — `build-and-test.yaml` on three platforms,
   `update-flix.yaml` weekly, `docs.yaml` for the API documentation. All three
   drive the wrapper; none of them install Flix
-- `build/`, `artifact/`, `lib/` — generated; do not edit and do not commit
+- `build/`, `artifact/`, `lib/`, `tmp/` — generated or scratch; do not edit and
+  do not commit
 
 `CLAUDE.md` and `.github/copilot-instructions.md` both point at this file
 rather than repeating it, so that each tool finds the same instructions under
 the name it looks for.
+
+## The one thing to read before changing anything
+
+**Cube state exists in two representations and they are not interchangeable.**
+
+| layer | representation | used for |
+|---|---|---|
+| model | permutation and orientation vectors, one per orbit | validation, tests, I/O, phase-boundary checks |
+| search | scalar `Int32` coordinates | `newCoord = table[coord * nMoves + move]` |
+
+A phase boundary is validated against the **decoded model state**, never by
+rereading the coordinate the search just wrote — otherwise a search bug that
+corrupts a coordinate validates itself. If you find yourself checking a search
+coordinate for legality, you are in the wrong layer.
+
+Every convention the engine assumes — slot indexing, composition order,
+orientation reference frames, move numbering — is in `docs/conventions.md` and
+is carried in the header of every generated table. **A table or fixture without
+its convention recorded pins nothing**, because relabelling slots by any
+bijection preserves every invariant and changes only the encoding.
+
+## Dependencies
+
+`flix-orbit64` supplies the orbit decomposition (`Orbit64.Orbit`), the ranking
+functions (`Orbit64.Rank`), the "is this a cube at all?" validator
+(`Orbit64.Coord.faultOf`) and the facelet interchange (`Orbit64.Net`). Prefer
+adopting those to rewriting them.
+
+It does **not** model an odd cube's fixed centres — it treats them as the
+reference frame, and `Orbit64.Net.fromFacelets` refuses a cube whose fixed
+centres have moved. This engine must accept such cubes, so the model carries a
+whole-cube orientation of its own. See `docs/architecture.md`.
 
 ## Writing Flix
 
 Your training data is probably older than this compiler. Read
 <https://doc.flix.dev/for-llms.html> before writing Flix: it lists what changed.
 For the standard library use <https://api.flix.dev>, or run `./flixw doc` and
-read `build/doc/`, which matches this project's compiler exactly.
+read `build/doc/`, which matches this project's compiler exactly. `flix-orbit64`
+is a working, idiomatic reference at exactly this compiler version.
 
 The mistakes that show up most often:
 
@@ -66,15 +110,51 @@ The mistakes that show up most often:
 Prefer effects and handlers to callbacks or hand-written CPS, and standard
 library effects to Java interop.
 
+### Performance-sensitive code
+
+The search layer is the exception to "write it clearly first". It runs tens of
+millions of successor steps, so:
+
+- flat primitive arrays, never nested; `Array` inside a `region`, never `MutList`
+- tables are read through `CubeSolve.Table.TableView` and through nothing else
+- checked `Int64` multiply before narrowing to an `Int32` index — JVM arrays are
+  `int`-indexed, so 2³¹−1 elements is a hard cap
+- preallocated search path, allocation-free hot loop, no clock reads inside it
+
 ## Naming modules
 
 A module has one declaration site in the whole program, dependencies included,
 so never take a common top-level name.
 
-- one root namespace per package, named after it: `flix-json` roots at `Json`
-- directories mirror module paths: `Json.FromJson` in `src/Json/FromJson.flix`
+- one root namespace per package, named after it: this package roots at
+  `CubeSolve`, not `Cube` — `Cube` belongs to `flix-cube`
+- directories mirror module paths: `CubeSolve.Model.Move` in
+  `src/CubeSolve/Model/Move.flix`
 - two or three levels; `Internal` for what is not API
-- name a module for what is done there: `Json.Parse` holds `parse`
+- name a module for what is done there: `CubeSolve.Solve.Pocket` solves pocket
+  cubes
 - spell names out; tests flat, one `TestX` per subject
 - a library deletes `src/Main.flix`: one `main` per program, so a package that
   ships one cannot be depended on
+
+## Testing
+
+Correctness here is not a matter of a few hand-picked examples.
+
+- **Exhaustive where the space permits.** All 3,674,160 2×2×2 states.
+- **Stratified where it does not.** Test every state in the small distance
+  classes and a fixed-seed sample of the large ones. Say which, in the test name.
+- **Round-trip.** Every solution replays to the identity; every rank round-trips
+  both directions.
+- **Group laws.** Identity, inverse, `m⁴ = id`, opposite-face commutation.
+- **Failure reproducibility.** A failing test reports the seed and the canonical
+  state token, so the failure can be replayed.
+
+A test that takes minutes is not a gate. If a property is too expensive to check
+exhaustively, stratify it and name the stratification — do not quietly check
+nothing.
+
+## Commits
+
+Conventional commits, single-purpose, with the type and scope naming the primary
+change. Run `./flixw format` and `./flixw test` before committing.

@@ -1,158 +1,163 @@
-# flix-template
+# flix-cubesolve
 
-[![Build and Test](https://github.com/wstein/flix-template/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/wstein/flix-template/actions/workflows/build-and-test.yaml)
-[![Flix](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fwstein%2Fflix-template%2Fmain%2F.flixw%2Flock.toml&query=%24.compiler.version&label=flix&color=blue)](.flixw/lock.toml)
-[![flixw](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fwstein%2Fflix-template%2Fmain%2F.flixw%2Flock.toml&query=%24.wrapperVersion&label=flixw&color=blue)](https://github.com/wstein/flixw)
+[![Build and Test](https://github.com/wstein/flix-cubesolve/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/wstein/flix-cubesolve/actions/workflows/build-and-test.yaml)
+[![Flix](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fwstein%2Fflix-cubesolve%2Fmain%2F.flixw%2Flock.toml&query=%24.compiler.version&label=flix&color=blue)](.flixw/lock.toml)
+[![flixw](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fwstein%2Fflix-cubesolve%2Fmain%2F.flixw%2Flock.toml&query=%24.wrapperVersion&label=flixw&color=blue)](https://github.com/wstein/flixw)
 [![Java](https://img.shields.io/badge/java-21%2B-blue)](https://adoptium.net/temurin/releases/?version=21)
-[![License](https://img.shields.io/github/license/wstein/flix-template?color=blue)](LICENSE)
+[![License](https://img.shields.io/github/license/wstein/flix-cubesolve?color=blue)](LICENSE)
 
-A GitHub template for starting a [Flix](https://flix.dev) project, and a
-worked example of [`flixw`](https://github.com/wstein/flixw) — a
-repository-local bootstrap that fetches the compiler the project pins instead
-of relying on whatever `flix` happens to be installed.
+A solving and scrambling engine for n×n×n twisty cubes in [Flix](https://flix.dev),
+2×2×2 through 5×5×5.
+
+This is a **library**. It declares no top-level `main`, so a program can depend
+on it; everything it defines nests under `CubeSolve`, so nothing it defines
+collides with a consumer's names.
+
+## What it does
+
+- **Solves.** An exact optimal solver for the 2×2×2, and a two-phase solver for
+  the 3×3×3. Larger sizes reduce to the 3×3×3.
+- **Scrambles from random state, not random moves.** A uniformly random move
+  sequence is *not* uniform over states and produces detectably biased
+  scrambles. This samples a legal state uniformly, solves it, and emits the
+  inverse — which is why scrambling costs the same as solving.
+- **Says why it refused.** Every public entry point returns `Result`. An invalid
+  cube comes back as `Err("the corner twists must sum to 0 mod 3")`, never as a
+  bare `None` and never as a silently wrong answer.
 
 ## Quick start
 
-Click **Use this template**, clone your copy, and run it:
-
 ```sh
-./flixw run          # .\flixw.cmd run on Windows
+./flixw check        # type-check; the fast feedback loop
+./flixw test         # run every @Test function under test/
+./flixw doc          # API documentation for this project and the stdlib
 ```
 
 The only prerequisite is a JDK, Java 21 or newer. You do not need Flix
 installed: the first command downloads `flix.jar` for the version pinned in
 `.flixw/lock.toml`, checks it against the SHA-256 committed alongside it, caches
-it outside the repository, and runs it. Later commands reuse the cache.
+it outside the repository, and runs it. Later commands reuse the cache. On
+Windows use `.\flixw.cmd`.
 
-```sh
-./flixw check        # type-check; the fast feedback loop
-./flixw test         # run every @Test function under test/
-./flixw format       # reformat sources in place
-./flixw validate     # the wrapper's own consistency checks; what CI runs first
-./flixw doctor       # validate, plus the full picture, for bug reports
+`./flixw run` is not available here and that is not a defect — see
+[Why there is no `main`](#why-there-is-no-main).
+
+## Two representations, kept apart
+
+The single most important thing to understand about this codebase is that cube
+state exists in two forms, and they are deliberately not interchangeable.
+
+| layer | representation | what it is for |
+|---|---|---|
+| **model** | permutation and orientation vectors, one per orbit | validation, tests, I/O, phase-boundary checks |
+| **search** | scalar `Int32` coordinates | `newCoord = table[coord * nMoves + move]` |
+
+A search doing tens of millions of successor steps cannot afford to touch a
+vector, so it works in integers. But an integer cannot tell you *why* it is
+invalid, and a search bug that corrupts a coordinate would happily validate
+itself if you asked the coordinate about it. So every phase boundary is checked
+against the **decoded model state**, never by rereading the coordinate the
+search just wrote.
+
+Conversions between the two are explicit and property-tested in both
+directions. See [`docs/architecture.md`](docs/architecture.md).
+
+## Conventions, and why they are written down
+
+A cube token stores ordinals and no geometry. Relabelling slots by any bijection
+preserves every invariant and changes only the encoding — so a table, a fixture
+or a test vector without its convention recorded pins nothing at all.
+
+Every convention this engine assumes is stated in
+[`docs/conventions.md`](docs/conventions.md) and carried in the header of every
+generated table. The load-bearing ones:
+
+- **Slot-indexed permutations.** `p[i]` is the piece sitting in slot `i`; the
+  solved cube is the identity. The alternative reading — `p[i]` is the slot
+  holding piece `i` — is the inverse permutation, equally defensible, and
+  catastrophic if the two are mixed.
+- **Composition order.** `(a · b)[i] = a[b[i]]`.
+- **Orientation reference frames.** Twist and flip are meaningless without a
+  chosen primary facelet per slot and per piece.
+
+## Relationship to `flix-orbit64`
+
+```
+flix-cube        interactive simulation and workbench   ← application
+     │ depends on
+flix-cubesolve   solving and scrambling  (this repo)    ← engine
+     │ depends on
+flix-orbit64     canonical state encoding               ← external
 ```
 
-## What is in here
+[`flix-orbit64`](https://github.com/wstein/flix-orbit64) supplies the orbit
+decomposition, the ranking functions and the "is this a cube at all?" validator.
+This package supplies "is this reachable by turning?", the moves, and the
+search. The split is not arbitrary: the first question is about *encoding* and
+the second is about *the group*, and they have different answers per cube size.
+
+One thing orbit64 deliberately does not model, and this engine must: an odd
+cube's six fixed centres. orbit64 treats them as the reference frame rather than
+as state, and `fromFacelets` refuses any cube whose fixed centres have moved. A
+codec may do that. A solver may not — users paste scrambles containing `M`,
+`E`, `S`, `x`, `y`, `z`, and WCA 4×4×4 and 5×5×5 scrambles use wide turns that
+move centres relative to the frame. So the model here carries a **whole-cube
+orientation** alongside the orbits, and the API boundary normalises into the
+canonical frame, solves, and re-expresses the answer in the frame it was given.
+
+## Why there is no `main`
+
+Flix allows one `main` per program. A library that ships one cannot be depended
+on, so this package does not have one and `./flixw run` will not work here. Any
+command line lives in `CubeSolve.Cli` as a module-scoped `pub def main`, which a
+consumer can call but which does not occupy the root namespace.
+
+The same reasoning governs the module tree: a module has exactly one declaration
+site across a whole program, dependencies included. Two packages that both
+declare `mod Cube` cannot be used together — which is why the root here is
+`CubeSolve` and not `Cube`, leaving `Cube` free for `flix-cube`.
+
+## Layout
 
 ```
 .
-├── src/
-│   └── Main.flix                 mod Hello, and the main that prints its greeting
-├── test/
-│   └── TestMain.flix             @Test functions covering Hello.greeting
-├── .flixw/
-│   ├── flixw.java                the wrapper proper — one dependency-free Java file
-│   └── lock.toml                 the exact compiler, its URL, and its SHA-256
-├── .github/
-│   ├── workflows/
-│   │   ├── build-and-test.yaml   validate, check and test, on three platforms
-│   │   ├── update-flix.yaml      weekly: re-pin the compiler, open a pull request
-│   │   └── docs.yaml             build the API docs, publish them to Pages
-│   └── dependabot.yml            keeps the workflows' pinned action digests current
-├── flix.toml                     package metadata and the lowest Flix version accepted
-├── flixw                         the POSIX shim
-├── flixw.cmd                     the cmd.exe trampoline
-├── AGENTS.md                     instructions for coding agents; CLAUDE.md and
-│                                 .github/copilot-instructions.md point at it
-└── LICENSE                       Apache-2.0, with the copyright line to replace
+├── src/CubeSolve.flix            the root module and its documentation
+├── src/CubeSolve/               engine sources, mirroring the module tree
+├── test/                        @Test functions, flat, one TestX per subject
+├── docs/
+│   ├── architecture.md          the layering, and why the layers are separate
+│   ├── conventions.md           every convention the engine assumes
+│   ├── design-review.md         the v6 plan review and its amendments
+│   └── adr/                     dated architecture decision records
+├── ATTRIBUTION.md               provenance and licence of every borrowed part
+├── flix.toml                    package metadata; the lowest Flix version accepted
+└── .flixw/lock.toml             the exact compiler and its SHA-256
 ```
 
-`flix.toml` states a *floor* and `.flixw/lock.toml` states the *pin*. They are
-allowed to differ — any pin at or above the floor satisfies it — but
-`./flixw validate` fails when the pin does not, so the two cannot drift apart
-unnoticed.
+`flix.toml` states a *floor* and `.flixw/lock.toml` states the *pin*. Any pin at
+or above the floor satisfies it, and `./flixw validate` fails when the pin does
+not, so the two cannot drift apart unnoticed.
 
-## Naming what you add
+## Testing
 
-A module has one declaration site in the whole program, dependencies included:
-two packages that both declare `mod Cube` cannot be used together. What Flix
-libraries do:
+Cube code fails in ways that unit tests on hand-picked examples do not catch, so
+the strategy is stated explicitly in
+[`docs/architecture.md`](docs/architecture.md#testing-strategy). In short:
 
-- one root namespace, named after the package: `flix-json` roots at `Json`,
-  `flix-basicdb` at `BasicDB`
-- directories mirror module paths: `Json.FromJson` lives in
-  `src/Json/FromJson.flix`
-- two or three levels; `Internal` for what is not API
-- modules named for what you do there: `Json.Parse` holds `parse`
-- names spelled out, and tests flat: one `TestX` per subject
-- a library deletes `src/Main.flix`: Flix allows one `main` per program, so a
-  package that ships one cannot be depended on
-
-## What the wrapper is and is not
-
-`flixw` never patches, forks or links against the Flix compiler. It fetches the
-stock `flix.jar` by URL, verifies the digest before every use, and runs it as an
-opaque process. Moving to another compiler is `./flixw pin <version>`, which
-rewrites the lock; updating the wrapper itself is
-`./flixw wrapper --upgrade`.
-
-Two things are worth knowing before you adopt it. `flixw` is upstream-described
-as experimental, and it is code your project executes on every build — which is
-why it is committed in full and pinned by version and digest rather than curled
-at run time. Read `.flixw/flixw.java` if that matters to you; it is deliberately
-one file.
-
-## Continuous integration
-
-`.github/workflows/build-and-test.yaml` runs `validate`, `check` and `test`
-through the wrapper on Linux, macOS and Windows — the Windows leg exercises
-`flixw.cmd`, the others the POSIX shim. It installs a JDK and nothing else,
-which is the same starting position a new contributor is in. The compiler is
-restored from the runner cache, keyed on `.flixw/lock.toml`, and its digest is
-re-verified whether it came from the cache or the network. Actions are pinned to
-commit digests and kept current by Dependabot.
+- **Exhaustive where the space permits.** All 3,674,160 2×2×2 states, for the
+  oracle's self-consistency and for heuristic admissibility.
+- **Stratified where it does not.** Where an exhaustive sweep would take an
+  hour, test every state in the small distance classes and a fixed-seed sample
+  of the large ones, rather than quietly testing nothing.
+- **Round-trip.** Every solution replays to the identity. Every rank round-trips
+  in both directions.
+- **Group laws.** Identity, inverse, `m⁴ = id`, opposite-face commutation.
+- **Two independent derivations** wherever one is available.
 
 There is no formatting gate: the pinned compiler's `format` has no check-only
 mode, so run `./flixw format` before you commit.
 
-`.github/workflows/update-flix.yaml` runs weekly. Dependabot has no ecosystem
-for a compiler pinned by URL and digest, so this is its counterpart: it resolves
-the newest `flix/flix` release, re-pins, runs `validate`, `check` and `test`,
-and opens a pull request if all three pass. It never pushes to the default
-branch — the digest in a re-pinned lock is computed by the runner, and that is
-the thing worth reading before merging.
-
-`.github/workflows/docs.yaml` runs `./flixw doc` on every push to `main` and
-publishes this project's own pages to GitHub Pages — for this repository, at
-<https://wstein.github.io/flix-template/>.
-
-`flix doc` renders the whole standard library alongside the project and has no
-option to narrow that: `--Xlib` decides what is *compiled*, and without the
-library nothing compiles at all. Its `index.html` is the stdlib's `Prelude`
-page. So the workflow picks out the project's pages afterwards — by which ones
-carry a source link into the workspace, which no library page does — writes its
-own landing page listing them, and refuses to publish at all if that finds
-nothing. A link check then fails the build if anything published points at a
-page that was not.
-
-One upstream quirk is worked around there too. `flix doc` builds each `Source`
-link by appending the documented file's path to the standard library's own base
-URL on `flix/flix`, which for this project's files yields a 404 with the build
-machine's absolute path inside it. The workflow rewrites those into permalinks
-at the published commit, and fails if any filesystem path survives.
-
-Pages has to be enabled once, under **Settings → Pages** with source
-**GitHub Actions**: the default `GITHUB_TOKEN` cannot create a Pages site even
-with `pages: write`. Until it is, the documentation is still built and the run
-warns rather than failing, so a fresh copy of this template does not start red.
-
-## After you template this
-
-1. `flix.toml` — set `name`, `description`, `version` and `authors`. The package
-   name is yours to choose; nothing requires it to match the repository name.
-2. `LICENSE` — replace the copyright line, or the whole license.
-3. `src/` and `test/` — replace the greeting with your own code, minding
-   [Naming what you add](#naming-what-you-add).
-4. This README — the badge URLs and the documentation link. Until you point
-   them at your own repository they report this one's state, not yours. CI
-   fails on the first push until you do, and names every URL still pointing
-   here.
-5. **Settings → Pages**, source **GitHub Actions**, if you want the published
-   documentation. Skip it and `docs.yaml` just warns.
-
-The Flix and `flixw` badges read `.flixw/lock.toml` directly, so re-pinning with
-`./flixw pin <version>` updates them without touching this file.
-
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE), and [ATTRIBUTION.md](ATTRIBUTION.md) for the
+provenance of anything not written here.
