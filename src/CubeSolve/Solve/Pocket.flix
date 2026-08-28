@@ -40,7 +40,7 @@ mod CubeSolve.Solve.Pocket {
     ///
     /// The 2x2x2 as a search phase, guided by both admissible projections.
     ///
-    pub def phaseOf(t: Pocket.Tables): Phase =
+    pub def phaseOf(t: Pocket.Tables): Phase[Int32] =
         IdaStar.phase(
             Pocket.moveCount(),
             successorOf(t),
@@ -57,7 +57,7 @@ mod CubeSolve.Solve.Pocket {
     /// nodes. A pruning rule that changed an answer would be a bug, and this is
     /// how that is checked.
     ///
-    pub def unprunedPhaseOf(t: Pocket.Tables): Phase =
+    pub def unprunedPhaseOf(t: Pocket.Tables): Phase[Int32] =
         IdaStar.phase(
             Pocket.moveCount(),
             successorOf(t),
@@ -73,7 +73,7 @@ mod CubeSolve.Solve.Pocket {
     /// admissible on its own, so this returns optimal solutions too, just far
     /// more slowly.
     ///
-    pub def singleProjectionPhaseOf(t: Pocket.Tables, useOrientation: Bool): Phase =
+    pub def singleProjectionPhaseOf(t: Pocket.Tables, useOrientation: Bool): Phase[Int32] =
         let table = if (useOrientation) Pocket.oriDistanceTable(t) else Pocket.permDistanceTable(t);
         let index =
             if (useOrientation) s -> Int32.modulo(s, Pocket.oriCount())

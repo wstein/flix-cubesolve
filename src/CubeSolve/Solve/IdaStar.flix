@@ -28,23 +28,30 @@ mod CubeSolve.Solve.IdaStar {
     ///
     /// Everything the search needs to know about one phase.
     ///
-    /// State is a single integer throughout. That is not a simplification: it
-    /// is what lets a successor be one array read, which is the whole reason
-    /// the search layer does not speak the model's language.
+    /// State is a single machine integer, and the phase says which width. That
+    /// is not a simplification: it is what lets a successor be one array read,
+    /// which is the whole reason the search layer does not speak the model's
+    /// language.
     ///
-    pub type alias Spec = {
+    /// The width is a parameter because one width does not fit every phase. The
+    /// 2x2x2's whole space is 3,674,160 states and rides in an `Int32`; the
+    /// 3x3x3's phase one is `Twist x Flip x UDSlice`, which is 2,217,093,120
+    /// and does not. Flix monomorphises, so the choice costs nothing at run
+    /// time -- each phase gets a specialised search rather than a boxed one.
+    ///
+    pub type alias Spec[s] = {
         moves = Int32,
-        successor = (Int32, Int32) -> Int32,
-        heuristic = Int32 -> Int32,
-        isGoal = Int32 -> Bool,
+        successor = (s, Int32) -> s,
+        heuristic = s -> Int32,
+        isGoal = s -> Bool,
         allows = (Int32, Int32) -> Bool
     }
 
     ///
-    /// One phase of a search.
+    /// One phase of a search, over states of type `s`.
     ///
-    pub enum Phase {
-        case Phase(Spec)
+    pub enum Phase[s] {
+        case Phase(Spec[s])
     }
 
     ///
@@ -84,11 +91,11 @@ mod CubeSolve.Solve.IdaStar {
     ///
     pub def phase(
         moveCount: Int32,
-        successor: (Int32, Int32) -> Int32,
-        heuristic: Int32 -> Int32,
-        isGoal: Int32 -> Bool,
+        successor: (s, Int32) -> s,
+        heuristic: s -> Int32,
+        isGoal: s -> Bool,
         allows: (Int32, Int32) -> Bool
-    ): Phase =
+    ): Phase[s] =
         Phase({
             moves = moveCount,
             successor = successor,
@@ -104,8 +111,8 @@ mod CubeSolve.Solve.IdaStar {
     /// Grouped because all four are constant through a pass and threading them
     /// separately would put six arguments on the hot recursion.
     ///
-    type alias Pass[r: Region] = {
-        spec = Spec,
+    type alias Pass[s: Type, r: Region] = {
+        spec = Spec[s],
         path = Array[Int32, r],
         visited = Ref[Int64, r],
         bound = Int32
@@ -120,7 +127,7 @@ mod CubeSolve.Solve.IdaStar {
     /// is reported as exhaustion naming the depth reached, so a caller can
     /// raise it deliberately instead of guessing.
     ///
-    pub def search(p: Phase, start: Int32, maxDepth: Int32): Result[String, Found] =
+    pub def search(p: Phase[s], start: s, maxDepth: Int32): Result[String, Found] =
         region rc {
             let Phase(spec) = p;
             let pass = {
@@ -136,7 +143,7 @@ mod CubeSolve.Solve.IdaStar {
     /// Try one bound, then the next, until the solution is found or `maxDepth`
     /// is passed.
     ///
-    def deepen(pass: Pass[r], start: Int32, maxDepth: Int32): Result[String, Found] \ r =
+    def deepen(pass: Pass[s, r], start: s, maxDepth: Int32): Result[String, Found] \ r =
         if (pass#bound > maxDepth)
             Err("no solution of ${maxDepth} moves or fewer: the heuristic still "
                 + "demands more at depth ${maxDepth}, so raise the depth rather "
@@ -152,7 +159,7 @@ mod CubeSolve.Solve.IdaStar {
     ///
     /// The same pass, working to a deeper bound.
     ///
-    def atBound(pass: Pass[r], bound: Int32): Pass[r] =
+    def atBound(pass: Pass[s, r], bound: Int32): Pass[s, r] =
         { spec = pass#spec, path = pass#path, visited = pass#visited, bound = bound }
 
     ///
@@ -162,7 +169,7 @@ mod CubeSolve.Solve.IdaStar {
     /// costs nothing. Only a successful path is ever read, and only its first
     /// `bound` entries mean anything.
     ///
-    def descend(pass: Pass[r], state: Int32, depth: Int32, lastMove: Int32): Bool \ r =
+    def descend(pass: Pass[s, r], state: s, depth: Int32, lastMove: Int32): Bool \ r =
         Ref.put(Ref.get(pass#visited) + 1i64, pass#visited);
         let spec = pass#spec;
         if (depth + (spec#heuristic)(state) > pass#bound)
@@ -178,8 +185,8 @@ mod CubeSolve.Solve.IdaStar {
     /// Every move the pruning rule allows, in order, until one succeeds.
     ///
     def tryMoves(
-        pass: Pass[r],
-        state: Int32,
+        pass: Pass[s, r],
+        state: s,
         depth: Int32,
         lastMove: Int32,
         m: Int32

@@ -347,104 +347,19 @@ mod CubeSolve.Table.Pocket {
         })
 
     ///
-    /// The marker a distance table carries before the sweep reaches a state.
-    ///
-    /// Fifteen, the largest a four-bit entry holds. Sound because the real
-    /// distances stop at eleven -- which the histogram test checks, so the
-    /// marker cannot quietly become a legal value.
-    ///
-    def unvisited(): Int32 = Table.widest(4)
-
-    ///
-    /// A breadth-first sweep in progress: where distances are written, and how
-    /// to get from a state to its successors.
-    ///
-    /// Grouped because the sweep threads both through every layer and every
-    /// edge, and because it is the only thing the full space and the two
-    /// quotients do not share.
-    ///
-    type alias Walk[r: Region] = {
-        distances = Array[Int8, r],
-        successor = (Int32, Int32) -> Int32
-    }
-
-    ///
-    /// Distance from state `0` in any space of `states` states.
-    ///
-    /// `successor(s, m)` is the state reached from `s` by move `m`. The full
-    /// 2x2x2 space and both of its quotients differ in nothing else, so they
-    /// share this rather than each carrying its own copy of a breadth-first
-    /// search -- three copies being three places for the same off-by-one.
-    ///
-    def breadthFirst(states: Int32, successor: (Int32, Int32) -> Int32): Result[String, TableView] =
-        region rc {
-            let walk = {
-                distances = Table.filledPayload(rc, 4, states, unvisited()),
-                successor = successor
-            };
-            let frontier = Array.repeat(rc, states, 0);
-            let next = Array.repeat(rc, states, 0);
-            Table.putEntry(walk#distances, 4, 0, 0);
-            sweep(walk, frontier, next, 1, 0);
-            Table.ofPayload(4, states, walk#distances)
-        }
-
-    ///
-    /// One layer, then the next, until nothing new is reached.
-    ///
-    def sweep(
-        walk: Walk[r],
-        frontier: Array[Int32, r],
-        next: Array[Int32, r],
-        count: Int32,
-        depth: Int32
-    ): Unit \ r =
-        if (count == 0)
-            ()
-        else {
-            let written = expandLayer(walk, frontier, next, count, depth);
-            sweep(walk, next, frontier, written, depth + 1)
-        }
-
-    ///
-    /// Every successor of the current frontier that has not been seen.
-    ///
-    def expandLayer(
-        walk: Walk[r],
-        frontier: Array[Int32, r],
-        next: Array[Int32, r],
-        count: Int32,
-        depth: Int32
-    ): Int32 \ r =
-        def eachState(i, written) =
-            if (i >= count) written
-            else {
-                let s = Array.get(i, frontier);
-                def eachMove(m, w) =
-                    if (m >= moveCount()) w
-                    else {
-                        let t = (walk#successor)(s, m);
-                        if (Table.getEntry(walk#distances, 4, t) == unvisited()) {
-                            Table.putEntry(walk#distances, 4, t, depth + 1);
-                            Array.put(t, w, next);
-                            eachMove(m + 1, w + 1)
-                        } else
-                            eachMove(m + 1, w)
-                    };
-                eachState(i + 1, eachMove(0, written))
-            };
-        eachState(0, 0)
-
-    ///
     /// Exact distance to solved for every state.
     ///
     /// Four bits an entry: the diameter is 11 and fifteen is the marker, so the
     /// whole 3,674,160-state table is 1,837,080 bytes.
     ///
     def fullDistances(pm: TableView, om: TableView): Result[String, TableView] =
-        breadthFirst(stateCount(), (s, m) ->
-            Table.get(s / oriCount() * moveCount() + m, pm) * oriCount()
-                + Table.get(Int32.modulo(s, oriCount()) * moveCount() + m, om))
+        Table.distancesFrom(
+            { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 4 },
+            (s, m) -> {
+                let perm = Table.get(s / oriCount() * moveCount() + m, pm);
+                let ori = Table.get(Int32.modulo(s, oriCount()) * moveCount() + m, om);
+                perm * oriCount() + ori
+            })
 
     ///
     /// Distance to solved in a quotient with its own move table.
@@ -458,6 +373,8 @@ mod CubeSolve.Table.Pocket {
     /// heuristic for the full space.
     ///
     pub def quotientDistancesOf(moves: TableView, states: Int32): Result[String, TableView] =
-        breadthFirst(states, (s, m) -> Table.get(s * moveCount() + m, moves))
+        Table.distancesFrom(
+            { states = states, goal = 0, moves = moveCount(), bits = 4 },
+            (s, m) -> Table.get(s * moveCount() + m, moves))
 
 }

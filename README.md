@@ -24,7 +24,7 @@ Under construction. What works today:
 | reachability validation | ✅ | ✅ | — | — |
 | uniform random state | ✅ | ✅ | — | — |
 | exact distance oracle | ✅ | — | — | — |
-| optimal solving | ✅ | — | — | — |
+| optimal solving | ✅ | phase 1 | — | — |
 | random-state scrambling | ✅ | — | — | — |
 | exact-difficulty scrambling | ✅ | n/a | n/a | n/a |
 | solving | — | — | — | — |

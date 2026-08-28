@@ -124,8 +124,8 @@ mod TestIdaStar {
     /// visits at least `factor` times fewer nodes doing it.
     def compareSearches(
         phases: {
-            better = CubeSolve.Solve.IdaStar.Phase,
-            worse = CubeSolve.Solve.IdaStar.Phase,
+            better = CubeSolve.Solve.IdaStar.Phase[Int32],
+            worse = CubeSolve.Solve.IdaStar.Phase[Int32],
             what = String
         },
         state: Int32,

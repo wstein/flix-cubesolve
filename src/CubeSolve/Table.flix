@@ -334,4 +334,98 @@ mod CubeSolve.Table {
                         + "${Int32.maxValue()} elements a JVM array can hold")
             }
 
+    // ---------- breadth-first construction ----------
+
+    ///
+    /// A sweep in progress: where distances are written, and how to get from a
+    /// state to its successors.
+    ///
+    type alias Sweep[r: Region] = {
+        distances = Array[Int8, r],
+        successor = (Int32, Int32) -> Int32,
+        moves = Int32,
+        bits = Int32
+    }
+
+    ///
+    /// Distance from `goal` to every state, by breadth-first search.
+    ///
+    /// The graph must be undirected -- every move's inverse must also be a move
+    /// -- because this searches forwards from the goal and reports the result
+    /// as the distance *to* it. Every move alphabet in this engine has that
+    /// property, and a phase whose alphabet did not would need its moves
+    /// inverted here.
+    ///
+    /// Entries are `bits` wide and the width's largest value marks a state not
+    /// yet reached, so the real distances must stop short of it. A caller is
+    /// responsible for choosing a width that can hold the diameter; the
+    /// histograms in the tests are what check that it did.
+    ///
+    pub def distancesFrom(
+        shape: { states = Int32, goal = Int32, moves = Int32, bits = Int32 },
+        successor: (Int32, Int32) -> Int32
+    ): Result[String, TableView] =
+        region rc {
+            let sweep = {
+                distances = filledPayload(rc, shape#bits, shape#states, widest(shape#bits)),
+                successor = successor,
+                moves = shape#moves,
+                bits = shape#bits
+            };
+            let frontier = Array.repeat(rc, shape#states, 0);
+            let next = Array.repeat(rc, shape#states, 0);
+            putEntry(sweep#distances, shape#bits, shape#goal, 0);
+            Array.put(shape#goal, 0, frontier);
+            layers(sweep, frontier, next, 1, 0);
+            ofPayload(shape#bits, shape#states, sweep#distances)
+        }
+
+    ///
+    /// One layer, then the next, until nothing new is reached.
+    ///
+    def layers(
+        sweep: Sweep[r],
+        frontier: Array[Int32, r],
+        next: Array[Int32, r],
+        count: Int32,
+        depth: Int32
+    ): Unit \ r =
+        if (count == 0)
+            ()
+        else {
+            let written = oneLayer(sweep, frontier, next, count, depth);
+            layers(sweep, next, frontier, written, depth + 1)
+        }
+
+    ///
+    /// Every successor of the current frontier that has not been seen.
+    ///
+    def oneLayer(
+        sweep: Sweep[r],
+        frontier: Array[Int32, r],
+        next: Array[Int32, r],
+        count: Int32,
+        depth: Int32
+    ): Int32 \ r =
+        let bits = sweep#bits;
+        let marker = widest(bits);
+        def eachState(i, written) =
+            if (i >= count) written
+            else {
+                let s = Array.get(i, frontier);
+                def eachMove(m, w) =
+                    if (m >= sweep#moves) w
+                    else {
+                        let t = (sweep#successor)(s, m);
+                        if (getEntry(sweep#distances, bits, t) == marker) {
+                            putEntry(sweep#distances, bits, t, depth + 1);
+                            Array.put(t, w, next);
+                            eachMove(m + 1, w + 1)
+                        } else
+                            eachMove(m + 1, w)
+                    };
+                eachState(i + 1, eachMove(0, written))
+            };
+        eachState(0, 0)
+
 }
