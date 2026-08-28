@@ -105,18 +105,6 @@ move centres relative to the frame. So the model here carries a **whole-cube
 orientation** alongside the orbits, and the API boundary normalises into the
 canonical frame, solves, and re-expresses the answer in the frame it was given.
 
-## Why there is no `main`
-
-Flix allows one `main` per program. A library that ships one cannot be depended
-on, so this package does not have one and `./flixw run` will not work here. Any
-command line lives in `CubeSolve.Cli` as a module-scoped `pub def main`, which a
-consumer can call but which does not occupy the root namespace.
-
-The same reasoning governs the module tree: a module has exactly one declaration
-site across a whole program, dependencies included. Two packages that both
-declare `mod Cube` cannot be used together — which is why the root here is
-`CubeSolve` and not `Cube`, leaving `Cube` free for `flix-cube`.
-
 ## Layout
 
 ```
