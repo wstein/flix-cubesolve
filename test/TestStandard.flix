@@ -8,7 +8,7 @@ mod TestStandard {
     /// Every phase-one table. Three breadth-first sweeps over 6.6 million
     /// states between them, so tests that need it build it once and assert a
     /// great deal.
-    def phase1(): Standard.Phase1 \ Assert =
+    def phase1(): Standard.Tables \ Assert =
         match Standard.build() {
             case Ok(p)  => p
             case Err(e) =>

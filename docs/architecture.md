@@ -176,6 +176,29 @@ Both depend only on the move and on the projected part. Using the maximum of the
 two is still admissible and is substantially stronger; see
 [the design review](design-review.md#motion-2) for the measurements.
 
+## The 3x3x3, in two phases
+
+```
+CubeSolve.Solve.Phase1     into  <U, D, R2, L2, F2, B2>
+CubeSolve.Solve.Domino     inside that subgroup, to solved
+CubeSolve.Solve.Standard   the two together, and the budget
+```
+
+Phase one searches `Twist x Flip x UDSlice`, which is 2,217,093,120 states and
+overflows `Int32` — which is why the search kernel is parameterised by state
+width. Phase two searches `CPerm x EPerm x MPerm`, about 3.9 × 10¹⁰.
+
+The **handover goes through the model**. Phase one's solution is applied to the
+cube and phase two's coordinates are read from the result, never from the
+coordinate the phase-one search wrote. This is the general rule stated above,
+at the place where it matters most: a corrupted coordinate handed to phase two
+would produce either a mysterious failure or a confidently solved wrong cube.
+
+The solver works upward through phase-one depths and tries several handovers at
+each, because the *shortest* phase one very often leads to a long phase two.
+Termination is by **probe count** — one probe is one phase-two attempt — with
+`probeMin` as a quality floor and `probeMax` as the hard cap.
+
 ## Testing strategy
 
 Cube code fails in ways that hand-picked examples do not catch.

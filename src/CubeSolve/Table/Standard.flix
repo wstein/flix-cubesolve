@@ -33,7 +33,7 @@ mod CubeSolve.Table.Standard {
     use CubeSolve.Model.Move
     use CubeSolve.Table
     use CubeSolve.Table.TableView
-    use CubeSolve.Table.Standard.Phase1.Phase1
+    use CubeSolve.Table.Standard.Tables.Tables
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
@@ -253,8 +253,8 @@ mod CubeSolve.Table.Standard {
     ///
     /// Every phase-one table, built together.
     ///
-    pub enum Phase1 {
-        case Phase1({
+    pub enum Tables {
+        case Tables({
             twistMoves = TableView,
             flipMoves = TableView,
             sliceMoves = TableView,
@@ -267,32 +267,32 @@ mod CubeSolve.Table.Standard {
     ///
     /// The move table on Twist.
     ///
-    pub def twistMoveTable(p: Phase1): TableView = let Phase1(r) = p; r#twistMoves
+    pub def twistMoveTable(p: Tables): TableView = let Tables(r) = p; r#twistMoves
 
     ///
     /// The move table on Flip.
     ///
-    pub def flipMoveTable(p: Phase1): TableView = let Phase1(r) = p; r#flipMoves
+    pub def flipMoveTable(p: Tables): TableView = let Tables(r) = p; r#flipMoves
 
     ///
     /// The move table on UDSlice.
     ///
-    pub def sliceMoveTable(p: Phase1): TableView = let Phase1(r) = p; r#sliceMoves
+    pub def sliceMoveTable(p: Tables): TableView = let Tables(r) = p; r#sliceMoves
 
     ///
     /// Pruning over `Twist x UDSlice`: 1,082,565 entries.
     ///
-    pub def twistSliceTable(p: Phase1): TableView = let Phase1(r) = p; r#twistSlice
+    pub def twistSliceTable(p: Tables): TableView = let Tables(r) = p; r#twistSlice
 
     ///
     /// Pruning over `Flip x UDSlice`: 1,013,760 entries.
     ///
-    pub def flipSliceTable(p: Phase1): TableView = let Phase1(r) = p; r#flipSlice
+    pub def flipSliceTable(p: Tables): TableView = let Tables(r) = p; r#flipSlice
 
     ///
     /// Pruning over `Flip x Twist`: 4,478,976 entries, the largest of the three.
     ///
-    pub def flipTwistTable(p: Phase1): TableView = let Phase1(r) = p; r#flipTwist
+    pub def flipTwistTable(p: Tables): TableView = let Tables(r) = p; r#flipTwist
 
     ///
     /// Build every phase-one table.
@@ -302,7 +302,7 @@ mod CubeSolve.Table.Standard {
     /// deterministic, so the result can be cached; nothing here does that, and
     /// a caller that needs it more than once should keep it.
     ///
-    pub def build(): Result[String, Phase1] =
+    pub def build(): Result[String, Tables] =
         forM (
             tm <- twistMoves();
             fm <- flipMoves();
@@ -316,7 +316,7 @@ mod CubeSolve.Table.Standard {
             ft <- pairPruning(
                 { moves = fm, count = flipCount(), goal = 0 },
                 { moves = tm, count = twistCount(), goal = 0 })
-        ) yield Phase1({
+        ) yield Tables({
             twistMoves = tm,
             flipMoves = fm,
             sliceMoves = sm,

@@ -3,13 +3,13 @@ mod TestStandardSearch {
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Sized
-    use CubeSolve.Solve.Standard
-    use CubeSolve.Table.Standard.Phase1
+    use CubeSolve.Solve.Phase1
+    use CubeSolve.Table.Standard.Tables
 
     /// Every phase-one table. Three breadth-first sweeps over 6.6 million
     /// states between them, so this is built once and asserted against
     /// thoroughly.
-    def phase1(): Phase1 \ Assert =
+    def phase1(): Tables \ Assert =
         match CubeSolve.Table.Standard.build() {
             case Ok(p)  => p
             case Err(e) =>
@@ -35,16 +35,16 @@ mod TestStandardSearch {
     /// packing that silently wrapped would fail here rather than in a search.
     @Test
     def thePackedStateRoundTripsAcrossTheWholeRange(): Unit \ Assert =
-        Assert.assertEq(expected = 2217093120i64, Standard.stateCount());
+        Assert.assertEq(expected = 2217093120i64, Phase1.stateCount());
         let corners =
             (0, 0, 0) :: (2186, 2047, 494) :: (1, 2, 3)
                 :: (2186, 0, 494) :: (0, 2047, 0) :: Nil;
         corners |> List.forEach(match (twist, flip, slice) -> {
-            let packed = Standard.pack(twist, flip, slice);
+            let packed = Phase1.pack(twist, flip, slice);
             Assert.assertTrueWithMsg(packed >= 0i64, "packing ${twist} ${flip} ${slice} wrapped");
-            Assert.assertEqWithMsg(expected = twist, Standard.twistOf(packed), "twist back");
-            Assert.assertEqWithMsg(expected = flip, Standard.flipOf(packed), "flip back");
-            Assert.assertEqWithMsg(expected = slice, Standard.sliceOf(packed), "slice back")
+            Assert.assertEqWithMsg(expected = twist, Phase1.twistOf(packed), "twist back");
+            Assert.assertEqWithMsg(expected = flip, Phase1.flipOf(packed), "flip back");
+            Assert.assertEqWithMsg(expected = slice, Phase1.sliceOf(packed), "slice back")
         })
 
     /// Phase one really does reach the subgroup, checked from decoded model
@@ -61,11 +61,11 @@ mod TestStandardSearch {
         let p = phase1();
         List.forEach(alg -> {
             let cube = scrambled(alg);
-            match Standard.phase1Solution(p, cube) {
+            match Phase1.phase1Solution(p, cube) {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
                 case Ok(ms) =>
                     Assert.assertTrueWithMsg(
-                        List.length(ms) <= Standard.maxDepth(),
+                        List.length(ms) <= Phase1.maxDepth(),
                         "'${alg}' needed ${List.length(ms)} moves, over the bound");
                     let after = Cube.applyAll(ms, Sized.cubeOfStandard(cube));
                     match after {

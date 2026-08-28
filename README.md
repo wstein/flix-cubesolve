@@ -24,7 +24,7 @@ Under construction. What works today:
 | reachability validation | ✅ | ✅ | — | — |
 | uniform random state | ✅ | ✅ | — | — |
 | exact distance oracle | ✅ | — | — | — |
-| optimal solving | ✅ | phase 1 | — | — |
+| solving | ✅ optimal | ✅ two-phase | — | — |
 | random-state scrambling | ✅ | — | — | — |
 | exact-difficulty scrambling | ✅ | n/a | n/a | n/a |
 | solving | — | — | — | — |
@@ -54,7 +54,8 @@ implementation. The rest of this README describes the engine being built.
 
 ```sh
 ./flixw check        # type-check; the fast feedback loop
-./flixw test         # run every @Test function under test/
+./flixw test         # run every @Test function under test/ (about 100s: it
+                     #   sweeps the whole 2x2x2 space and builds the 3x3x3 tables)
 ./flixw doc          # API documentation for this project and the stdlib
 ./flixw metrics --format md   # code-smell report; run it before committing
 ```

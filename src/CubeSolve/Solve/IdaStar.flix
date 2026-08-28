@@ -204,4 +204,88 @@ mod CubeSolve.Solve.IdaStar {
                 tryMoves(pass, state, depth, lastMove, m + 1)
         }
 
+    // ---------- enumerating, for a two-phase search ----------
+
+    ///
+    /// Up to `limit` solutions of exactly `depth` moves, from `start`.
+    ///
+    /// A two-phase solver needs more than the first answer. Its first phase
+    /// hands over to its second, and the *shortest* first-phase solution
+    /// frequently leads to a long second phase, so the good total solutions come
+    /// from trying several handovers rather than the best one. This is what
+    /// makes that possible.
+    ///
+    /// Exactly `depth`, not at most: the caller works upwards through depths so
+    /// that it sees short handovers first, and letting a shorter solution appear
+    /// again at a deeper bound would repeat work.
+    ///
+    pub def enumerate(
+        p: Phase[s],
+        start: s,
+        depth: Int32,
+        limit: Int32
+    ): List[List[Int32]] =
+        region rc {
+            let Phase(spec) = p;
+            let scratch = Array.repeat(rc, depth + 1, 0);
+            let sweep = {
+                spec = spec,
+                path = scratch,
+                found = MutList.empty(rc),
+                limit = limit,
+                depth = depth
+            };
+            collect(sweep, start, 0, -1);
+            MutList.toList(sweep#found) |> List.reverse
+        }
+
+    ///
+    /// An enumeration in progress: the phase, the scratch path, what has been
+    /// found, and the bounds it is working to.
+    ///
+    type alias Gather[s: Type, r: Region] = {
+        spec = Spec[s],
+        path = Array[Int32, r],
+        found = MutList[List[Int32], r],
+        limit = Int32,
+        depth = Int32
+    }
+
+    ///
+    /// Depth-first at a fixed bound, keeping every path that reaches the goal.
+    ///
+    def collect(sweep: Gather[s, r], state: s, at: Int32, lastMove: Int32): Unit \ r =
+        let spec = sweep#spec;
+        if (MutList.size(sweep#found) >= sweep#limit)
+            ()
+        else if (at == sweep#depth) {
+            if ((spec#isGoal)(state))
+                MutList.push(List.take(sweep#depth, Array.toList(sweep#path)), sweep#found)
+            else ()
+        } else if (at + (spec#heuristic)(state) > sweep#depth)
+            ()
+        else
+            eachMove(sweep, state, at, lastMove, 0)
+
+    ///
+    /// Every move the pruning rule allows, at one node.
+    ///
+    def eachMove(
+        sweep: Gather[s, r],
+        state: s,
+        at: Int32,
+        lastMove: Int32,
+        m: Int32
+    ): Unit \ r =
+        let spec = sweep#spec;
+        if (m >= spec#moves or MutList.size(sweep#found) >= sweep#limit)
+            ()
+        else {
+            if ((spec#allows)(lastMove, m)) {
+                Array.put(m, at, sweep#path);
+                collect(sweep, (spec#successor)(state, m), at + 1, m)
+            } else ();
+            eachMove(sweep, state, at, lastMove, m + 1)
+        }
+
 }
