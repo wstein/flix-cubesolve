@@ -29,6 +29,37 @@ mod TestTable {
                 ))
         }, (8, 100) :: (4, 16) :: (2, 4) :: Nil)
 
+    /// Move tables hold coordinates, not distances: a 2x2x2 permutation index
+    /// reaches 5039 and a 3x3x3 edge permutation index reaches 40319. Those need
+    /// whole-byte entries, and 40319 does not fit a *signed* 16-bit value, so
+    /// the full unsigned range has to work.
+    @Test
+    def wideEntriesHoldWholeCoordinates(): Unit \ Assert =
+        let wide = Vector#{0, 1, 5039, 32767, 32768, 40319, 65535};
+        match Table.ofValues(16, wide) {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
+            case Ok(t)  =>
+                Assert.assertEq(expected = 14, Table.byteLength(t));
+                Vector.range(0, Vector.length(wide)) |> Vector.forEach(i ->
+                    Assert.assertEq(expected = Vector.get(i, wide), Table.get(i, t)))
+        }
+
+    @Test
+    def thirtyTwoBitEntriesHoldAnyNonNegativeInt32(): Unit \ Assert =
+        let wide = Vector#{0, 1, 3674159, 2147483647};
+        match Table.ofValues(32, wide) {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
+            case Ok(t)  =>
+                Assert.assertEq(expected = 16, Table.byteLength(t));
+                Vector.range(0, Vector.length(wide)) |> Vector.forEach(i ->
+                    Assert.assertEq(expected = Vector.get(i, wide), Table.get(i, t)))
+        }
+
+    @Test
+    def aValueTooWideForSixteenBitsIsRefused(): Unit \ Assert =
+        Assert.assertErr(Table.ofValues(16, Vector#{65536}));
+        Assert.assertErr(Table.ofValues(16, Vector#{-1}))
+
     /// Entries that share a byte must not bleed into each other. A table of
     /// alternating extremes is where an off-by-one shift shows up.
     @Test
@@ -95,7 +126,8 @@ mod TestTable {
     @Test
     def anUnsupportedWidthIsRefused(): Unit \ Assert =
         Assert.assertErr(Table.ofValues(3, Vector#{0, 1}));
-        Assert.assertErr(Table.ofValues(16, Vector#{0, 1}));
+        Assert.assertErr(Table.ofValues(12, Vector#{0, 1}));
+        Assert.assertErr(Table.ofValues(64, Vector#{0, 1}));
         Assert.assertErr(Table.ofValues(0, Vector#{0}))
 
     /// Reading past the end is a programming error, and the table says so

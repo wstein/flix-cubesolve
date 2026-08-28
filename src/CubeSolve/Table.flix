@@ -37,7 +37,7 @@ mod CubeSolve.Table {
     }
 
     ///
-    /// How many bits each entry of `t` occupies: 2, 4 or 8.
+    /// How many bits each entry of `t` occupies: 2, 4, 8, 16 or 32.
     ///
     pub def bitsPerEntry(t: TableView): Int32 = let TableView(bits, _, _) = t; bits
 
@@ -61,10 +61,39 @@ mod CubeSolve.Table {
     ///
     pub def get(i: Int32, t: TableView): Int32 =
         let TableView(bits, _, payload) = t;
+        if (bits < 8) getPacked(i, bits, payload) else getWide(i, bits / 8, payload)
+
+    ///
+    /// An entry narrower than a byte, several to the byte.
+    ///
+    def getPacked(i: Int32, bits: Int32, payload: Vector[Int8]): Int32 =
         let perByte = 8 / bits;
-        let byte = Int8.toInt32(Vector.get(i / perByte, payload));
-        let shift = (Int32.modulo(i, perByte)) * bits;
+        let byte = byteAt(i / perByte, payload);
+        let shift = Int32.modulo(i, perByte) * bits;
         Int32.bitwiseAnd(Int32.rightShift(byte, shift), mask(bits))
+
+    ///
+    /// An entry of one or more whole bytes, least significant first.
+    ///
+    /// Little-endian by choice rather than by accident, and recorded as such in
+    /// every serialised header: a table written on one machine and read on
+    /// another must agree, and "whatever the platform does" is not an agreement.
+    ///
+    def getWide(i: Int32, width: Int32, payload: Vector[Int8]): Int32 =
+        let at = i * width;
+        Vector.range(0, width)
+            |> Vector.foldLeft((acc, b) ->
+                Int32.bitwiseOr(acc, Int32.leftShift(byteAt(at + b, payload), b * 8)), 0)
+
+    ///
+    /// Byte `at` of `payload`, as `0` to `255`.
+    ///
+    /// Flix's byte type is signed and has no unsigned counterpart, so a byte
+    /// with its top bit set arrives negative. Masking is what keeps that an
+    /// artefact of the storage rather than something a caller has to know.
+    ///
+    def byteAt(at: Int32, payload: Vector[Int8]): Int32 =
+        Int32.bitwiseAnd(Int8.toInt32(Vector.get(at, payload)), 255)
 
     ///
     /// Entry `i` of `t`, or why there is no such entry.
@@ -78,14 +107,21 @@ mod CubeSolve.Table {
     ///
     /// The low `bits` bits set.
     ///
-    def mask(bits: Int32): Int32 = Int32.leftShift(1, bits) - 1
+    /// At 32 bits that is every bit, and `1 << 32` does not give it, so the
+    /// widest case is written out rather than computed.
+    ///
+    def mask(bits: Int32): Int32 =
+        if (bits >= 32) Int32.maxValue() else Int32.leftShift(1, bits) - 1
 
     ///
     /// How many bytes `count` entries of `bits` bits occupy, rounded up.
     ///
     pub def payloadBytes(bits: Int32, count: Int32): Int32 =
-        let perByte = 8 / bits;
-        (count + perByte - 1) / perByte
+        if (bits < 8)
+            let perByte = 8 / bits;
+            (count + perByte - 1) / perByte
+        else
+            count * (bits / 8)
 
     ///
     /// A table holding `values`, at `bits` bits each.
@@ -118,11 +154,11 @@ mod CubeSolve.Table {
     /// Whether `bits` is a width an entry can have.
     ///
     def checkWidth(bits: Int32): Result[String, Unit] =
-        if (bits == 2 or bits == 4 or bits == 8)
+        if (bits == 2 or bits == 4 or bits == 8 or bits == 16 or bits == 32)
             Ok(())
         else
-            Err("${bits} bits per entry is not supported: an entry occupies 2, 4 "
-                + "or 8 bits, so that a whole number of them fits in a byte")
+            Err("${bits} bits per entry is not supported: an entry occupies 2, 4, "
+                + "8, 16 or 32 bits, so that entries and bytes divide each other")
 
     ///
     /// `values` packed, having already been checked.
@@ -149,6 +185,60 @@ mod CubeSolve.Table {
         Array.repeat(rc, payloadBytes(bits, count), 0i8)
 
     ///
+    /// A payload for `count` entries, every one holding `value`.
+    ///
+    /// A breadth-first search needs a marker for "not reached yet" that is not
+    /// a legal distance, and zero is the distance of the solved state. So the
+    /// table starts full of the width's largest value and the search overwrites
+    /// it.
+    ///
+    pub def filledPayload(
+        rc: Region[r],
+        bits: Int32,
+        count: Int32,
+        value: Int32
+    ): Array[Int8, r] \ r =
+        let payload = emptyPayload(rc, bits, count);
+        Vector.range(0, count) |> Vector.forEach(i -> putEntry(payload, bits, i, value));
+        payload
+
+    ///
+    /// The largest value `bits` bits can hold.
+    ///
+    /// Doubles as the "not reached yet" marker while a table is being built,
+    /// which is sound exactly when the real values stop short of it -- as the
+    /// 2x2x2's distances do, reaching 11 in a four-bit table.
+    ///
+    pub def widest(bits: Int32): Int32 = mask(bits)
+
+    ///
+    /// Entry `i` of a payload still under construction.
+    ///
+    /// The read half of `putEntry`, for a builder that has to look at what it
+    /// has already written -- which a breadth-first search does at every edge.
+    ///
+    pub def getEntry(payload: Array[Int8, r], bits: Int32, i: Int32): Int32 \ r =
+        if (bits < 8) getPackedFrom(payload, bits, i) else getWideFrom(payload, bits / 8, i)
+
+    ///
+    /// The packed case of `getEntry`.
+    ///
+    def getPackedFrom(payload: Array[Int8, r], bits: Int32, i: Int32): Int32 \ r =
+        let perByte = 8 / bits;
+        let byte = Int32.bitwiseAnd(Int8.toInt32(Array.get(i / perByte, payload)), 255);
+        Int32.bitwiseAnd(Int32.rightShift(byte, Int32.modulo(i, perByte) * bits), mask(bits))
+
+    ///
+    /// The whole-byte case of `getEntry`.
+    ///
+    def getWideFrom(payload: Array[Int8, r], width: Int32, i: Int32): Int32 \ r =
+        let at = i * width;
+        Vector.range(0, width)
+            |> Vector.foldLeft((acc, b) ->
+                let byte = Int32.bitwiseAnd(Int8.toInt32(Array.get(at + b, payload)), 255);
+                Int32.bitwiseOr(acc, Int32.leftShift(byte, b * 8)), 0)
+
+    ///
     /// Write `value` as entry `i` of `payload`.
     ///
     /// Assumes the value fits; `ofPayload` cannot re-check every entry without
@@ -156,13 +246,27 @@ mod CubeSolve.Table {
     /// value is the one that knows its range.
     ///
     pub def putEntry(payload: Array[Int8, r], bits: Int32, i: Int32, value: Int32): Unit \ r =
+        if (bits < 8) putPacked(payload, bits, i, value) else putWide(payload, bits / 8, i, value)
+
+    ///
+    /// Write an entry narrower than a byte, leaving its neighbours alone.
+    ///
+    def putPacked(payload: Array[Int8, r], bits: Int32, i: Int32, value: Int32): Unit \ r =
         let perByte = 8 / bits;
         let at = i / perByte;
-        let shift = (Int32.modulo(i, perByte)) * bits;
-        let old = Int8.toInt32(Array.get(at, payload));
-        let cleared = Int32.bitwiseAnd(old, Int32.bitwiseNot(Int32.leftShift(mask(bits), shift)));
-        let merged = Int32.bitwiseOr(cleared, Int32.leftShift(value, shift));
+        let shift = Int32.modulo(i, perByte) * bits;
+        let old = Int32.bitwiseAnd(Int8.toInt32(Array.get(at, payload)), 255);
+        let hole = Int32.bitwiseNot(Int32.leftShift(mask(bits), shift));
+        let merged = Int32.bitwiseOr(Int32.bitwiseAnd(old, hole), Int32.leftShift(value, shift));
         Array.put(narrow(merged), at, payload)
+
+    ///
+    /// Write an entry of one or more whole bytes, least significant first.
+    ///
+    def putWide(payload: Array[Int8, r], width: Int32, i: Int32, value: Int32): Unit \ r =
+        let at = i * width;
+        Vector.range(0, width) |> Vector.forEach(b ->
+            Array.put(narrow(Int32.rightShift(value, b * 8)), at + b, payload))
 
     ///
     /// A byte's worth of bits as an `Int8`.

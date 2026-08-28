@@ -23,6 +23,7 @@ Under construction. What works today:
 | slice, wide and rotation notation | rotations only | ✅ | — | — |
 | reachability validation | ✅ | ✅ | — | — |
 | uniform random state | ✅ | ✅ | — | — |
+| exact distance oracle | ✅ | — | — | — |
 | solving | — | — | — | — |
 | scrambling | — | — | — | — |
 
