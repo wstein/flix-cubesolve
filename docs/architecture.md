@@ -139,6 +139,33 @@ explicit: `U8Table` (one entry per byte), `Packed4Table` (two), `Packed2Table`
 (four). Indices are computed with a checked `Int64` multiply and then narrowed,
 because JVM arrays are `int`-indexed and 2³¹−1 elements is a hard cap.
 
+### Keeping tables between runs
+
+Tables are pure and deterministic and expensive, so they are written once and
+read back. `CubeSolve.Table.Codec` is the format; `CubeSolve.Table.Cache` is the
+policy.
+
+**The cache is an effect, not a filesystem.** `Cache.Store` says only that bytes
+can be kept and fetched under a key. `onFilesystem` is one handler, a test's map
+is another, and `withoutCache` is a third that always misses. So the logic that
+decides *whether a cached table is acceptable* never acquires an `IO` effect,
+and it is tested without a disk anywhere near it.
+
+**The header is checked, not decorative.** A table's convention identifier is
+compared on read: a table from a different slot numbering is not stale, it is a
+table of a different puzzle and would otherwise be read without complaint. The
+generator version is recorded as provenance and deliberately *not* compared.
+
+**A corrupt or foreign cache is a miss, not a failure.** A half-written file
+should cost a rebuild, not an outage. `reasonToRebuild` reports which it was, so
+a caller can warn rather than guess.
+
+**The tests deliberately do not use the cache.** They call the plain builders,
+so they measure building. Sharing a filesystem cache across the suite would cut
+its runtime substantially and would also mean a table changed without a
+convention bump could be read from a stale file and pass — trading a slow gate
+for an unsound one.
+
 ## Search
 
 `CubeSolve.Solve.IDAStar` is generic over a phase supplying a move alphabet, a

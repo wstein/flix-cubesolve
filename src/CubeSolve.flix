@@ -43,6 +43,27 @@ mod CubeSolve {
     pub def supportedSizes(): Vector[Int32] = Vector#{2, 3}
 
     ///
+    /// The slot and move numbering every table in this engine is built under.
+    ///
+    /// Carried in the header of every cached table and checked when one is
+    /// read. A cube table stores ordinals and no geometry, so relabelling slots
+    /// by any bijection preserves every invariant and changes only the
+    /// encoding: a table from a different numbering is not stale, it is a table
+    /// of a different puzzle. **Change this string whenever
+    /// `docs/conventions.md` changes**, so that older caches are rejected
+    /// rather than misread.
+    ///
+    pub def convention(): String = "kociemba-htm@1"
+
+    ///
+    /// Which build wrote a table, recorded as provenance.
+    ///
+    /// Not checked when a cache is read: a table built by an older build of the
+    /// same code, under the same convention, is still that table.
+    ///
+    pub def generator(): String = "cubesolve 0.1.0"
+
+    ///
     /// Whether this engine implements an `n x n x n`.
     ///
     pub def supports(n: Int32): Bool = Vector.memberOf(n, supportedSizes())

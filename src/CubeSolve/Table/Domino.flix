@@ -35,6 +35,8 @@ mod CubeSolve.Table.Domino {
     use CubeSolve.Table
     use CubeSolve.Table.TableView
     use CubeSolve.Table.Domino.Tables.Tables
+    use CubeSolve.Table.Cache
+    use CubeSolve.Table.Codec
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
@@ -455,5 +457,44 @@ mod CubeSolve.Table.Domino {
                 let b = Table.get(Int32.modulo(s, secondCount) * k + m, secondMoves);
                 a * secondCount + b
             })
+
+    ///
+    /// Build every phase-two table, reading from the cache where it can.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
+        forM (
+            cp <- keep("domino.cornerPermMoves", () -> cornerPermMoves());
+            ep <- keep("domino.edgePermMoves", () -> edgePermMoves());
+            sp <- keep("domino.slicePermMoves", () -> slicePermMoves());
+            cb <- keep("domino.combMoves", () -> combMoves());
+            lookup <- keep("domino.combOfCornerPerm", () -> combOfCornerPerm());
+            cs <- keep("domino.cornerSlice", () -> pairPruning(
+                { moves = cp, count = cornerPermCount() },
+                { moves = sp, count = slicePermCount() }));
+            ec <- keep("domino.edgeComb", () -> pairPruning(
+                { moves = ep, count = edgePermCount() },
+                { moves = cb, count = combCount() }))
+        ) yield Tables({
+            cornerPermMoves = cp,
+            edgePermMoves = ep,
+            slicePermMoves = sp,
+            combMoves = cb,
+            combOfCornerPerm = lookup,
+            cornerSlice = cs,
+            edgeComb = ec
+        })
+
+    ///
+    /// One table, from the cache or freshly built and kept.
+    ///
+    def keep(
+        key: String,
+        build: Unit -> Result[String, TableView]
+    ): Result[String, TableView] \ Cache.Store =
+        Cache.table(key, Codec.header({
+            table = key,
+            convention = CubeSolve.convention(),
+            generator = CubeSolve.generator()
+        }), build)
 
 }

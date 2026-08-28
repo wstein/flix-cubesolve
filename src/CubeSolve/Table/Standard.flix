@@ -34,6 +34,8 @@ mod CubeSolve.Table.Standard {
     use CubeSolve.Table
     use CubeSolve.Table.TableView
     use CubeSolve.Table.Standard.Tables.Tables
+    use CubeSolve.Table.Cache
+    use CubeSolve.Table.Codec
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
@@ -352,5 +354,44 @@ mod CubeSolve.Table.Standard {
                 let b = Table.get(Int32.modulo(s, secondCount) * k + m, secondMoves);
                 a * secondCount + b
             })
+
+    ///
+    /// Build every phase-one table, reading from the cache where it can.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
+        forM (
+            tm <- keep("standard.twistMoves", () -> twistMoves());
+            fm <- keep("standard.flipMoves", () -> flipMoves());
+            sm <- keep("standard.sliceMoves", () -> sliceMoves());
+            ts <- keep("standard.twistSlice", () -> pairPruning(
+                { moves = tm, count = twistCount(), goal = 0 },
+                { moves = sm, count = sliceCount(), goal = solvedSlice() }));
+            fs <- keep("standard.flipSlice", () -> pairPruning(
+                { moves = fm, count = flipCount(), goal = 0 },
+                { moves = sm, count = sliceCount(), goal = solvedSlice() }));
+            ft <- keep("standard.flipTwist", () -> pairPruning(
+                { moves = fm, count = flipCount(), goal = 0 },
+                { moves = tm, count = twistCount(), goal = 0 }))
+        ) yield Tables({
+            twistMoves = tm,
+            flipMoves = fm,
+            sliceMoves = sm,
+            twistSlice = ts,
+            flipSlice = fs,
+            flipTwist = ft
+        })
+
+    ///
+    /// One table, from the cache or freshly built and kept.
+    ///
+    def keep(
+        key: String,
+        build: Unit -> Result[String, TableView]
+    ): Result[String, TableView] \ Cache.Store =
+        Cache.table(key, Codec.header({
+            table = key,
+            convention = CubeSolve.convention(),
+            generator = CubeSolve.generator()
+        }), build)
 
 }

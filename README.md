@@ -27,6 +27,7 @@ Under construction. What works today:
 | solving | ✅ optimal | ✅ two-phase | — | — |
 | random-state scrambling | ✅ | — | — | — |
 | exact-difficulty scrambling | ✅ | n/a | n/a | n/a |
+| table caching between runs | ✅ | ✅ | — | — |
 
 Exact-difficulty scrambling is marked `n/a` above rather than missing: it needs
 the whole distance table in memory, which only the 2×2×2 admits. Larger cubes

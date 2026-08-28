@@ -36,6 +36,8 @@ mod CubeSolve.Table.Pocket {
     use CubeSolve.Table.TableView
     use Orbit64.Coord.Coord.CornerCoord
     use CubeSolve.Table.Pocket.Tables.Tables
+    use CubeSolve.Table.Cache
+    use CubeSolve.Table.Codec
 
     ///
     /// The number of permutations of the seven movable corners.
@@ -376,5 +378,45 @@ mod CubeSolve.Table.Pocket {
         Table.distancesFrom(
             { states = states, goal = 0, moves = moveCount(), bits = 4 },
             (s, m) -> Table.get(s * moveCount() + m, moves))
+
+    ///
+    /// Build every 2x2x2 table, reading from the cache where it can.
+    ///
+    /// Each table is cached under its own key, so a change that invalidates one
+    /// does not throw away the rest.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
+        forM (
+            pm <- keep("pocket.permMoves", () -> permMoves());
+            om <- keep("pocket.oriMoves", () -> oriMoves());
+            full <- keep("pocket.distances", () -> fullDistances(pm, om));
+            oriD <- keep("pocket.oriDistances", () -> quotientDistancesOf(om, oriCount()));
+            permD <- keep("pocket.permDistances", () -> quotientDistancesOf(pm, permCount()))
+        ) yield Tables({
+            permMoves = pm,
+            oriMoves = om,
+            distances = full,
+            oriDistances = oriD,
+            permDistances = permD
+        })
+
+    ///
+    /// One table, from the cache or freshly built and kept.
+    ///
+    def keep(
+        key: String,
+        build: Unit -> Result[String, TableView]
+    ): Result[String, TableView] \ Cache.Store =
+        Cache.table(key, headerFor(key), build)
+
+    ///
+    /// The header a 2x2x2 table is written under.
+    ///
+    def headerFor(key: String): Codec.Header =
+        Codec.header({
+            table = key,
+            convention = CubeSolve.convention(),
+            generator = CubeSolve.generator()
+        })
 
 }
