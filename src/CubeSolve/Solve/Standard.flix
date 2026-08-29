@@ -363,7 +363,42 @@ mod CubeSolve.Solve.Standard {
         Option.isEmpty(best) == false and probes >= limits#probeMin
 
     ///
+    /// A handover phase one is offering: the moves, the state they leave, and
+    /// the fewest moves phase two could possibly need from it.
+    ///
+    type alias Handover = {
+        prefix = List[Move.Move],
+        state = Int64,
+        bound = Int32
+    }
+
+    ///
+    /// What phase two makes of one handover, or nothing if it does not reach
+    /// the domino group at all.
+    ///
+    def describe(attempt: Attempt, handover: List[Int32]): Option[Handover] =
+        let prefix = handover |> List.map(Phase1.moveOfIndex);
+        let after = Cube.applyAll(prefix, Sized.cubeOfStandard(attempt#cube));
+        match after |> Result.flatMap(Domino.coordsOf) {
+            case Err(_) => None
+            case Ok((cperm, eperm, mperm)) =>
+                let state = Domino.packPhase2(cperm, eperm, mperm);
+                Some({
+                    prefix = prefix,
+                    state = state,
+                    bound = Domino.lowerBoundOf(attempt#phase2, state)
+                })
+        }
+
+    ///
     /// Try each handover in turn, returning the probes spent and the best found.
+    ///
+    /// A handover whose lower bound already puts it at or past the current best
+    /// is skipped without a probe. That is not a change to what a probe means --
+    /// a probe is a phase-two attempt, and this handover is never attempted,
+    /// because arithmetic has already proved it cannot win. The check is made
+    /// against the *current* best rather than the one the ranking saw, so each
+    /// improvement prunes the handovers still to come.
     ///
     def tryHandovers(
         attempt: Attempt,
@@ -377,10 +412,20 @@ mod CubeSolve.Solve.Standard {
                 let limits = attempt#limits;
                 if (probes >= limits#probeMax or bestIsGoodEnough(best, probes, limits))
                     (probes, best)
-                else {
-                    let improved = tryOne(attempt, first, best);
-                    tryHandovers(attempt, rest, probes + 1, improved)
-                }
+                else
+                    match describe(attempt, first) {
+                        case None => tryHandovers(attempt, rest, probes, best)
+                        case Some(h) =>
+                            let room =
+                                shorterThanBest(best, limits#maxDepth) - List.length(h#prefix);
+                            if (h#bound > room)
+                                // Proven unable to beat the answer in hand, so it
+                                // is not attempted and is not a probe.
+                                tryHandovers(attempt, rest, probes, best)
+                            else
+                                tryHandovers(
+                                    attempt, rest, probes + 1, tryOne(attempt, h, best))
+                    }
         }
 
     ///
@@ -388,16 +433,16 @@ mod CubeSolve.Solve.Standard {
     ///
     def tryOne(
         attempt: Attempt,
-        handover: List[Int32],
+        handover: Handover,
         best: Option[List[Move.Move]]
     ): Option[List[Move.Move]] =
         let limits = attempt#limits;
-        let prefix = handover |> List.map(Phase1.moveOfIndex);
+        let prefix = handover#prefix;
         let room = shorterThanBest(best, limits#maxDepth) - List.length(prefix);
         if (room < 0)
             best
         else
-            match finishFrom(attempt, prefix, room) {
+            match finishFrom(attempt, handover#state, room) {
                 case None       => best
                 case Some(rest) => keepShorter(best, List.append(prefix, rest))
             }
@@ -415,23 +460,12 @@ mod CubeSolve.Solve.Standard {
     ///
     /// Phase two from the state the handover leaves, in at most `room` moves.
     ///
-    def finishFrom(
-        attempt: Attempt,
-        prefix: List[Move.Move],
-        room: Int32
-    ): Option[List[Move.Move]] =
-        let after = Cube.applyAll(prefix, Sized.cubeOfStandard(attempt#cube));
-        let coords = after |> Result.flatMap(Domino.coordsOf);
-        match coords {
-            case Err(_) => None
-            case Ok((cperm, eperm, mperm)) =>
-                let search = Domino.phase2Of(attempt#phase2);
-                let state = Domino.packPhase2(cperm, eperm, mperm);
-                let ceiling = Domino.maxPhase2Depth();
-                IdaStar.search(search, state, Int32.min(room, ceiling))
-                    |> Result.map(f -> IdaStar.moves(f) |> List.map(Domino.moveOfIndex))
-                    |> Result.toOption
-        }
+    def finishFrom(attempt: Attempt, state: Int64, room: Int32): Option[List[Move.Move]] =
+        let search = Domino.phase2Of(attempt#phase2);
+        let ceiling = Domino.maxPhase2Depth();
+        IdaStar.search(search, state, Int32.min(room, ceiling))
+            |> Result.map(f -> IdaStar.moves(f) |> List.map(Domino.moveOfIndex))
+            |> Result.toOption
 
     ///
     /// The shorter of the best so far and a new candidate.

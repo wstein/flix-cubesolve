@@ -404,6 +404,47 @@ quietly doing. Pre-scramble was rejected the same way. The suggestion to add
 self-symmetry deduplication is a sound one in a solver whose views are genuinely
 independent searches; in this one they are not.
 
+## Phase-two feedback: measured and kept
+
+The one refinement that paid. Phase two hands back a **certified lower bound**
+on the moves it would need from a handover, and phase one uses it to drop
+handovers that cannot beat the answer already in hand.
+
+The bound is the larger of two admissible pruning values, so no shorter
+phase-two solution exists. When it already exceeds the moves the budget leaves,
+arithmetic has settled the handover and searching it would spend a probe to
+learn what is known. It is never attempted, so it was never a probe — the
+meaning of a probe is unchanged. The test is made against the *current* best, so
+each improvement prunes what is still to come.
+
+| corpus | before | after |
+|---|---|---|
+| 20 uniform random states, mean | 20.8 | **20.4** |
+| 102 patterns, total solver moves | 1467 | **1445** |
+| 102 patterns, longer than published | 32 | **29** |
+| 102 patterns, worst excess | 7 | 7 |
+| whole suite, wall clock | ~230 s | ~219 s |
+
+**20.4 beats min2phase's 20.6.** And the aggregate crossed over: 1445 solver
+moves against the publications' 1453, so across the collection the solver is now
+shorter than the hand-built algorithms — while still losing 29 of them
+individually.
+
+Cost did not move into the fast path. The suite measured 219 s against a
+226–328 s band for identical code beforehand, which is to say the difference is
+below what these measurements can resolve.
+
+**One attempt was thrown away first, and it is the reason this one works.**
+Ranking every handover by its bound before probing any looked strictly better
+and timed out: the ranking evaluated all 300 handovers per depth where the old
+code stopped after a few. Pruning lazily — compute the bound when the handover
+comes up, which the probe needed anyway — keeps the benefit and adds nothing.
+
+`TestDominoBound.thePhaseTwoLowerBoundNeverOverstates` is the safety net. The
+bound is checked against an actual search over 30 domino states of varying
+depth, because a bound that overstated would silently discard winning handovers
+on some cubes and not others.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be

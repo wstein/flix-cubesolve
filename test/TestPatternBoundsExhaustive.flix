@@ -20,7 +20,9 @@ mod TestPatternBoundsExhaustive {
     ///
     /// The whole collection's figures live here rather than in the fast
     /// stratum, because a 27-pattern subset cannot carry them: 102 patterns
-    /// published in face turns, the solver longer on 32 of them, worst excess 7.
+    /// published in face turns, the solver longer on 29 of them, worst excess 7.
+    /// In aggregate the solver is now *shorter* than the publications -- 1445
+    /// moves against their 1453 -- while still losing 29 of them individually.
     ///
     @Test
     def theWholeCollectionStaysWithinTheDocumentedMoveCount(): Unit \ Assert + IO =
@@ -41,9 +43,9 @@ mod TestPatternBoundsExhaustive {
                 PatternBoundCheck.tables(), Standard.defaultBudget(), Vector#{});
         Assert.assertEqWithMsg(expected = 102, comparable,
             "102 of the 110 are published in face turns and so document a count");
-        Assert.assertTrueWithMsg(longer <= 32,
+        Assert.assertTrueWithMsg(longer <= 29,
             "the solver is longer than the published algorithm on ${longer} "
-                + "patterns, up from the recorded 32");
+                + "patterns, up from the recorded 29");
         Assert.assertTrueWithMsg(worst <= 7,
             "the solver's worst excess over a published algorithm is ${worst} "
                 + "moves, over the recorded 7")

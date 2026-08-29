@@ -155,7 +155,7 @@ mod PatternFixtures {
             "D B2 R L D F' L2 U' F' D R' L2 F2 U F2 D' F2 B2 D R2 F2 R2"),
         Pattern("Minority cross", "A7WRgdLkQKUk", "ruwix1",
             "L2 D' B2 L2 B2 D' F2 D U' B2 L B2 F' L B' F U' F' U L2",
-            "U2 B D2 U2 B' U2 F' D2 L2 U2 B' D' L' F2 B2 R D' F B'")
+            "R D2 L' B2 F2 L F2 R' F U2 F U' D L' F2 L' B' F")
     }
 
     /// Patterns 17 to 32; see `all`.
@@ -174,7 +174,7 @@ mod PatternFixtures {
             "R F2 D B F' U D' B' U2 R B F D2 B' U2 D2 B' L2 B2"),
         Pattern("Deckerboard", "A7WRgc3m3B1X", "ruwix1",
             "U D R L' F' B U D' R2 U R2 L2 D2 F2 B2 D",
-            "L2 F' B U2 F' L2 R2 F2 D2 U2 B' D U L' R F B"),
+            "B R2 L2 B2 U' D R L' B' F D' B2 U2 D2 F2 D2"),
         Pattern("Spiral pattern", "A2Hg_EdOyc64", "ruwix1",
             "L' B' D U R U' R' D2 R2 D L D' L' R' F U",
             "F U F' R F D' L D B' D' B R2 L2 U2 B' L2 F R2 D2 F' L2"),
@@ -220,10 +220,10 @@ mod PatternFixtures {
             "B' R' U R2 U' R B R2 U F2 B2 R2 U' F2 U R2 U' F2"),
         Pattern("Black mamba", "A2HhlM-xDXSo", "ruwix1",
             "R D L F' R L' D R' U D' B U' R' D'",
-            "R F2 L2 U2 F2 R2 U2 R' U' F2 U2 F R2 F2 R F2 L2 F"),
+            "R D B D R' D B D2 R F2 D' F2 D2 R' B2 D2"),
         Pattern("Green mamba", "A2HhlM-_GXSo", "ruwix1",
             "R D R F R' F' B D R' U' B' U D2",
-            "U' B' U2 D L2 F B2 U' L F U R2 F2 R2 U' D2 R2 F2 U F2"),
+            "U L2 F R L' U' L2 F' D2 F2 R' F2 B2 L B2 D2"),
         Pattern("Tangled", "A26_UMYOF3gA", "ruwix1",
             "F B U D F B U D F B U D F2 B2",
             "R2 B2 R2 B2 D U B2 R2 F2 R2 D U"),
@@ -259,7 +259,7 @@ mod PatternFixtures {
             "U' B2 D' L D2 R F' U2 B' U' D2 F2 B2 L2 U' R2 F2 D2 F2 B2"),
         Pattern("Evenly distributed", "AAAEyZbn45qo", "ruwix1",
             "D' B2 D' L2 R2 D B2 L2 D' B2 L R' F' L2 D U' F2 R' D' U'",
-            "B F L D2 B F' R2 D R' L U2 F R2 U2 F' R2 L2 F U2 F")
+            "F2 U2 R U2 F2 U2 R' B' L B D' L R' B2 U2 B' R' D' R'")
     }
 
     /// Patterns 49 to 64; see `all`.
@@ -275,7 +275,7 @@ mod PatternFixtures {
             "B2 F2 R2 U2 B2 F2 R2 U2 R2 U2"),
         Pattern("3C3W", "AAEjmAWj1cRV", "ruwix1",
             "D L B' L L F L' B' U D' R L' F B D L'",
-            "L2 U' R2 U L2 D' F2 U2 B2 L B2 F D B U' B2 R' B"),
+            "U2 R B2 L' D2 B' D2 F U L2 D' B' L' D B D' R'"),
         Pattern("Pong", "A1j7ix-Tx8gA", "ruwix1",
             "U R2 F2 B2 L2 U2 D R2 F2 B2 L2",
             "L2 B2 F2 R2 D' L2 B2 F2 R2 D2 U'"),
@@ -290,10 +290,10 @@ mod PatternFixtures {
             "L2 F2 L2 R2 F2 R2"),
         Pattern("Viaduct", "AK9WrXvHWAgH", "ruwix2",
             "R2 U2 L2 D B2 L2 B2 R2 D' U L' D F' U' R2 F' U B2 U2 R'",
-            "F2 R U2 L' B' R2 U D' F2 R B U2 F' L2"),
+            "B R' U2 F' L' U D' B L U2 F R'"),
         Pattern("Solved in scrambled", "AAABjtHDG7iC", "ruwix2",
             "U2 L' U2 L' U2 F2 D L F' L F R2 D' B2 D' L2 D' L2 F2 R2",
-            "L' F2 B2 U' D2 B U' B' R U2 R2 F2 R2 B2 L2 D R2 B2 D2 F2 D"),
+            "F2 U R2 B U L U' L' B' R2 F R2 F2 U2 F' L2 D2 B' D2 L2"),
         Pattern("Hi Ohio", "A1j7i5P9uIAA", "ruwix2",
             "U2 F2 L2 R2 F2 U2",
             "U2 F2 L2 R2 F2 U2"),
@@ -305,7 +305,7 @@ mod PatternFixtures {
             "B R2 F2 L2 B' U2 B L F' L2 U' F' L' R2 D L D' B"),
         Pattern("Antipodal chaos", "A2Ha7-OY4vgA", "ruwix2",
             "U2 L2 U2 L2 U2 F2 R2 F2 U2 F2",
-            "U2 L2 U2 L2 U2 F2 R2 F2 U2 F2"),
+            "F' B L2 D2 L2 D2 F' B' R2"),
         Pattern("Flower field", "A2HhlPT_6jf4", "ruwix2",
             "M S M' S' R2 L2 U2 D2 F2 B2",
             "R' L' D U' F' B R L' D2 F2 R2 L2 F2"),
@@ -336,7 +336,7 @@ mod PatternFixtures {
             "L2 F2 R2 F2 D U B2 R2 F2 R2 D U"),
         Pattern("3T", "A0RhCWKUmzgA", "ruwix2",
             "B U2 L2 F2 R2 F D2 F2 R2 F' R2 U2",
-            "B2 L2 D L2 B2 D2 F2 U F2 R2 D2 L2 D'"),
+            "B U2 L2 B2 L2 B' U2 B2 L2 B R2 U2"),
         Pattern("4 T", "A0zOGOUIGAAA", "ruwix2",
             "F2 D2 F' L2 D2 U2 R2 B' U2 F2",
             "B2 L2 R2 F2 D' L2 B2 F2 R2 U'"),
@@ -363,7 +363,7 @@ mod PatternFixtures {
             "F2 L2 B2 L2 D U L2 F2 R2 F2 D U"),
         Pattern("Mirror", "A1l1f4L7lfgA", "ruwix2",
             "U D F2 B2 U' D' R2 L2 B2",
-            "L2 R2 B2 D U B2 F2 D' U'")
+            "F' B' D2 U2 F B'")
     }
 
     /// Patterns 81 to 96; see `all`.
@@ -376,7 +376,7 @@ mod PatternFixtures {
             "B2 F2 D' U' B2 L2 R2 F2 D' U'"),
         Pattern("4 plus 2 dots", "A7WRghtBSyVX", "ruwix2",
             "F U2 D2 R L U' D F B R U2 R2 U2 F2 L2 U2 F2 L2 B2",
-            "B F R' L' D' R2 L2 B2 F2 D B2 R2 D2 R2 B F U2"),
+            "L2 R2 B2 U2 D2 F L R' U' D B' F R2 U2 D2 R'"),
         Pattern("Rockets", "A0zOGHCeJ8gA", "ruwix2",
             "U R2 F2 R2 U' D F2 R2 F2 D",
             "B2 F2 L2 R2 U2 B2 F2 L2 R2"),
@@ -409,7 +409,7 @@ mod PatternFixtures {
             "B' D' L D2 L' D B' L2 D' F2 L2 D' L2 F2 D' B2 R2 U' R2"),
         Pattern("Twisted rings", "A2HhlNhrAz4Y", "ruwix2",
             "F D F' D2 L' B' U L D R U L' F' U L U2",
-            "D' L U' R' U2 R' L' U' L' F' U' R2 B2 U' R2 D R2 L2 U2 B2"),
+            "L F2 R2 F2 R' U2 R D' L' F2 L' U L' F' U B2 D R'"),
         Pattern("Exchanged rings", "A7WRga4Pleni", "ruwix2",
             "B' U' B' L' D B U D2 B U L D' L' U' L2 D",
             "F2 D R2 B2 L2 B2 U L2 U' F2 U R2 B L' D L2 D' L B"),
@@ -452,7 +452,7 @@ mod PatternFixtures {
             "F' L' B' R' U' R B L F U"),
         Pattern("Weirdo", "A-Hk308HXIw8", "ruwix2",
             "R' F' U F2 U' F R' F2 D2 F2 D2 F2 D F2 R2 U2",
-            "B' L' D L2 D' L B' R2 D2 L2 D2 R2 U L2 B2 U2"),
+            "R2 L' F U' F2 U F' L D' F2 D2 F2 D2 R2 U2"),
         Pattern("Twisted corners", "AAAFE_Mx4AAA", "ruwix2",
             "F U D R2 F2 U' B U B U R2 B' U L2 U B2 U2 F2 L2 U'",
             "U2 R2 D2 B2 D L2 D F2 D L2 U' F D B F' D' L2 F' D L2 B"),

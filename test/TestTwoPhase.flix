@@ -178,6 +178,7 @@ mod TestTwoPhase {
         //     six views, budget shared         mean 20.9  (fastBudget)
         //     six views, probeMin 120          mean 20.8  (defaultBudget)
         //     six views, probeMin 600/1200     mean 20.6  (thoroughBudget)
+        //     + phase-two handover pruning     mean 20.4  (defaultBudget)
         //
         // Pre-scramble was implemented, measured and removed: with the premoves
         // in, the same budgets gave the same means to the decimal, so the whole
@@ -211,9 +212,9 @@ mod TestTwoPhase {
         let (total, worst) = loop(samples, 4242i64, 0, 0);
         // tenths, to avoid floating point in a gate
         let mean = total * 10 / samples;
-        Assert.assertTrueWithMsg(mean <= 211,
+        Assert.assertTrueWithMsg(mean <= 207,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
-                + "above the recorded baseline of 20.8 by more than the margin");
+                + "above the recorded baseline of 20.4 by more than the margin");
         Assert.assertTrueWithMsg(mean >= 150,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
                 + "below the true optimum of about 17.7 -- which is impossible, so "

@@ -91,6 +91,18 @@ mod CubeSolve.Solve.Domino {
         }
 
     ///
+    /// The fewest moves phase two could possibly need from `state`.
+    ///
+    /// A certified lower bound, not an estimate: it is the larger of two
+    /// admissible pruning values, so no phase-two solution shorter than this
+    /// exists. That is what lets a caller reject a handover *before* searching
+    /// it -- if this already exceeds the moves left in the budget, the handover
+    /// cannot beat the answer in hand, and searching it would spend a probe to
+    /// learn what arithmetic already knows.
+    ///
+    pub def lowerBoundOf(p: Domino.Tables, state: Int64): Int32 = (phase2Heuristic(p))(state)
+
+    ///
     /// The larger of the two phase-two pruning bounds.
     ///
     def phase2Heuristic(p: Domino.Tables): Int64 -> Int32 =

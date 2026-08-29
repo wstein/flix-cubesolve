@@ -40,13 +40,13 @@ mod TestPatternBoundsFast {
         // short count rather than as a silently smaller gate
         Assert.assertEqWithMsg(expected = 24, comparable,
             "24 of the 27 are published in face turns and so document a count");
-        // 12 of the 24, which is far above the collection's 32-in-102 rate and
-        // is the point: the stratum deliberately takes every pattern the solver
-        // already loses badly, so this number is dense in exactly the cases a
-        // regression would touch.
-        Assert.assertTrueWithMsg(longer <= 12,
+        // 11 of the 24, far above the collection's 29-in-102 rate, and that is
+        // the point: the stratum deliberately takes every pattern the solver
+        // already loses badly, so it is dense in exactly the cases a regression
+        // would touch.
+        Assert.assertTrueWithMsg(longer <= 11,
             "the solver is longer than the publication on ${longer} of the "
-                + "stratum, up from the recorded 12");
+                + "stratum, up from the recorded 11");
         Assert.assertTrueWithMsg(worst <= 7,
             "the solver's worst excess over the stratum is ${worst} moves, over "
                 + "the recorded 7")

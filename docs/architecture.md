@@ -223,6 +223,14 @@ would produce either a mysterious failure or a confidently solved wrong cube.
 
 The solver works upward through phase-one depths and tries several handovers at
 each, because the *shortest* phase one very often leads to a long phase two.
+
+**Phase two prunes phase one.** Before a handover is searched, phase two is
+asked for a certified lower bound on what it would need; if that already exceeds
+the moves the budget leaves, the handover cannot beat the answer in hand and is
+dropped without a probe. It is never attempted, so a probe still means one
+phase-two attempt. `Domino.lowerBoundOf` carries that bound, and a test checks
+it against real searches, because a bound that overstated would discard winning
+handovers silently.
 Termination is by **probe count** — one probe is one phase-two attempt — with
 `probeMin` as a quality floor and `probeMax` as the hard cap.
 
