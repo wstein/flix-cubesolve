@@ -232,7 +232,8 @@ so the comparison is not simply "spend more":
 | two views (state and inverse), budget split | 21.0 | 23 |
 | six views (three axes × two directions), budget split | 21.1 | 23 |
 | **six views, budget shared** | **20.9** | 22 |
-| six views, budget shared, 3× the probes | 20.7 | 22 |
+| six views, budget shared, `probeMin` 120 | 20.8 | 22 |
+| six views, budget shared, `probeMin` 600 of 1200 | **20.6** | 22 |
 
 Two findings, neither of which was the expected one.
 
@@ -273,9 +274,26 @@ all three phase-one tables are already built, so the heuristic is already as
 strong as the reference's. Symmetry is a memory-and-speed optimisation here, not
 a quality one.
 
-**Where that leaves the gap.** 20.9 against min2phase's 20.6 and a true optimum
-of 17.7. The remaining named refinement is pre-scramble, which is worth less than
-the axes were.
+**Pre-scramble was implemented, measured, and removed.** The identity holds and
+the code worked — every solution replayed — but with the premoves in place the
+same budgets gave *the same means to the decimal*: 20.8 at `probeMin` 120 and
+20.6 at 600, exactly as without them. The entire gain above 20.9 was the budget
+letting the six existing views run, not the premoves.
+
+Keeping it would have been carrying a view type, a composition helper and four
+extra searches per solve for nothing measurable, so it was deleted. Recording
+the negative result is the point of having measured: without the isolating run,
+"we added pre-scramble and the mean improved" would have been true and
+misleading.
+
+**Where that leaves the gap.** **20.6 at `thoroughBudget`, which is min2phase's
+own average**, and 20.8 at the default. The remaining distance is to the true
+optimum of 17.7, and no budget closes that — it is the gap between a two-phase
+solver and an optimal one.
+
+Three budgets are now named, with their measured means, because the curve is
+flat enough that the choice is the user's: `fastBudget` 20.9, `defaultBudget`
+20.8, `thoroughBudget` 20.6.
 
 **Gate 7.2 is not met and is not claimed.** Superflip is solved, but not in 20
 moves, and asserting that it were would be asserting a quality the solver does

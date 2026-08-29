@@ -80,14 +80,38 @@ mod CubeSolve.Solve.Standard {
     }
 
     ///
-    /// A budget that returns a good solution quickly.
+    /// A budget that answers quickly and accepts a longer solution for it.
     ///
-    /// Thirty probes past the first solution, five hundred in all, and nothing
-    /// longer than twenty-five moves. Modest next to the reference's defaults,
-    /// and chosen so the tests are a gate rather than a benchmark.
+    /// Measured mean **20.9** moves over uniform random states.
+    ///
+    /// The solver looks at the cube six ways -- three axes, each forwards and
+    /// inverted -- and `probeMin` is what decides how many of those it gets to
+    /// try before it settles. At thirty it usually settles after two or three.
+    ///
+    pub def fastBudget(): Budget =
+        Budget({ probeMin = 30, probeMax = 500, maxDepth = 25, handovers = 300 })
+
+    ///
+    /// The budget to use when nothing else is stated.
+    ///
+    /// Measured mean **20.8** moves. Costs roughly four times the probes of
+    /// `fastBudget` for a tenth of a move, which is the shape of the whole
+    /// curve here: the views are there, and buying more of them is the only
+    /// thing that shortens the answer.
     ///
     pub def defaultBudget(): Budget =
-        Budget({ probeMin = 30, probeMax = 500, maxDepth = 25, handovers = 300 })
+        Budget({ probeMin = 120, probeMax = 500, maxDepth = 25, handovers = 300 })
+
+    ///
+    /// A budget that spends until every view has had its turn.
+    ///
+    /// Measured mean **20.6** moves, which is min2phase's own average. Two to
+    /// three times the work of `defaultBudget`, and the point at which more
+    /// probes stop paying: what is left after this is the gap between a
+    /// two-phase solver and an optimal one, and no budget closes that.
+    ///
+    pub def thoroughBudget(): Budget =
+        Budget({ probeMin = 600, probeMax = 1200, maxDepth = 25, handovers = 300 })
 
     ///
     /// A budget, from its parts.

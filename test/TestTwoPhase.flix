@@ -140,12 +140,18 @@ mod TestTwoPhase {
         // shortest. Measured over uniform states from a fixed seed, and
         // recorded with its history in docs/design-review.md:
         //
-        //     single view, 60 handovers     mean 21.4   (the first baseline)
-        //     single view, 300 handovers    mean 21.3
-        //     single view, 1200 handovers   mean 21.4
-        //     two views, budget split       mean 21.0
-        //     six views, budget split       mean 21.1
-        //     six views, budget shared      mean 20.9   (the default now)
+        //     single view, 60 handovers        mean 21.4  (the first baseline)
+        //     single view, 300 handovers       mean 21.3
+        //     single view, 1200 handovers      mean 21.4
+        //     two views, budget split          mean 21.0
+        //     six views, budget split          mean 21.1
+        //     six views, budget shared         mean 20.9  (fastBudget)
+        //     six views, probeMin 120          mean 20.8  (defaultBudget)
+        //     six views, probeMin 600/1200     mean 20.6  (thoroughBudget)
+        //
+        // Pre-scramble was implemented, measured and removed: with the premoves
+        // in, the same budgets gave the same means to the decimal, so the whole
+        // gain above 20.9 was the budget letting the existing views run.
         //
         // min2phase averages about 20.6 and the true optimum about 17.7.
         //
@@ -175,9 +181,9 @@ mod TestTwoPhase {
         let (total, worst) = loop(samples, 4242i64, 0, 0);
         // tenths, to avoid floating point in a gate
         let mean = total * 10 / samples;
-        Assert.assertTrueWithMsg(mean <= 212,
+        Assert.assertTrueWithMsg(mean <= 211,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
-                + "above the recorded baseline of 20.9 by more than the margin");
+                + "above the recorded baseline of 20.8 by more than the margin");
         Assert.assertTrueWithMsg(mean >= 150,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
                 + "below the true optimum of about 17.7 -- which is impossible, so "
