@@ -284,6 +284,31 @@ Each phase owns its own tables and re-exports them, so the combining layer talks
 to `Solve.Phase1` and `Solve.Domino` rather than reaching into their table
 modules.
 
+## Anytime solving
+
+`solution` answers once and settles. `start`, `next` and `withBudget` are the
+same search with the loop turned inside out: the caller takes the first answer,
+looks at it, and decides whether to pay for a shorter one.
+
+**One view loop, two stopping rules.** `stepOnce` searches exactly one view and
+is the only place a view is run, so the two entry points cannot drift into
+searching differently. `solution` stops at the `probeMin` floor — there is an
+answer and enough has been spent looking for a better one. `next` has no floor:
+a caller asking for a better answer has said what it wants by asking, and stops
+when it stops.
+
+**Each answer is strictly shorter than the last**, and that is structural rather
+than checked afterwards. A view is capped at one move under the best in hand, so
+anything it returns is an improvement and `Improved` is reachable no other way.
+Views that find nothing better are searched and passed over silently: one call
+may cost several of them.
+
+**Exhaustion says which kind it is.** Out of probes is answerable — `withBudget`
+offers every view again under a larger allowance, keeping the best already found
+so the answer cannot get worse. Out of views is not: the six views are this
+scheduler's whole search space, and more probes alone will not change what it
+can reach. A single "exhausted" would have hidden that difference.
+
 ## The pattern corpora
 
 199 published patterns — 110 for the 3x3x3, 89 for the 2x2x2 — with their

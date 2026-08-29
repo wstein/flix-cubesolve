@@ -158,6 +158,230 @@ mod CubeSolve.Solve.Standard {
         Rotation.identity() :: Rotation.x() :: Rotation.z() :: Nil
 
     ///
+    /// A search in progress: what it is solving, what it has spent, what it has
+    /// found, and which views it has not tried yet.
+    ///
+    /// Held explicitly rather than hidden in a loop so that a caller can take
+    /// the first answer and decide afterwards whether to pay for a better one.
+    /// The engine has no notion of time, so "how long may this take" is not a
+    /// question it can answer; "may I have a shorter one" is.
+    ///
+    pub enum Search {
+        case Search({
+            tables = Tables,
+            budget = Budget,
+            cube = Sized.Standard,
+            views = List[(Rotation.Rotation, Bool)],
+            spent = Int32,
+            best = Option[List[Move.Move]]
+        })
+    }
+
+    ///
+    /// What `next` did.
+    ///
+    /// `Exhausted` carries the search back along with the reason, because the
+    /// reason decides whether resuming is worth anything: out of probes can be
+    /// answered with `withBudget`, out of views cannot be answered at all by
+    /// this scheduler.
+    ///
+    pub enum Step {
+        case Improved(List[Move.Move], Search)
+        case Exhausted(String, Search)
+    }
+
+    ///
+    /// A search over `c` that has not looked at anything yet.
+    ///
+    pub def start(t: Tables, budget: Budget, c: Sized.Standard): Search =
+        Search.Search({
+            tables = t,
+            budget = budget,
+            cube = c,
+            views = axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil),
+            spent = 0,
+            best = None
+        })
+
+    ///
+    /// The shortest solution found so far, if any.
+    ///
+    pub def bestSoFar(s: Search): Option[List[Move.Move]] =
+        let Search.Search(f) = s;
+        f#best
+
+    ///
+    /// How many probes this search has spent.
+    ///
+    /// Probes rather than time, for the reason `Budget` gives: this number is
+    /// the same on every machine, and a duration is not.
+    ///
+    pub def probesSpent(s: Search): Int32 =
+        let Search.Search(f) = s;
+        f#spent
+
+    ///
+    /// The next solution, which is always strictly shorter than the last one.
+    ///
+    /// Views that find nothing better are searched and passed over silently, so
+    /// one call may cost several of them. That is the point: a caller asking for
+    /// a better answer wants a better answer, not a report that a view failed.
+    ///
+    /// The guarantee is structural. A view is capped at one move shorter than
+    /// the best in hand, so anything it returns is an improvement, and
+    /// `Improved` is reachable no other way.
+    ///
+    pub def next(s: Search): Step =
+        advance(s, lengthOf(bestSoFar(s)))
+
+    ///
+    /// `s` continued under a different budget, with every view offered again.
+    ///
+    /// The best found so far is kept and still caps what a view will accept, so
+    /// this cannot make the answer worse. Views already searched are searched
+    /// again: a view that found nothing shorter under a small allowance may find
+    /// something under a larger one, and there is no way to tell which without
+    /// looking. Probes already spent are not refunded -- `probesSpent` keeps
+    /// counting -- so a new `probeMax` must exceed it to buy anything.
+    ///
+    pub def withBudget(s: Search, budget: Budget): Search =
+        let Search.Search(f) = s;
+        Search.Search({
+            tables = f#tables,
+            budget = budget,
+            cube = f#cube,
+            views = axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil),
+            spent = f#spent,
+            best = f#best
+        })
+
+    ///
+    /// Search views until one improves on `before`, or until there is nothing
+    /// left to search.
+    ///
+    def advance(s: Search, before: Int32): Step =
+        let Search.Search(f) = s;
+        let Budget(limits) = f#budget;
+        if (f#spent >= limits#probeMax)
+            Step.Exhausted(outOfProbes(limits#probeMax), s)
+        else
+            continueFrom(s, before, limits#maxDepth)
+
+    ///
+    /// One more view, and what came of it.
+    ///
+    def continueFrom(s: Search, before: Int32, maxDepth: Int32): Step =
+        match stepOnce(s) {
+            case None     => Step.Exhausted(outOfViews(maxDepth), s)
+            case Some(s2) => afterOneView(s2, before)
+        }
+
+    ///
+    /// Whether the view just searched improved on `before`.
+    ///
+    def afterOneView(s: Search, before: Int32): Step =
+        match bestSoFar(s) {
+            case Some(found) if List.length(found) < before => Step.Improved(found, s)
+            case _                                          => advance(s, before)
+        }
+
+    ///
+    /// Why a search stopped, when the probes ran out.
+    ///
+    def outOfProbes(probeMax: Int32): String =
+        "spent all ${probeMax} probes: continue with `withBudget` and a larger "
+            + "`probeMax`, which is the only thing that buys more here"
+
+    ///
+    /// Why a search stopped, when there was nothing left to look at.
+    ///
+    def outOfViews(maxDepth: Int32): String =
+        "every view of the cube has been searched at ${maxDepth} moves or fewer: "
+            + "this scheduler has nothing further to try, and more probes alone "
+            + "will not change that"
+
+    ///
+    /// One view searched, or nothing when none are left.
+    ///
+    /// The single place a view is run. `solution` and `next` differ only in when
+    /// they stop calling it, so the two cannot drift into searching differently.
+    ///
+    def stepOnce(s: Search): Option[Search] =
+        let Search.Search(f) = s;
+        match f#views {
+            case Nil          => None
+            case view :: rest => Some(afterSearching(s, view, rest))
+        }
+
+    ///
+    /// `s` with one view searched and its result folded in.
+    ///
+    def afterSearching(
+        s: Search,
+        view: (Rotation.Rotation, Bool),
+        rest: List[(Rotation.Rotation, Bool)]
+    ): Search =
+        let (found, used) = searchOneView(s, view);
+        folded(s, rest, found, used)
+
+    ///
+    /// One view searched, reporting what it found and what it spent.
+    ///
+    def searchOneView(
+        s: Search,
+        view: (Rotation.Rotation, Bool)
+    ): (Option[List[Move.Move]], Int32) =
+        let Search.Search(f) = s;
+        let Tables.Tables(p1, p2) = f#tables;
+        let Budget(limits) = f#budget;
+        let (r, inverted) = view;
+        let looking = { rotation = r, inverted = inverted };
+        alongAxis(p1, p2, shareFor(limits, f#spent, f#best), f#cube, looking)
+
+    ///
+    /// `s` with a view's result taken in and that view dropped.
+    ///
+    def folded(
+        s: Search,
+        rest: List[(Rotation.Rotation, Bool)],
+        found: Option[List[Move.Move]],
+        used: Int32
+    ): Search =
+        let Search.Search(f) = s;
+        Search.Search({
+            tables = f#tables,
+            budget = f#budget,
+            cube = f#cube,
+            views = rest,
+            spent = f#spent + used,
+            best = keepShorterOf(f#best, found)
+        })
+
+    ///
+    /// What one view may spend, and how long an answer it may accept.
+    ///
+    /// Whatever probes are left, and capped one move under the best in hand, so
+    /// a view either improves on the answer or gives up quickly.
+    ///
+    def shareFor(
+        limits: { probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 },
+        spent: Int32,
+        best: Option[List[Move.Move]]
+    ): Budget =
+        Budget({
+            probeMin = 1,
+            probeMax = limits#probeMax - spent,
+            maxDepth = shorterThanBest(best, limits#maxDepth),
+            handovers = limits#handovers
+        })
+
+    ///
+    /// How long the best solution is, or longer than any solution can be.
+    ///
+    def lengthOf(best: Option[List[Move.Move]]): Int32 =
+        best |> Option.map(List.length) |> Option.getWithDefault(Int32.maxValue())
+
+    ///
     /// Search every axis, and both directions of each, keeping the shortest.
     ///
     /// The probe budget is divided between the six searches rather than spent
@@ -171,9 +395,8 @@ mod CubeSolve.Solve.Standard {
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
         let Budget(limits) = budget;
-        let views = axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil);
-        let job = { tables = Tables.Tables(p1, p2), budget = budget, cube = c };
-        match sweep(job, views, 0, None) {
+        let settled = runToSettled(start(Tables.Tables(p1, p2), budget, c));
+        match bestSoFar(settled) {
             case Some(best) => Ok(best)
             case None =>
                 Err("no solution within ${limits#probeMax} probes and "
@@ -182,38 +405,27 @@ mod CubeSolve.Solve.Standard {
         }
 
     ///
-    /// Work through the views of the cube, all drawing on one probe budget.
+    /// Work through the views until the budget says stop.
     ///
     /// Each search is given whatever is left rather than a fixed share, and is
     /// capped at one move shorter than the best found so far -- so a later view
     /// either improves on the answer or gives up quickly. That is what makes
     /// six searches affordable within one budget.
     ///
-    def sweep(
-        job: { tables = Tables, budget = Budget, cube = Sized.Standard },
-        views: List[(Rotation.Rotation, Bool)],
-        spent: Int32,
-        best: Option[List[Move.Move]]
-    ): Option[List[Move.Move]] =
-        let Tables.Tables(p1, p2) = job#tables;
-        let c = job#cube;
-        let Budget(limits) = job#budget;
-        let exhausted = spent >= limits#probeMax;
-        let satisfied = bestIsGoodEnough(best, spent, limits);
-        match views {
-            case Nil                                     => best
-            case _ :: _ if exhausted or satisfied        => best
-            case (r, inverted) :: rest                   =>
-                let remaining = Budget({
-                    probeMin = 1,
-                    probeMax = limits#probeMax - spent,
-                    maxDepth = shorterThanBest(best, limits#maxDepth),
-                    handovers = limits#handovers
-                });
-                let view = { rotation = r, inverted = inverted };
-                let (found, used) = alongAxis(p1, p2, remaining, c, view);
-                sweep(job, rest, spent + used, keepShorterOf(best, found))
-        }
+    /// Unlike `next`, this honours `probeMin`: it stops once there is an answer
+    /// and enough has been spent looking for a better one. A caller driving the
+    /// search by hand has said what it wants by asking, so no floor applies.
+    ///
+    def runToSettled(s: Search): Search =
+        let Search.Search(f) = s;
+        let Budget(limits) = f#budget;
+        if (f#spent >= limits#probeMax or bestIsGoodEnough(f#best, f#spent, limits))
+            s
+        else
+            match stepOnce(s) {
+                case None     => s
+                case Some(s2) => runToSettled(s2)
+            }
 
     ///
     /// The shorter of two solutions, keeping the first when they are equal.

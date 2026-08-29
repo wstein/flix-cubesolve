@@ -640,8 +640,14 @@ returns a replay-valid solution within the configured bound.
 search settings**. Quality regression, not correctness: a probe-limited
 two-phase solver may legitimately return more.
 **Gate 7.3** — Exhaustion path exercised by a starved `probeMax`; returns the
-documented error rather than hanging or lying.
+documented error rather than hanging or lying. **Met**, and the two exhaustion
+reasons are distinguished: out of probes can be answered with `withBudget`, out
+of views cannot be answered by this scheduler at all.
 **Gate 7.4** — `next()` never returns a longer solution than its predecessor.
+**Met**, and structurally so: a view is capped at one move under the best in
+hand, so `Improved` is unreachable except on an improvement. The test replays
+every solution as well, because "never longer" is satisfied by a `next` that
+returns the same answer forever.
 **Gate 7.5** — Identical `probeMin`/`probeMax`/`maxDepth`/seed produces an
 identical solution on two different machines.
 **Gate 7.6** — Average length recorded over the fixed corpus, as Stage 10's
