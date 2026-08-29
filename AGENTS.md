@@ -157,6 +157,29 @@ A test that takes minutes is not a gate. If a property is too expensive to check
 exhaustively, stratify it and name the stratification — do not quietly check
 nothing.
 
+### The slow tier
+
+The suite takes four to five minutes, and the spread between runs is wide — 233 s
+to 328 s for identical code — so do not tune against a single measurement.
+
+Cost comes from two things and only two: **running the solver**, and **building
+a table**. `TestPatternBounds` solves 110 patterns and is alone worth 96–143 s;
+`TestTwoPhase` and `TestScrambleStandard` are about 30 s each; the phase-table
+gates are 20 s and 16 s. Everything else is under ten seconds together.
+
+**Do not assume a test is slow because it looks like a lot of work.** Sweeping
+all 199 checked-in patterns through all 24 orientations — nearly five thousand
+re-recordings — costs 0.14 s and 0.05 s. That was misdiagnosed once as the cause
+of the suite's runtime, and consolidating those tests to fix it saved nothing
+measurable. Time a test before restructuring it:
+
+```sh
+./flixw test 2>&1 | grep " PASS "     # each test prints its own elapsed time
+```
+
+If the suite has to come down, the lever is the solver-driven tests: stratify
+them the way `Gate 4.2` is stratified, and name the stratification.
+
 ## Commits
 
 Conventional commits, single-purpose, with the type and scope naming the primary

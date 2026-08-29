@@ -272,3 +272,21 @@ Cube code fails in ways that hand-picked examples do not catch.
   and would silently invalidate every checked-in fixture.
 - **Failure reproducibility.** Every failure preserves its seed and canonical
   state token.
+
+### What the suite costs
+
+Four to five minutes, measured at 233 s, 255 s and 328 s on three runs of
+identical code — the spread is wide enough that no single figure means much.
+
+The cost is entirely in tests that **run the solver** or **build a table**.
+`TestPatternBounds` solves 110 patterns and accounts for roughly half the suite
+on its own; `TestTwoPhase` and `TestScrambleStandard` are about 30 s each; the
+two phase-table gates are 20 s and 16 s.
+
+The fixture sweeps are not the slow tier, though they look like the most work:
+re-recording all 199 patterns from all 24 orientations costs 0.14 s and 0.05 s.
+That was misattributed once, and the restructuring done to fix it saved nothing
+— which is the argument for timing a test before rewriting it.
+
+Tests deliberately do not share a table cache; see the note under *Keeping
+tables between runs* for why a faster suite would be an unsound one.

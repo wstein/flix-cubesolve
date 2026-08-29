@@ -56,8 +56,8 @@ implementation. The rest of this README describes the engine being built.
 
 ```sh
 ./flixw check        # type-check; the fast feedback loop
-./flixw test         # run every @Test function under test/ (about 100s: it
-                     #   sweeps the whole 2x2x2 space and builds the 3x3x3 tables)
+./flixw test         # run every @Test function under test/ (4 to 5 minutes;
+                     #   see Testing below for what costs what)
 ./flixw doc          # API documentation for this project and the stdlib
 ./flixw metrics --format md   # code-smell report; run it before committing
 ```
@@ -173,6 +173,21 @@ the strategy is stated explicitly in
 - **Against published algorithms.** 199 patterns from three collections are
   checked in as fixtures, and the solver is measured against every one that
   documents a half-turn move count.
+
+The suite takes **four to five minutes** — 233 s, 255 s and 328 s on three runs
+of identical code, so treat any single figure as approximate. Almost all of it
+is a handful of tests that either *run the solver* or *build a table*:
+
+| test | cost |
+|---|---|
+| `TestPatternBounds` — 110 pattern solves | 96–143 s |
+| `TestTwoPhase`, `TestScrambleStandard` | ~30 s each |
+| `TestDomino`, `TestStandard` — table sweeps | 20 s, 16 s |
+| everything else, including both fixture sweeps | under 10 s |
+
+The fixture sweeps are cheap and easy to misjudge: re-recording all 199 patterns
+from all 24 orientations costs **0.14 s and 0.05 s**. Solving is what is slow, and
+it is slow wherever it appears.
 
 There is no formatting gate: the pinned compiler's `format` has no check-only
 mode, so run `./flixw format` before you commit.
