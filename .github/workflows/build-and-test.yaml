@@ -41,6 +41,62 @@ jobs:
         env:
           CUBESOLVE_EXHAUSTIVE: '1'
 
+  # The example is a separate package that depends on the *published*
+  # cubesolve, so this is the only thing that exercises the library the way a
+  # consumer gets it -- through release assets, under Flix's dependency security
+  # context, with only the public surface reachable. Three defects were found
+  # that way on its first real run, none of which `./flixw check` can see.
+  #
+  # Read what it proves carefully: it builds against the latest **release**, not
+  # against this commit. A breaking change on main will not fail here until the
+  # next tag, and that is the price of the example being an honest consumer
+  # rather than a subdirectory with a shortcut into the source tree.
+  examples:
+    name: the example builds as a consumer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Examples are found on disk rather than asked for, so a wrapper verb
+      # that stops listing them cannot quietly reduce this job to nothing.
+      #
+      # The output is checked for a test count for the same reason, and it is
+      # not paranoia: `./flixw examples test` was observed printing its usage
+      # and exiting 0, which would have made this job green while running no
+      # tests at all. A gate nobody knows is disabled is worse than no gate.
+      - name: Test every example
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for dir in examples/*/; do
+            name="$(basename "${dir}")"
+            [ -f "${dir}flix.toml" ] || continue
+            found=$((found + 1))
+            echo "::group::${name}"
+            if ! ./flixw examples test "${name}" 2>&1 | tee /tmp/example.log; then
+              echo "::error::${name} failed"
+              exit 1
+            fi
+            if ! grep -qE "^Passed: [0-9]+" /tmp/example.log; then
+              echo "::error::${name} reported no test results -- it ran nothing"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "${found}" -eq 0 ]; then
+            echo "::error::no example package was found under examples/"
+            exit 1
+          fi
+          echo "tested ${found} example package(s)"
+
   # Gate 13.2. Two child JVMs racing on one cache directory, which the suite
   # cannot do from inside a single JVM. Off pull requests for the same reason as
   # the job above: it builds a fatjar and then generates the 2x2x2 tables twice
