@@ -1,3 +1,5 @@
+use Args.Needs.{Turning, Solving, Corpus}
+
 ///
 /// A command line over cubesolve, and the demonstration that it is usable.
 ///
@@ -10,9 +12,6 @@
 /// which runs the solver, and `Corpus`, which reads the pattern collections --
 /// a split that keeps the command line from being the one module that reaches
 /// into everything.
-///
-use Args.Needs.{Turning, Solving, Corpus}
-
 ///
 /// Read the arguments, do the thing, say how it went.
 ///

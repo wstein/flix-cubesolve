@@ -8,4 +8,8 @@ license     = "Apache-2.0"
 authors     = ["Werner Stein"]
 
 [dependencies]
-"github:wstein/flix-cubesolve" = "0.1.0"
+# unrestricted: CubeSolve.Model.Random.secureSeed uses java.security.SecureRandom
+# directly, which the default "plain" security context forbids for a dependency.
+# This is the sibling package this example exists to prove works, not a
+# third-party unknown, so granting it is the deliberate choice here.
+"github:wstein/flix-cubesolve" = { version = "0.1.0", security = "unrestricted" }
