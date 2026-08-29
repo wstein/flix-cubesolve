@@ -151,10 +151,32 @@ is another, and `withoutCache` is a third that always misses. So the logic that
 decides *whether a cached table is acceptable* never acquires an `IO` effect,
 and it is tested without a disk anywhere near it.
 
-**The header is checked, not decorative.** A table's convention identifier is
-compared on read: a table from a different slot numbering is not stale, it is a
-table of a different puzzle and would otherwise be read without complaint. The
-generator version is recorded as provenance and deliberately *not* compared.
+`onFilesystem` leaves the five filesystem effects open, which is what makes that
+possible and is also eight nested handlers for anyone who just wants the cache.
+`CubeSolve.Table.Cache.Disk.withFilesystem` is that chain, written once, in a
+module of its own so the policy module keeps no dependency on the effects it
+exists to avoid naming.
+
+**The header is checked, not decorative.** All three identifiers are compared on
+read. A table from a different slot numbering is not stale, it is a table of a
+different puzzle and would otherwise be read without complaint. The generator is
+compared too: what a table contains is decided by the code that built it, and the
+convention string does not capture that — change a pruning pairing, a move order,
+or fix a bug in a sweep, and every entry differs while the convention is
+untouched. This file once called the generator provenance rather than a check;
+that was wrong, and the cost of the correction is one rebuild after a version
+bump.
+
+**Publication stages somewhere else.** Bytes are written into a directory the
+handler obtains for itself and are then moved into place, so a reader sees the
+old file or the whole new one. Staging beside the target under a shared name is
+what this used to do and is not safe when two processes build at once: the second
+can move the first's half-written file into place, and where rename detaches the
+name from the open file the first then keeps writing into what has been
+published. Both processes generate identical bytes — the tables are deterministic
+— which is exactly what makes the corruption look impossible. If no staging
+directory can be had, nothing is written: a cache that cannot store is slow, one
+that stores unsafely is wrong.
 
 **A corrupt or foreign cache is a miss, not a failure.** A half-written file
 should cost a rebuild, not an outage. `reasonToRebuild` reports which it was, so
@@ -162,9 +184,13 @@ a caller can warn rather than guess.
 
 **The tests deliberately do not use the cache.** They call the plain builders,
 so they measure building. Sharing a filesystem cache across the suite would cut
-its runtime substantially and would also mean a table changed without a
-convention bump could be read from a stale file and pass — trading a slow gate
-for an unsound one.
+its runtime substantially and would leave the builders themselves ungated.
+`TestCacheOnDisk` is the exception and covers the handler rather than the tables:
+it runs `onFilesystem` through the real `Fs` handlers down to `IO`, in a
+temporary directory, and checks that a table survives the round trip, that the
+second run reads rather than rebuilds, and that a file from another build is
+rebuilt. The in-memory tests prove the policy; that one proves the plumbing,
+which is the part that can be wrong without any of them noticing.
 
 ## Search
 

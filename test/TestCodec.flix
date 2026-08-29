@@ -170,17 +170,29 @@ mod TestCodec {
             case Err(e) => Assert.assertTrue(String.contains(substr = "standard.flipTwist", e))
         }
 
-    /// The generator version is recorded but not required to match: a table
-    /// built by an older build of the same code is still that table. It is
-    /// provenance, not a compatibility check, and saying which is the point.
+    /// A cache written by another build is refused.
+    ///
+    /// What a table contains is decided by the code that built it, and the
+    /// convention string does not capture that: change a pruning pairing, a
+    /// move order, or fix a bug in a sweep, and the convention is untouched
+    /// while every entry differs. Treating the generator as provenance only --
+    /// which an earlier version of this codec did -- means such a table is
+    /// served from cache without complaint.
     @Test
-    def theGeneratorVersionIsProvenanceRatherThanACheck(): Unit \ Assert =
+    def aCacheFromAnotherBuildIsRefused(): Unit \ Assert =
         let older = Codec.header({
             table = "pocket.distances",
             convention = "kociemba-htm@1",
             generator = "cubesolve 0.0.9"
         });
         let read = b -> Codec.expect(header(), b);
-        Assert.assertOk(Codec.encode(older, sample(8, 50)) |> Result.flatMap(read))
+        match Codec.encode(older, sample(8, 50)) |> Result.flatMap(read) {
+            case Ok(_)  => Assert.assertTrueWithMsg(false, "the build differs")
+            case Err(e) =>
+                Assert.assertTrue(String.contains(substr = "cubesolve 0.0.9", e));
+                Assert.assertTrue(String.contains(substr = "code that built it", e))
+        };
+        // and the same build still round-trips
+        Assert.assertOk(Codec.encode(header(), sample(8, 50)) |> Result.flatMap(read))
 
 }

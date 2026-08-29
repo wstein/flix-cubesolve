@@ -22,6 +22,7 @@ mod CubeSolve.Table.Cache {
     use CubeSolve.Table.Codec
     use CubeSolve.Table.TableView
     use Fs.FileExists
+    use Fs.MkTempDir
     use Fs.MoveFile
     use Fs.ReadBytes
     use Fs.WriteBytes
@@ -125,17 +126,32 @@ mod CubeSolve.Table.Cache {
     ///
     /// Run `f` with the cache kept as files under `directory`.
     ///
-    /// Publication is atomic: the bytes go to a neighbouring temporary file and
-    /// are then moved into place. A reader therefore sees either the old file
-    /// or the whole new one, never a partial write -- which is the failure the
-    /// checksum would otherwise have to catch, and which two processes starting
-    /// at once would otherwise produce.
+    /// Publication is atomic: the bytes are written somewhere else entirely and
+    /// then moved into place, so a reader sees either the old file or the whole
+    /// new one and never a partial write.
+    ///
+    /// **The staging area is a directory of this handler's own**, obtained from
+    /// the system rather than named after the target. Staging beside the target
+    /// under a shared name is not safe when two processes build at once: the
+    /// second can move the first's half-written file into place, and on a system
+    /// where rename detaches the name from the open file the first then goes on
+    /// writing into what has already been published. Both processes generate the
+    /// same bytes -- the tables are deterministic -- which makes the corruption
+    /// look impossible right up until it happens.
+    ///
+    /// If no staging directory can be had, nothing is written. A cache that
+    /// cannot store is a slow cache; a cache that stores unsafely is a wrong
+    /// answer.
     ///
     pub def onFilesystem(directory: String, f: Unit -> a \ ef): a \
-        (ef - Store) + FileExists + ReadBytes + WriteBytes + MoveFile =
+        (ef - Store) + FileExists + ReadBytes + WriteBytes + MoveFile + MkTempDir =
+        let staging = Fs.MkTempDir.mkTempDir("cubesolve-cache-") |> Result.toOption;
         run { f() } with handler Store {
             def load(key, k) = k(readFile(pathOf(directory, key)))
-            def save(key, bytes, k) = k(writeAtomically(pathOf(directory, key), bytes))
+            def save(key, bytes, k) = k(match staging {
+                case None      => ()
+                case Some(dir) => writeAtomically(dir, key, pathOf(directory, key), bytes)
+            })
         }
 
     ///
@@ -155,8 +171,16 @@ mod CubeSolve.Table.Cache {
     ///
     /// Write `bytes` to `path` so that no reader can see a partial file.
     ///
-    def writeAtomically(path: String, bytes: Vector[Int8]): Unit \ WriteBytes + MoveFile =
-        let staged = "${path}.writing";
+    /// `dir` is this handler's own staging directory, so the name written to
+    /// cannot collide with another process's.
+    ///
+    def writeAtomically(
+        dir: String,
+        key: String,
+        path: String,
+        bytes: Vector[Int8]
+    ): Unit \ WriteBytes + MoveFile =
+        let staged = "${dir}/${key}";
         match Fs.WriteBytes.writeBytes(bytes, staged) {
             case Err(_) => ()
             case Ok(_)  =>

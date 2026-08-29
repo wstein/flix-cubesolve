@@ -34,8 +34,8 @@ mod CubeSolve.Table.Codec {
     /// What a table file says about itself.
     ///
     /// `table` names which table it is, `convention` which slot and move
-    /// numbering it was built under, and `generator` which build wrote it.
-    /// The first two are checked; the third is provenance.
+    /// numbering it was built under, and `generator` which build wrote it. All
+    /// three are compared when a cached table is read.
     ///
     pub enum Header with Eq, ToString {
         case Header(String, String, String)
@@ -58,7 +58,7 @@ mod CubeSolve.Table.Codec {
     pub def conventionOf(h: Header): String = let Header(_, c, _) = h; c
 
     ///
-    /// Which build wrote it.
+    /// Which build wrote it. Compared when a cache is read, not merely recorded.
     ///
     pub def generatorOf(h: Header): String = let Header(_, _, g) = h; g
 
@@ -196,8 +196,19 @@ mod CubeSolve.Table.Codec {
     ///
     /// The table `bytes` hold, if its header is the one expected.
     ///
-    /// The generator is not compared: a table built by an older build of the
-    /// same code is still that table.
+    /// **All three fields are compared, the generator included.** An earlier
+    /// version of this file called the generator provenance rather than a
+    /// check, reasoning that a table built by an older build of the same code is
+    /// still that table. The premise is the problem: what a table contains is
+    /// decided by the code that generated it, and the convention string does not
+    /// capture that. Change how a table is built without touching the
+    /// convention -- a different pruning pairing, a different move order, a
+    /// fixed bug -- and a stale cache would be served without complaint, which
+    /// is the worst way for a table to be wrong.
+    ///
+    /// The cost is a rebuild after a version bump. That is seconds, once, and
+    /// it is the right trade against silently reading a table that no longer
+    /// describes what this build computes.
     ///
     pub def expect(wanted: Header, bytes: Vector[Int8]): Result[String, TableView] =
         decode(bytes) |> Result.flatMap(match (found, t) ->
@@ -209,6 +220,11 @@ mod CubeSolve.Table.Codec {
                     + "'${conventionOf(found)}', but this build reads "
                     + "'${conventionOf(wanted)}': the two number the cube "
                     + "differently, so the table describes a different puzzle")
+            else if (generatorOf(found) != generatorOf(wanted))
+                Err("this file was built by '${generatorOf(found)}' and this is "
+                    + "'${generatorOf(wanted)}': what a table contains is decided "
+                    + "by the code that built it, so a table from another build is "
+                    + "rebuilt rather than trusted")
             else
                 Ok(t))
 

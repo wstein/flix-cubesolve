@@ -445,6 +445,38 @@ bound is checked against an actual search over 30 domino states of varying
 depth, because a bound that overstated would silently discard winning handovers
 on some cubes and not others.
 
+## Two cache defects that both looked like conservatism
+
+Both were argued for when written, and both arguments were wrong in the same
+way: they optimised for not doing work, in a component whose entire job is to
+return something a caller will trust without checking.
+
+**The generator was recorded and not compared.** The reasoning was that a table
+built by an older build of the same code is still that table. But what a table
+contains is decided by the code that generated it, and the convention string does
+not capture that. A different pruning pairing, a different move order, a fixed
+bug in a sweep — the convention is untouched and every entry differs. The failure
+is the worst shape available: a stale table served without complaint, on a
+developer's machine only, after a change that tested clean. The cost of comparing
+is one rebuild after a version bump, which is seconds, once.
+
+**Publication staged beside the target under `${path}.writing`.** The name is a
+function of the target, so two processes generating the same table pick the same
+staging file. The second can move the first's half-written file into place, and
+on a system where rename detaches the name from the open file, the first then
+continues writing into what has already been published. That both processes
+compute identical bytes is not a defence — it is why nobody would look here. The
+handler now stages in a directory it obtains for itself, and writes nothing at
+all if it cannot get one.
+
+**Neither would have been caught by the tests that existed.** The in-memory store
+proved every policy question and never touched a file, so the filesystem handler,
+the staging path and the atomic move had no coverage at all. `TestCacheOnDisk`
+runs the production chain down to `IO` in a temporary directory. The lesson is
+not "test more" — the in-memory tests are good and fast — it is that a handler
+that exists to talk to the outside is not covered by tests of the thing it
+handles for. This is what stood between the plan and **Gate 13.2**.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be
