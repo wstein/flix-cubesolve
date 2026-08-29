@@ -1,0 +1,110 @@
+name: Release
+
+# A tag is the only thing that publishes. Pushing `v1.2.3` builds the package
+# from that exact tag, checks it, and attaches it to a GitHub release of the
+# same name -- so what a consumer downloads is what this repository built from
+# the commit the tag names, rather than whatever was on a maintainer's laptop.
+#
+# `github:` dependencies resolve through release assets, so a tag without a
+# release is a version nobody can depend on. That is what this closes.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+# Read-only by default, exactly as the other workflows are. Only the one job
+# that has to publish gets more, and it says so where it asks.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  # Never cancel: a run killed between creating the release and uploading the
+  # package leaves a release with nothing in it, which reads as a published
+  # version and resolves as a missing one.
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    # A wedged runner is not a build failure, but without a cap it looks like
+    # one for six hours: GitHub's default. This job takes about a minute, so
+    # anything near this number is a hung runner rather than slow work.
+    timeout-minutes: 15
+
+    permissions:
+      contents: write # create the release and upload the package to it
+
+    steps:
+      # A tag push checks out the tag, so everything below is built from the
+      # commit the tag names and not from the branch it happens to sit on.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # flixw is itself a Java program, so it needs one JDK to start; from there
+      # it fetches the compiler pinned in .flixw/lock.toml and verifies it
+      # against the committed digest before running it. 21 is the lowest Java
+      # the wrapper supports, so this runs on the oldest JDK this project claims.
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Shared with Build and Test, and safe for the same reason: the digest in
+      # the lock is re-verified on every run, so a restored -- or tampered --
+      # cache cannot substitute a different compiler, only save a download.
+      - name: Restore the pinned compiler
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flixw
+          key: ${{ runner.os }}-flixw-${{ hashFiles('.flixw/lock.toml') }}
+
+      # The tag is what a consumer writes in their own flix.toml, and the
+      # version inside the package is what the resolver reads back. If those
+      # two disagree the release is mislabelled in a way nothing downstream can
+      # see, so refuse before anything is published rather than after.
+      - name: The tag names the version this tree declares
+        run: |
+          set -euo pipefail
+          tagged=${GITHUB_REF_NAME#v}
+          declared=$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' flix.toml)
+          if [ "$tagged" != "$declared" ]; then
+            echo "::error file=flix.toml::tag ${GITHUB_REF_NAME} would publish" \
+                 "version ${declared}; flix.toml has to say ${tagged}"
+            exit 1
+          fi
+          echo "ok  ${GITHUB_REF_NAME} publishes ${declared}"
+
+      # Wrapper integrity first: the shims match the committed stage 0, the lock
+      # satisfies flix.toml, and every generated file is tracked by git. A
+      # failure here means the rest of the run would prove nothing.
+      - name: Validate the wrapper
+        run: ./flixw validate
+
+      # Build and Test has already run this on three platforms for the commit
+      # the tag names. It runs again because a release is the one artefact
+      # nobody re-checks afterwards, and a green tick on a parent commit is not
+      # the same claim as a green tick on what is being published.
+      - name: Test
+        run: ./flixw test
+
+      - name: Package
+        run: ./flixw build-pkg
+
+      # `flix.toml` goes up alongside the package because the resolver fetches
+      # both: it reads the manifest to learn what the package needs before it
+      # downloads the package itself. A release carrying only the `.fpkg` looks
+      # complete and still fails to resolve.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            --title "${GITHUB_REF_NAME#v}" \
+            --verify-tag \
+            --generate-notes \
+            artifact/flix-cubesolve.fpkg \
+            artifact/flix.toml
