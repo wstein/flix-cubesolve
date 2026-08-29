@@ -26,8 +26,19 @@ use `.\flixw.cmd` wherever these say `./flixw`.
   commit and fix what it finds**; it needs the project to compile first
 
 `./flixw run` does **not** work here and should not be made to. Flix allows one
-`main` per program, so a library that ships one cannot be depended on. A command
-line, if one is added, goes in `CubeSolve.Cli` as a module-scoped `pub def main`.
+`main` per program, so a library that ships one cannot be depended on. The
+command line is `CubeSolve.Cli.main`, module-scoped, and is reached by naming it:
+
+```sh
+./flixw build-fatjar --entrypoint CubeSolve.Cli.main
+java -jar artifact/flix-cubesolve.jar help
+```
+
+`--entrypoint` reaches a definition under `test/` too, which is how the Gate 13.2
+harness runs without putting anything in `src/`.
+
+Note that `build-fatjar` runs redundancy checks `check` does not — a pure
+function declared `\ IO` passes `./flixw check` and fails the jar build.
 
 The wrapper adds verbs of its own, ahead of the compiler's:
 

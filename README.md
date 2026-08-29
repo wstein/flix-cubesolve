@@ -68,8 +68,24 @@ installed: the first command downloads `flix.jar` for the version pinned in
 it outside the repository, and runs it. Later commands reuse the cache. On
 Windows use `.\flixw.cmd`.
 
-`./flixw run` is not available here and that is not a defect — see
-[Why there is no `main`](#why-there-is-no-main).
+`./flixw run` is not available here and that is not a defect. Flix allows one
+`main` per program, so a library that ships one at the top level cannot be
+depended on. There is still a command line; it is named rather than default:
+
+## Trying it
+
+```sh
+./flixw build-fatjar --entrypoint CubeSolve.Cli.main
+java -jar artifact/flix-cubesolve.jar solve "R U R' U' F2 L D B'"
+java -jar artifact/flix-cubesolve.jar show "M2 E2 S2"       # a coloured net
+java -jar artifact/flix-cubesolve.jar identify "M2 E2 S2"   # Pons Asinorum
+java -jar artifact/flix-cubesolve.jar scramble
+```
+
+The first solve builds the tables and takes about twenty seconds; every solve
+after that reads them from the cache and takes about one. The library itself
+ships no top-level `main`, so depending on it stays possible — `CubeSolve.Cli`
+is module-scoped and reached with `--entrypoint`.
 
 ## Two representations, kept apart
 
@@ -141,6 +157,7 @@ canonical frame, solves, and re-expresses the answer in the frame it was given.
 ├── src/CubeSolve.flix            the root module and its documentation
 ├── src/CubeSolve/               engine sources, mirroring the module tree
 ├── test/                        @Test functions, flat, one TestX per subject
+├── scripts/                     qualification harnesses CI runs but tests cannot
 ├── docs/
 │   ├── architecture.md          the layering, and why the layers are separate
 │   ├── conventions.md           every convention the engine assumes

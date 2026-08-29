@@ -200,7 +200,16 @@ mod CubeSolve.Model.Random {
     /// consider uniform. The `IO` is real and confined to one line.
     ///
     pub def sampleSecure(n: Int32): Result[String, Cube] \ IO =
-        let seed = (new SecureRandom()).nextLong();
-        sampleDeterministic(seed, n) |> Result.map(fst)
+        sampleDeterministic(secureSeed(), n) |> Result.map(fst)
+
+    ///
+    /// A seed from the platform's entropy.
+    ///
+    /// The one line of `IO` in this module, and the only place a value enters
+    /// that a rerun cannot reproduce. Everything downstream is the pure
+    /// generator, so anything drawn from this seed can be replayed by recording
+    /// it -- which is what makes "the failing seed" a usable bug report.
+    ///
+    pub def secureSeed(): Int64 \ IO = (new SecureRandom()).nextLong()
 
 }

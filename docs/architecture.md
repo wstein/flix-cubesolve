@@ -8,6 +8,8 @@ CubeSolve.Table      packed lookup tables behind one read handle
 CubeSolve.Solve      IDA*, phases, per-size solvers
 CubeSolve.Scramble   random-state scrambling, over Solve's public API only
 CubeSolve.Patterns   the published pattern corpora, and recognising one
+CubeSolve.Render     a cube drawn as an unfolded net, plain or coloured
+CubeSolve.Cli        the command line, and the demonstration it is usable
 ```
 
 The dependency arrows run strictly downward. `Scramble` in particular is written
@@ -283,6 +285,33 @@ the refinement was worth nothing until the budget stopped being sliced. See
 Each phase owns its own tables and re-exports them, so the combining layer talks
 to `Solve.Phase1` and `Solve.Domino` rather than reaching into their table
 modules.
+
+## The command line
+
+`CubeSolve.Cli.main` is **module-scoped, never top-level**. Flix allows one
+`main` per program, so a library that ships one at the top level cannot be
+depended on. `--entrypoint CubeSolve.Cli.main` reaches it, which costs a consumer
+nothing.
+
+It is split three ways, because a command line is otherwise the one module that
+reaches into everything: `Cli` dispatches and prints, `Cli.Args` turns arguments
+into a cube, `Cli.Engine` runs the solver and `Cli.Corpus` reads the pattern
+collections. `Cli.Store` resolves the cache directory, so the commands can ask
+for a cache without also acquiring the filesystem — `Table.Cache` goes to some
+length to stay free of `IO` and a caller that reaches for `Fs` alongside it
+throws that away.
+
+**It is the only real user of the table cache.** The tests build tables so that
+they measure building. A person at a terminal waits once: measured cold at 21 s
+and warm at 1.2 s on the same machine, which is what the cache exists for and
+what nothing else in the repository demonstrates.
+
+Rendering is pure, including the colours. An ANSI escape is a string like any
+other, so `CubeSolve.Render` produces text and printing it is somebody else's
+effect — which is why the coloured net can be tested by stripping the escapes and
+comparing against the plain one. The colours are 24-bit rather than the sixteen
+basic ones for one reason: there is no orange among the sixteen, and orange
+against red is the one distinction a cube renderer cannot afford to lose.
 
 ## Anytime solving
 
