@@ -295,9 +295,46 @@ Three budgets are now named, with their measured means, because the curve is
 flat enough that the choice is the user's: `fastBudget` 20.9, `defaultBudget`
 20.8, `thoroughBudget` 20.6.
 
-**Gate 7.2 is not met and is not claimed.** Superflip is solved, but not in 20
-moves, and asserting that it were would be asserting a quality the solver does
-not have.
+**Gate 7.2 is not met, and the reason is worth knowing.** Superflip's optimum is
+20; this solver returns **22**, at every budget. That is now pinned by a test
+rather than left unstated.
+
+Superflip is fully symmetric, so all six views of it — three axes, each
+forwards and inverted — are the *same cube*. Every economy this solver has comes
+from those views disagreeing with one another, and on superflip they cannot.
+More probes buy nothing either, which is why `fast`, `default` and `thorough`
+all return 22. It is the exact worst case for this design, and closing it needs
+symmetry reduction rather than more search.
+
+## The 3x3x3 scrambler, and what it can honestly promise (Motion 7)
+
+Random-state, like the 2x2x2's: sample a uniform state, solve it, emit the
+inverse. What differs is that the 3x3x3 has no distance table, so difficulty is
+**bracketed rather than claimed**, and every scramble carries two certified
+numbers:
+
+| bound | source | strength |
+|---|---|---|
+| `atMostMoves` | an actual solution | exact as a bound, pessimistic as a distance |
+| `atLeastMoves` | phase-one pruning tables | true, and capped at **9** |
+
+The lower bound is taken as the **largest over the three phase-one axes**. Each
+axis's pruning value bounds the moves needed to reach that axis's domino group,
+and a full solution passes through the solved cube, which lies in all three — so
+each is a lower bound on the whole solution and the best of the three is free.
+The ceiling stays 9, since none of them can exceed it, but the typical bound
+improves.
+
+`atLeast` above 9 returns `Err` naming the ceiling *and its cause*, per Motion 7.
+It is honest and nearly useless, and the module says so: 3×3×3 optimal lengths
+concentrate near 17–18, so almost every state is hard and the difficulty a
+caller can actually choose lives at the easy end. `atMost` is the useful
+constructor.
+
+One limit found by building it: **`atMost`'s floor is set by the solver, not by
+the cube.** Asking for much below 20.8 rejects nearly every draw — not because
+such states are rare, but because this engine cannot demonstrate them. When the
+draws run out it says exactly that.
 
 ## Undisputed, and worth keeping
 

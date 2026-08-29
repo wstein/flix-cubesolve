@@ -127,6 +127,36 @@ mod TestTwoPhase {
             }
         });
 
+        // ---- superflip, the known worst case ----
+        //
+        // Gate 7.2 asks for superflip in 20 moves, which is its true optimum.
+        // This solver returns 22, at every budget, and that is recorded rather
+        // than quietly dropped.
+        //
+        // The reason is worth knowing: superflip is fully symmetric, so all six
+        // views of it -- three axes, each forwards and inverted -- are the same
+        // cube. Every economy this solver has comes from those views disagreeing
+        // with each other, and on superflip they cannot. More probes buy nothing
+        // either, which is why fast, default and thorough all return 22.
+        //
+        // Asserted as an upper bound so an improvement does not fail the test,
+        // and as a lower bound of 20 because nothing can beat the optimum.
+        let superflip = scrambled("R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U");
+        match Standard.solutionWith(t, budget, superflip) {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "superflip solves")
+            case Ok(ms) =>
+                let n = List.length(ms);
+                Assert.assertTrueWithMsg(n >= 20,
+                    "superflip cannot be solved in ${n} moves: its optimum is 20");
+                Assert.assertTrueWithMsg(n <= 22,
+                    "superflip took ${n} moves, over the recorded 22");
+                Assert.assertEqWithMsg(
+                    expected = Ok(true),
+                    Cube.applyAll(ms, Sized.cubeOfStandard(superflip))
+                        |> Result.map(Cube.isSolved),
+                    "the superflip solution did not solve it")
+        };
+
         let repeatable = scrambled("R U2 F' L D B2 R' U");
         let once = Standard.solutionWith(t, budget, repeatable) |> Result.map(Move.showAll);
         let twice = Standard.solutionWith(t, budget, repeatable) |> Result.map(Move.showAll);
