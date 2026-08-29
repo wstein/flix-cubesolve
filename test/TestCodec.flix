@@ -7,7 +7,7 @@ mod TestCodec {
         Codec.header({
             table = "pocket.distances",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.1.0"
+            generator = "cubesolve 0.2.0"
         })
 
     def sample(bits: Int32, count: Int32): Table.TableView \ Assert =
@@ -147,7 +147,7 @@ mod TestCodec {
         let other = Codec.header({
             table = "pocket.distances",
             convention = "some-other-numbering@1",
-            generator = "cubesolve 0.1.0"
+            generator = "cubesolve 0.2.0"
         });
         let read = b -> Codec.expect(header(), b);
         match Codec.encode(other, sample(8, 50)) |> Result.flatMap(read) {
@@ -162,7 +162,7 @@ mod TestCodec {
         let other = Codec.header({
             table = "standard.flipTwist",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.1.0"
+            generator = "cubesolve 0.2.0"
         });
         let read = b -> Codec.expect(header(), b);
         match Codec.encode(other, sample(8, 50)) |> Result.flatMap(read) {
