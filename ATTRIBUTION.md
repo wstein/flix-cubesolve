@@ -35,13 +35,39 @@ All three READMEs carry **both** a GPLv3 section and an MIT section, attributed
 to Shuang Chen / Chen Shuang, 2023. The MIT text is a standalone grant, so
 using the code under MIT terms with attribution is available.
 
-**One discrepancy, recorded openly.** The READMEs present both licences without
-stating "at your option," and **cube555 additionally ships a `LICENSE` file
-containing GPL v3 text only**; the other two ship no separate licence file.
+**Two discrepancies, recorded openly.**
 
-The practical exposure is narrow: cube555 is the repository from which no code
-is taken. Ported code is restricted to min2phase, whose README carries the MIT
-grant and which ships no contradicting `LICENSE` file.
+The READMEs present both licences without stating "at your option," and
+**cube555 additionally ships a `LICENSE` file containing GPL v3 text only**; the
+other two ship no separate licence file.
+
+And — checked directly on 2026-08-29, correcting an earlier note here —
+**min2phase's `src/Search.java` carries a GPLv3-only header** in the file
+itself:
+
+> Copyright (C) 2015 Shuang Chen … you can redistribute it and/or modify it
+> under the terms of the GNU General Public License … either version 3 of the
+> License, or (at your option) any later version.
+
+Its README does carry both a GPLv3 and an MIT section, dated 2023, so the dual
+grant is real. But a 2015 GPLv3 header inside the source file is a stronger and
+more specific statement than a 2023 README section, and the two are not
+obviously reconciled. `Util.java`, `CubieCube.java`, `CoordCube.java` and
+`Tools.java` carry no header at all.
+
+**What this project does about it.** `Search.java` is the file holding the
+two-phase *search orchestration* — the part most worth learning from, and the
+part this engine deliberately does not take. Nothing here is ported from it, and
+nothing here reproduces its structure. The search in `CubeSolve.Solve` was
+derived from the published algorithm's description and from measurement, and
+where the reference is used at all it is used for **published figures** — the
+pruning-table maxima decoded from `pruningValue.txt`, and pattern algorithms
+checked in as fixtures with their provenance.
+
+That position is deliberately more conservative than the READMEs would require.
+It costs little, because the ideas in a search — skip equivalent branches, feed a
+failure bound back into the caller — are not the sort of thing a licence covers,
+while an implementation's structure is.
 
 A clarification has been requested from the author. Per
 [the design review](docs/design-review.md#motion-5), the project does not block
