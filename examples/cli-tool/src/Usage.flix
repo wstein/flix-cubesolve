@@ -19,6 +19,7 @@ mod Usage {
             :: "  identify [--size n] <scramble>   which published pattern it is"
             :: "  scramble                         a uniform random-state scramble"
             :: "  patterns [--size n]              the published corpus"
+            :: "  pll                <scramble>    the last-layer case and its algorithm"
             :: "  help                             this"
             :: ""
             :: "Solves ${Args.written(CubeSolve.supportedSizes())}; "

@@ -28,6 +28,7 @@ def dispatch(args: List[String]): Unit \ IO = match args {
     case "solve" :: rest    => report(Args.withSize(rest, Solving, solveCommand))
     case "show" :: rest     => report(Args.withSize(rest, Turning, showCommand))
     case "identify" :: rest => report(Args.withSize(rest, Corpus, identifyCommand))
+    case "pll" :: rest      => report(Args.withSize(rest, Turning, pllCommand))
     case "scramble" :: rest =>
         report(Args.withSize(rest, Solving, (n, _) -> Engine.scramble(n)))
     case "patterns" :: rest =>
@@ -50,6 +51,12 @@ def solveCommand(size: Int32, rest: List[String]): Result[String, String] \ IO =
 ///
 def showCommand(size: Int32, rest: List[String]): Result[String, String] =
     Args.onCube(size, rest, (_, c) -> Corpus.show(c))
+
+///
+/// `pll <scramble>` -- the last-layer case, if that is what this is.
+///
+def pllCommand(size: Int32, rest: List[String]): Result[String, String] =
+    Args.onCube(size, rest, (_, c) -> Method.pll(c))
 
 ///
 /// `identify [--size n] <scramble>`

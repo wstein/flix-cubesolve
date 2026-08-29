@@ -28,3 +28,24 @@ U R U' R'
 
 Solve tables are cached under `$XDG_CACHE_HOME/cubesolve-cli` (or
 `~/.cache/cubesolve-cli`) after the first run.
+
+### `pll <scramble>`
+
+Recognise a last-layer case and show how to finish it:
+
+```
+$ cubesolve pll "(R U R' U' R' F R2 U' R' U' R U R' F')'"
+case      T-PLL
+setup     none
+algorithm R U R' U' R' F R2 U' R' U' R U R' F'
+finish    none
+sequence  R U R' U' R' F R2 U' R' U' R U R' F'
+optimal   10 HTM published for this case; the algorithm above is
+          speed-oriented, not shortest
+source    https://www.speedsolving.com/wiki/index.php?title=PLL
+```
+
+Opt-in and separate from `solve`, which is unchanged: this recognises one
+partial state and plays back a memorised algorithm, where `solve` searches. It
+refuses anything that is not a PLL case, saying which part is not ready — first
+two layers unsolved, or a last layer that is not yet oriented.
