@@ -27,15 +27,25 @@ use `.\flixw.cmd` wherever these say `./flixw`.
 
 `./flixw run` does **not** work here and should not be made to. Flix allows one
 `main` per program, so a library that ships one cannot be depended on. The
-command line is `CubeSolve.Cli.main`, module-scoped, and is reached by naming it:
+command line lives in its own package, `examples/cli-tool`, depending on the
+*published* `cubesolve` the same way any other consumer would — proof that a
+released build is actually usable, not only that the library compiles:
 
 ```sh
-./flixw build-fatjar --entrypoint CubeSolve.Cli.main
-java -jar artifact/flix-cubesolve.jar help
+./flixw examples run cli-tool -- help
+./flixw examples run cli-tool -- solve R U R' U'
 ```
 
-`--entrypoint` reaches a definition under `test/` too, which is how the Gate 13.2
-harness runs without putting anything in `src/`.
+`examples/cli-tool` carries no wrapper of its own and needs a `cubesolve`
+release to resolve against; see `docs/architecture.md` for the full rationale
+and `examples/cli-tool/README.md` for running it directly with `flix run`.
+
+`--entrypoint` still reaches a definition under `test/` for the Gate 13.2
+harness, which runs without putting anything in `src/`:
+
+```sh
+./flixw build-fatjar --entrypoint QualifyCacheRace.qualify
+```
 
 Note that `build-fatjar` runs redundancy checks `check` does not — a pure
 function declared `\ IO` passes `./flixw check` and fails the jar build.

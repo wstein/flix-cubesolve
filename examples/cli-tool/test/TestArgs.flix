@@ -6,10 +6,9 @@
 /// different answers. Getting them confused is how `show` ends up refusing a
 /// 4x4x4 it could draw perfectly well, which is what it did before this.
 ///
-mod TestCliArgs {
+mod TestArgs {
 
-    use CubeSolve.Cli.Args
-    use CubeSolve.Cli.Args.Needs.{Turning, Solving, Corpus}
+    use Args.Needs.{Turning, Solving, Corpus}
 
     ///
     /// `show` renders every size the model can turn, including the two it

@@ -86,22 +86,24 @@ Windows use `.\flixw.cmd`.
 
 `./flixw run` is not available here and that is not a defect. Flix allows one
 `main` per program, so a library that ships one at the top level cannot be
-depended on. There is still a command line; it is named rather than default:
+depended on. There is still a command line; it lives in its own package:
 
 ## Trying it
 
 ```sh
-./flixw build-fatjar --entrypoint CubeSolve.Cli.main
-java -jar artifact/flix-cubesolve.jar solve "R U R' U' F2 L D B'"
-java -jar artifact/flix-cubesolve.jar show "M2 E2 S2"       # a coloured net
-java -jar artifact/flix-cubesolve.jar identify "M2 E2 S2"   # Pons Asinorum
-java -jar artifact/flix-cubesolve.jar scramble
+./flixw examples run cli-tool -- solve "R U R' U' F2 L D B'"
+./flixw examples run cli-tool -- show "M2 E2 S2"       # a coloured net
+./flixw examples run cli-tool -- identify "M2 E2 S2"   # Pons Asinorum
+./flixw examples run cli-tool -- scramble
 ```
 
 The first solve builds the tables and takes about twenty seconds; every solve
 after that reads them from the cache and takes about one. The library itself
-ships no top-level `main`, so depending on it stays possible — `CubeSolve.Cli`
-is module-scoped and reached with `--entrypoint`.
+ships no top-level `main`, so depending on it stays possible — `examples/cli-tool`
+is a separate package depending on the *published* `cubesolve`, proof that a
+released build is actually usable. It carries no wrapper of its own; run it
+directly with `cd examples/cli-tool && flix run -- <args>` against your own
+Flix install, or see `examples/cli-tool/README.md`.
 
 ## Two representations, kept apart
 

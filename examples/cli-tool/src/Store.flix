@@ -6,7 +6,7 @@
 /// stay free of `IO`, and a caller that reaches for `Fs` alongside it throws
 /// that away.
 ///
-mod CubeSolve.Cli.Store {
+mod Store {
 
     use CubeSolve.Table.Cache
     use CubeSolve.Table.Cache.Disk
@@ -30,7 +30,7 @@ mod CubeSolve.Cli.Store {
     ///
     pub def directory(): String \ IO =
         Sys.Env.runWithIO(_ -> {
-            let dir = "${base(Sys.Env.getEnv())}/cubesolve";
+            let dir = "${base(Sys.Env.getEnv())}/cubesolve-cli";
             let _ = Fs.FileWrite.runWithIO(_ -> Fs.FileWrite.mkDirs(dir));
             dir
         })

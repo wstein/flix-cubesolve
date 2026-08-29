@@ -5,7 +5,8 @@
 /// declares no top-level `main`. Both are deliberate: a library that leaks a
 /// name into the root namespace collides with every consumer that does the
 /// same, and a program may have only one entry point, so a library that ships
-/// one cannot be depended on. Any command line lives in `CubeSolve.Cli`.
+/// one cannot be depended on. The command line is `examples/cli-tool`, a
+/// separate package depending on this one exactly as any other consumer would.
 ///
 /// The engine is layered, and the layers are kept apart on purpose:
 ///

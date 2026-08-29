@@ -9,8 +9,9 @@ CubeSolve.Solve      IDA*, phases, per-size solvers
 CubeSolve.Scramble   random-state scrambling, over Solve's public API only
 CubeSolve.Patterns   the published pattern corpora, and recognising one
 CubeSolve.Render     a cube drawn as an unfolded net, plain or coloured
-CubeSolve.Cli        the command line, and the demonstration it is usable
 ```
+
+The command line is not a layer of the library at all — see below.
 
 The dependency arrows run strictly downward. `Scramble` in particular is written
 against `Solve`'s public API and nothing else, because random-state scrambling
@@ -339,23 +340,27 @@ is not.
 
 ## The command line
 
-`CubeSolve.Cli.main` is **module-scoped, never top-level**. Flix allows one
-`main` per program, so a library that ships one at the top level cannot be
-depended on. `--entrypoint CubeSolve.Cli.main` reaches it, which costs a consumer
-nothing.
+**Not part of this library at all.** Flix allows one `main` per program, so a
+library that ships one at the top level cannot be depended on — the command
+line lives in `examples/cli-tool`, a separate package with its own `flix.toml`
+depending on the *published* `cubesolve` exactly as any other consumer would.
+That is a stronger claim than a fatjar with `--entrypoint` ever made: it is
+proof a released build resolves and runs, not only that the source compiles.
 
-It is split three ways, because a command line is otherwise the one module that
-reaches into everything: `Cli` dispatches and prints, `Cli.Args` turns arguments
-into a cube, `Cli.Engine` runs the solver and `Cli.Corpus` reads the pattern
-collections. `Cli.Store` resolves the cache directory, so the commands can ask
-for a cache without also acquiring the filesystem — `Table.Cache` goes to some
-length to stay free of `IO` and a caller that reaches for `Fs` alongside it
-throws that away.
+It is split the same way it always was, unmoved by the extraction: `Main`
+dispatches and prints, `Args` turns arguments into a cube, `Engine` runs the
+solver and `Corpus` reads the pattern collections. `Store` resolves the cache
+directory, so the commands can ask for a cache without also acquiring the
+filesystem — `Table.Cache` goes to some length to stay free of `IO` and a
+caller that reaches for `Fs` alongside it throws that away.
 
 **It is the only real user of the table cache.** The tests build tables so that
 they measure building. A person at a terminal waits once: measured cold at 21 s
 and warm at 1.2 s on the same machine, which is what the cache exists for and
 what nothing else in the repository demonstrates.
+
+See `examples/cli-tool/README.md` for running it, and `./flixw examples run
+cli-tool -- <args>` from the root for the short form.
 
 Rendering is pure, including the colours. An ANSI escape is a string like any
 other, so `CubeSolve.Render` produces text and printing it is somebody else's

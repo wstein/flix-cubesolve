@@ -1,12 +1,12 @@
 ///
 /// What the command line says when asked how to use it.
 ///
-/// Its own module so that `CubeSolve.Cli` is left holding argument parsing and
+/// Its own module so that `Main` is left holding argument dispatch and
 /// nothing else -- the help text is the one part that has to know which sizes
-/// the engine supports, and asking that question is a dependency the parser
-/// need not carry.
+/// the engine supports, and asking that question is a dependency the
+/// dispatcher need not carry.
 ///
-mod CubeSolve.Cli.Usage {
+mod Usage {
 
     ///
     /// How to use this.
@@ -21,8 +21,8 @@ mod CubeSolve.Cli.Usage {
             :: "  patterns [--size n]              the published corpus"
             :: "  help                             this"
             :: ""
-            :: "Solves ${CubeSolve.Cli.Args.written(CubeSolve.supportedSizes())}; "
-                + "draws ${CubeSolve.Cli.Args.written(CubeSolve.turnableSizes())}."
+            :: "Solves ${Args.written(CubeSolve.supportedSizes())}; "
+                + "draws ${Args.written(CubeSolve.turnableSizes())}."
             :: "Tables are cached after the first run."
             :: Nil)
 

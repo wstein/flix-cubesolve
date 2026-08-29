@@ -1,13 +1,13 @@
 ///
 /// Reading the arguments a command was given.
 ///
-/// Separated from `CubeSolve.Cli` so that dispatching a command and
-/// interpreting its arguments are not the same module: the parser needs the
-/// model to turn a scramble into a cube, and the dispatcher needs none of that.
+/// Separated from `Main` so that dispatching a command and interpreting its
+/// arguments are not the same module: the parser needs the model to turn a
+/// scramble into a cube, and the dispatcher needs none of that.
 ///
-mod CubeSolve.Cli.Args {
+mod Args {
 
-    use CubeSolve.Cli.Args.Needs.{Turning, Solving, Corpus}
+    use Args.Needs.{Turning, Solving, Corpus}
     use CubeSolve.Model.Cube
 
     ///

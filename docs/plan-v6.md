@@ -82,7 +82,8 @@ CubeSolve.Scramble   depends on CubeSolve.Solve's public API only
 
 **Copy orbit64's packaging discipline.** Everything nests under one module so
 nothing collides with a consumer's names, and the library defines **no top-level
-`main`**. Any CLI lives in `CubeSolve.Cli`.
+`main`**. The CLI lives in `examples/cli-tool`, a separate package depending on
+the published `cubesolve`, the same split orbit64 itself moved to.
 
 **Diamond to confirm before first release.** If `flix-cube` already depends on
 `flix-orbit64` directly, adding `flix-cubesolve` creates a diamond. Workable if

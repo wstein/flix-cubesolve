@@ -1,0 +1,11 @@
+[package]
+name        = "cubesolve"
+description = "Demo command line for cubesolve: solve, scramble, draw and identify NxNxN cubes"
+version     = "0.1.0"
+repository  = "github:wstein/flix-cubesolve"
+flix        = "0.75.3"
+license     = "Apache-2.0"
+authors     = ["Werner Stein"]
+
+[dependencies]
+"github:wstein/flix-cubesolve" = "0.1.0"

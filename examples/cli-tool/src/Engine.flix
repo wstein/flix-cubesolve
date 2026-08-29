@@ -1,13 +1,13 @@
 ///
 /// The commands that run the solver.
 ///
-/// Split from `CubeSolve.Cli` so that the part which parses arguments does not
-/// also reach into every table, solver and scrambler in the library. This is
-/// the only place the command line touches the engine.
+/// Split from `Main` so that the part which parses arguments does not also
+/// reach into every table, solver and scrambler in the library. This is the
+/// only place the command line touches the engine.
 ///
-mod CubeSolve.Cli.Engine {
+mod Engine {
 
-    use CubeSolve.Cli.Store
+    use Store
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Random

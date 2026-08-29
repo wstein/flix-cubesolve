@@ -2,10 +2,10 @@
 /// The commands that read the published pattern corpora.
 ///
 /// Nothing here runs a solver. Recognising a cube is a lookup, and the split
-/// between this module and `CubeSolve.Cli.Engine` is the same split the library
-/// draws: patterns are reference data and the solver never consults them.
+/// between this module and `Engine` is the same split the library draws:
+/// patterns are reference data and the solver never consults them.
 ///
-mod CubeSolve.Cli.Corpus {
+mod Corpus {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
