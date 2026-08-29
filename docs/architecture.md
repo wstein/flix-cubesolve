@@ -170,13 +170,16 @@ bump.
 **Publication stages somewhere else.** Bytes are written into a directory the
 handler obtains for itself and are then moved into place, so a reader sees the
 old file or the whole new one. Staging beside the target under a shared name is
-what this used to do and is not safe when two processes build at once: the second
-can move the first's half-written file into place, and where rename detaches the
-name from the open file the first then keeps writing into what has been
-published. Both processes generate identical bytes — the tables are deterministic
-— which is exactly what makes the corruption look impossible. If no staging
-directory can be had, nothing is written: a cache that cannot store is slow, one
-that stores unsafely is wrong.
+what this used to do, and two processes building at once pick the same staging
+file: one can publish the other's half-written bytes, and where rename detaches
+the name from the open file the loser keeps writing into what is already
+published. That breaks the sentence above without corrupting an answer —
+deterministic tables mean racing writers produce identical bytes, and where they
+would not, a torn file fails its digest and counts as a miss. So the private
+directory is defence in depth behind the digest rather than the thing preventing
+corruption; *The staging fix is smaller than it was first written up as* in the
+design review has the measurement. If no staging directory can be had, nothing is
+written.
 
 **A corrupt or foreign cache is a miss, not a failure.** A half-written file
 should cost a rebuild, not an outage. `reasonToRebuild` reports which it was, so

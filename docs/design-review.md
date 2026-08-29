@@ -475,7 +475,35 @@ the staging path and the atomic move had no coverage at all. `TestCacheOnDisk`
 runs the production chain down to `IO` in a temporary directory. The lesson is
 not "test more" — the in-memory tests are good and fast — it is that a handler
 that exists to talk to the outside is not covered by tests of the thing it
-handles for. This is what stood between the plan and **Gate 13.2**.
+handles for.
+
+## The staging fix is smaller than it was first written up as
+
+The commit that made it claimed the shared `${path}.writing` name let two
+processes corrupt a published table. Gate 13.2 was then built to prove it, and
+the honest way to learn whether a gate is worth having is to reintroduce the
+defect and watch it fail. It did not fail. **Twenty-five rounds of two real
+processes generating `pocket.distances` into one fresh directory, with the shared
+staging name restored, produced twenty-five valid caches.**
+
+The reason is the part the original write-up skipped. Tables are deterministic,
+so two racing processes write *identical bytes*, and a lost race publishes the
+right content regardless of who won it. Where the bytes would differ — two builds
+whose table construction changed — an interleaved file fails the codec's digest,
+which makes it a miss, which makes it a rebuild. The digest was already what
+stood between a torn write and a wrong answer, exactly as *A corrupt or foreign
+cache is a miss, not a failure* says it should be.
+
+So the fix is not what met the gate; the gate was already met. What it actually
+restores is the property `writeAtomically` states about itself — a reader sees
+the old file or the whole new one — which under a shared name a concurrent reader
+could catch it breaking, and pay a needless rebuild for. That is worth keeping.
+It is defence in depth behind the digest, not the thing preventing corruption,
+and calling it the latter overstated it.
+
+**The measurement is the point.** A gate that passes is evidence of nothing until
+you know it can fail. Falsifying this one cost five minutes and corrected a claim
+that had already been committed.
 
 ## Undisputed, and worth keeping
 

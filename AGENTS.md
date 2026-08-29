@@ -193,6 +193,25 @@ shortened list. And **make the skip loud**: the exhaustive test prints that it
 was skipped and how to run it, because a gate nobody knows is disabled is worse
 than no gate at all.
 
+### Gate 13.2, which is not a test
+
+`scripts/qualify-cache-race.sh` races two child JVMs onto one cache directory.
+It is a script rather than a `@Test` because a test runs inside one JVM, and
+what the gate is about is two of them. It builds a fatjar whose entry point is
+`test/QualifyCacheRace.flix` -- `--entrypoint` reaches a definition under
+`test/`, so the harness stays out of `src/` and the library still ships no
+`main`.
+
+```sh
+./scripts/qualify-cache-race.sh              # five rounds; CI runs this on main
+CUBESOLVE_RACE_ROUNDS=25 ./scripts/qualify-cache-race.sh
+```
+
+A race that is lost is still a pass, so treat a single green round as proving
+nothing. The same applies to the gate as a whole: it was run with the defect it
+exists for put back, and passed twenty-five rounds. `docs/design-review.md` says
+why, and it is the better lesson of the two.
+
 ## Commits
 
 Conventional commits, single-purpose, with the type and scope naming the primary

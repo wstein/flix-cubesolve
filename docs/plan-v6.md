@@ -912,7 +912,14 @@ checked-in slot mapping.
 **Gate 13.1** — Clean clone builds and passes every gate on a machine that has
 never generated a table and has no Java toolchain.
 **Gate 13.2** — Concurrent first-run generation by two processes produces one
-valid cache.
+valid cache. **Met.** `scripts/qualify-cache-race.sh` builds a fatjar whose entry
+point is `test/QualifyCacheRace.flix`, starts two child JVMs on one directory
+that has never existed, and reads the result back through the cache with
+rebuilding refused. Two processes, not two threads: a `@Test` runs in one JVM and
+so cannot reach this. `TestCacheOnDisk.twoThreadsRacingOnOneDirectoryLeaveOne`
+`ValidCache` is the cheap per-commit regression test and is named for what it is.
+The gate was also run with the old shared staging name restored, and passed —
+see the design review for what that says about it.
 **Gate 13.3** — A consumer importing both `cubesolve` and `orbit64` compiles,
 with no top-level `main` conflict.
 

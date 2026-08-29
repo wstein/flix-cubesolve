@@ -132,12 +132,20 @@ mod CubeSolve.Table.Cache {
     ///
     /// **The staging area is a directory of this handler's own**, obtained from
     /// the system rather than named after the target. Staging beside the target
-    /// under a shared name is not safe when two processes build at once: the
-    /// second can move the first's half-written file into place, and on a system
-    /// where rename detaches the name from the open file the first then goes on
-    /// writing into what has already been published. Both processes generate the
-    /// same bytes -- the tables are deterministic -- which makes the corruption
-    /// look impossible right up until it happens.
+    /// under a shared name -- which this used to do -- makes the claim above
+    /// false when two processes build at once: they pick the same staging file,
+    /// so one can move the other's half-written bytes into place, and where
+    /// rename detaches the name from the open file the loser goes on writing
+    /// into what is already published.
+    ///
+    /// Be clear about the size of that. It does not corrupt an answer: tables
+    /// are deterministic, so racing writers produce identical bytes, and where
+    /// they would not, a torn file fails its digest and counts as a miss. Gate
+    /// 13.2 was run with the shared name restored and passed twenty-five rounds
+    /// of two real processes. What the private directory buys is the property
+    /// this function claims -- old file or whole new one, never a torn one --
+    /// which a concurrent reader could otherwise catch it breaking, at the cost
+    /// of a needless rebuild.
     ///
     /// If no staging directory can be had, nothing is written. A cache that
     /// cannot store is a slow cache; a cache that stores unsafely is a wrong

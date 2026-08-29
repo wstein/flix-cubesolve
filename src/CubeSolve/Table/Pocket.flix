@@ -412,7 +412,11 @@ mod CubeSolve.Table.Pocket {
     ///
     /// The header a 2x2x2 table is written under.
     ///
-    def headerFor(key: String): Codec.Header =
+    /// Public because anything reading this cache without going through
+    /// `cachedTables` -- the Gate 13.2 harness does -- must ask under the same
+    /// header, and a second copy of that construction would drift.
+    ///
+    pub def headerFor(key: String): Codec.Header =
         Codec.header({
             table = key,
             convention = CubeSolve.convention(),

@@ -94,4 +94,54 @@ mod TestCacheOnDisk {
         }
     }
 
+    ///
+    /// Two **threads**, not two processes, racing to generate one table into
+    /// one fresh directory leave a single file that decodes.
+    ///
+    /// The name says threads because that is what this is, and it is worth
+    /// being blunt about what it therefore does not establish. **This is not
+    /// Gate 13.2.** Two threads share one JVM, one filesystem-handle table and
+    /// one runtime; two processes share none of those, and it is precisely at
+    /// that boundary -- independent open files, independent rename calls --
+    /// that the staging defect this replaced used to bite. What this test is
+    /// good for is catching a regression cheaply and on every run: if staging
+    /// ever goes back to a name derived from the target, two writers will
+    /// collide here too.
+    ///
+    @Test
+    def twoThreadsRacingOnOneDirectoryLeaveOneValidCache(): Unit \ Assert + IO =
+        match Fs.FileWrite.runWithIO(_ -> Fs.FileWrite.mkTempDir("cubesolve-race-")) {
+            case Err(_) =>
+                Assert.assertTrueWithMsg(false, "could not make a temporary directory")
+            case Ok(dir) =>
+                let done = Concurrent.Channel.newChannel(2);
+                let racer = () -> Concurrent.Channel.put(
+                    Disk.withFilesystem(dir, () ->
+                        Cache.table("pocket.distances", header("t"), () -> table(0))),
+                    done);
+                region rc {
+                    spawn racer() @ rc;
+                    spawn racer() @ rc
+                };
+                let left = Concurrent.Channel.get(done);
+                let right = Concurrent.Channel.get(done);
+                Assert.assertOk(left);
+                Assert.assertOk(right);
+                // Whoever published, what is on disk now must decode, and must
+                // be the table both of them built.
+                let after = Disk.withFilesystem(dir, () ->
+                    Cache.table("pocket.distances", header("t"), () ->
+                        Err("the race left nothing readable behind")));
+                match (after, table(0)) {
+                    case (Ok(found), Ok(wanted)) =>
+                        Assert.assertEq(expected = Table.entries(wanted), Table.entries(found));
+                        Vector.range(0, Table.entries(wanted)) |> Vector.forEach(i ->
+                            Assert.assertEqWithMsg(
+                                expected = Table.get(i, wanted), Table.get(i, found),
+                                "entry ${i} differs from what both racers built"))
+                    case _ =>
+                        Assert.assertTrueWithMsg(false, "the race left no valid cache")
+                }
+        }
+
 }
