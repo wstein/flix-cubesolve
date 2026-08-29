@@ -7,6 +7,7 @@ CubeSolve.Model      pieces, moves, validation, sampling
 CubeSolve.Table      packed lookup tables behind one read handle
 CubeSolve.Solve      IDA*, phases, per-size solvers
 CubeSolve.Scramble   random-state scrambling, over Solve's public API only
+CubeSolve.Method     human methods: recognise a partial state, play an algorithm
 CubeSolve.Patterns   the published pattern corpora, and recognising one
 CubeSolve.Render     a cube drawn as an unfolded net, plain or coloured
 ```
@@ -393,6 +394,37 @@ offers every view again under a larger allowance, keeping the best already found
 so the answer cannot get worse. Out of views is not: the six views are this
 scheduler's whole search space, and more probes alone will not change what it
 can reach. A single "exhausted" would have hidden that difference.
+
+## Human methods
+
+`CubeSolve.Solve` answers any cube by searching. `CubeSolve.Method` answers one
+particular partial state the way a person does: recognise it, then play back an
+algorithm that was memorised for it. These are different products, and neither
+is a better version of the other — a method answer is longer than a searched one
+and is not offered as a solution to an arbitrary cube.
+
+`Method.Pll` is the first of them, and covers the last step of CFOP.
+
+**The precondition is decided from decoded model state.** A cube is a PLL case
+when the first two layers are solved and the last layer is oriented; that is a
+question about pieces in slots, so it is asked of the orbit vectors and not of a
+coordinate or a facelet.
+
+**AUF is part of the answer, and is found rather than derived.** The same case
+arrives turned any of four ways and its algorithm assumes one, so recognition
+reports a `U` turn to make before and one after. It finds them by trying all
+21 cases against all sixteen pairs and replaying: an answer is returned only
+after it has been applied to the cube in hand and seen to solve it. That costs
+less than a case index and cannot be subtly wrong.
+
+**One algorithm per case, not claimed to be fastest.** The source lists many for
+each and says plainly that a longer algorithm can be quicker for a given person,
+so "fastest" is not a fact this module can hold. What it records is one
+published, replay-checked choice, alongside the optimal length the same source
+gives — the two differ for most cases, which is what a speed algorithm is for.
+
+**Nothing connects it to the solver.** `Standard.solution` is unchanged and does
+not consult it.
 
 ## The pattern corpora
 

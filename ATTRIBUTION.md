@@ -97,3 +97,18 @@ published figures. See [`docs/design-review.md`](docs/design-review.md).
 ## This repository
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+## PLL algorithms
+
+`src/CubeSolve/Method/Pll.flix` records one algorithm and one optimal length for
+each of the 21 PLL cases, taken from the Speedsolving.com wiki's PLL page,
+retrieved 2026-08-30:
+
+<https://www.speedsolving.com/wiki/index.php?title=PLL>
+
+Each algorithm is the first listed under its case's *Speedsolving Algorithms*
+heading, so it is a speed-oriented choice rather than a shortest one, and the
+recorded optimum is what the same page gives under *Optimal Algorithms*. The
+page lists many algorithms per case and states that a longer one may be faster
+for a given person, so no claim is made here that the recorded choice is the
+fastest.
