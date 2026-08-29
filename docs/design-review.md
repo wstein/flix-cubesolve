@@ -336,6 +336,37 @@ the cube.** Asking for much below 20.8 rejects nearly every draw — not because
 such states are rare, but because this engine cannot demonstrate them. When the
 draws run out it says exactly that.
 
+## What the pattern collections say about solution length
+
+The published patterns are a second, harder quality corpus, and they measure
+something the random baseline cannot. Random states are typical; patterns are
+*designed* — symmetric, structured positions whose algorithms were built to
+exploit exactly that structure.
+
+**On the 3×3×3 the solver loses to the publications, and more search barely
+helps.** Over the 102 patterns published in face turns, at the default budget:
+
+| budget | longer than published | worst excess | solver total |
+|---|---|---|---|
+| `fastBudget` | 37 of 102 | — | 1481 |
+| `defaultBudget` | **32 of 102** | **7** | 1467 |
+| `thoroughBudget` | 31 of 102 | 7 | 1456 |
+| 6000 probes | 28 of 102 | 7 | 1441 |
+
+Twelve times the probes buys four patterns. The worst case is Tetris —
+published in 8 moves, solved in 15 — and it does not improve with effort. The
+gap is structural: a two-phase solver reaches every state the same way, through
+the domino subgroup, with no notion that this position is special. Closing it
+would need the solver to exploit symmetry, which is what Stage 10a is for.
+
+**On the 2×2×2 the solver cannot lose**, because its solver is exact. That turns
+the comparison around and measures the *publications* instead: **63 of the 89
+published pocket-cube algorithms are already the shortest possible**, and the
+other 26 carry at most 4 moves of slack — 752 moves published against 702
+needed.
+
+Both are asserted as gates, so a regression in either direction shows.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be

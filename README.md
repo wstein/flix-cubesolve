@@ -170,6 +170,9 @@ the strategy is stated explicitly in
   in both directions.
 - **Group laws.** Identity, inverse, `m⁴ = id`, opposite-face commutation.
 - **Two independent derivations** wherever one is available.
+- **Against published algorithms.** 199 patterns from three collections are
+  checked in as fixtures, and the solver is measured against every one that
+  documents a half-turn move count.
 
 There is no formatting gate: the pinned compiler's `format` has no check-only
 mode, so run `./flixw format` before you commit.
