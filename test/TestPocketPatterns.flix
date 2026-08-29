@@ -1,5 +1,6 @@
 mod TestPocketPatterns {
 
+    use CubeSolve.Patterns
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
     use CubeSolve.Model.Move
@@ -20,41 +21,15 @@ mod TestPocketPatterns {
     /// moves pieces between slots while the colours stay with the pieces. That
     /// is what a move does and is not what conjugation does, so on this puzzle a
     /// whole-cube rotation really is a pair of moves.
-    def reorientations(): Vector[String] = Vector#{
-        "",
-        "F B'",
-        "R L'",
-        "U D'",
-        "F B' F B'",
-        "F B' U D'",
-        "R L' F B'",
-        "R L' R L'",
-        "R L' U D'",
-        "U D' R L'",
-        "U D' U D'",
-        "F B' F B' F B'",
-        "R L' F B' F B'",
-        "R L' R L' F B'",
-        "R L' R L' R L'",
-        "R L' R L' U D'",
-        "R L' U D' R L'",
-        "R L' U D' U D'",
-        "U D' R L' R L'",
-        "U D' U D' U D'",
-        "R L' R L' R L' U D'",
-        "R L' R L' U D' R L'",
-        "R L' U D' R L' R L'",
-        "R L' U D' U D' U D'"
-    }
-
     /// The smallest token over all 24 orientations: a pattern's identity.
+    /// Computed by the library rather than copied here, so the recorded
+    /// identities below are checked against the code consumers will run.
     def identityOf(c: Cube.Cube): String =
-        reorientations()
-            |> Vector.map(w -> match Cube.applyNotation(w, c) {
-                case Ok(x)  => Facelets.token(x) |> Result.getWithDefault("~")
-                case Err(_) => "~"
-            })
-            |> Vector.foldLeft((best, t) -> if (t < best) t else best, "~~~~~~~~~~~~~~")
+        Patterns.Pocket.identify(c) |> Option.getWithDefault("not a cube")
+
+    /// The words the library re-holds a pocket cube by.
+    def reorientations(): Vector[String] =
+        Patterns.Pocket.reorientations() |> Vector.map(snd)
 
     /// Everything the 2x2x2 collection must satisfy, in one pass.
     ///
@@ -81,33 +56,33 @@ mod TestPocketPatterns {
             expected = 24, List.length(List.distinct(held)),
             "the 24 reorientations should be distinct recordings of a solved cube");
 
-        let all = PocketPatternFixtures.all();
+        let all = Patterns.Pocket.all();
         Assert.assertEqWithMsg(expected = 89, Vector.length(all),
             "the collection should hold 89 distinct patterns");
-        let names = all |> Vector.map(PocketPatternFixtures.name) |> Vector.toList;
+        let names = all |> Vector.map(Patterns.Pocket.name) |> Vector.toList;
         Assert.assertEqWithMsg(
             expected = List.length(names), List.length(List.distinct(names)),
             "two patterns share a name");
-        let ids = all |> Vector.map(PocketPatternFixtures.canonical) |> Vector.toList;
+        let ids = all |> Vector.map(Patterns.Pocket.canonical) |> Vector.toList;
         Assert.assertEqWithMsg(
             expected = List.length(ids), List.length(List.distinct(ids)),
             "two patterns in the collection are the same pattern");
 
         all |> Vector.forEach(p -> {
-            let name = PocketPatternFixtures.name(p);
+            let name = Patterns.Pocket.name(p);
             Assert.assertTrueWithMsg(
-                PocketPatternFixtures.url(PocketPatternFixtures.source(p)) != "unknown",
+                Patterns.Pocket.url(Patterns.Pocket.source(p)) != "unknown",
                 "'${name}' cites an unknown source");
-            let published = made(name, PocketPatternFixtures.notation(p));
+            let published = made(name, Patterns.Pocket.notation(p));
             Assert.assertEqWithMsg(
-                expected = PocketPatternFixtures.canonical(p), identityOf(published),
+                expected = Patterns.Pocket.canonical(p), identityOf(published),
                 "'${name}' does not reach its recorded pattern");
             Assert.assertEqWithMsg(
                 expected = None, Validate.faultOf(published),
                 "'${name}' reaches a state turning cannot");
-            let shortest = made(name, PocketPatternFixtures.optimal(p));
+            let shortest = made(name, Patterns.Pocket.optimal(p));
             Assert.assertEqWithMsg(
-                expected = PocketPatternFixtures.canonical(p), identityOf(shortest),
+                expected = Patterns.Pocket.canonical(p), identityOf(shortest),
                 "'${name}' shortest form makes a different pattern");
             Assert.assertTrueWithMsg(not Cube.isSolved(shortest),
                 "'${name}' is the solved cube, not a pattern")

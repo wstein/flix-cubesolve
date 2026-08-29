@@ -7,6 +7,7 @@ CubeSolve.Model      pieces, moves, validation, sampling
 CubeSolve.Table      packed lookup tables behind one read handle
 CubeSolve.Solve      IDA*, phases, per-size solvers
 CubeSolve.Scramble   random-state scrambling, over Solve's public API only
+CubeSolve.Patterns   the published pattern corpora, and recognising one
 ```
 
 The dependency arrows run strictly downward. `Scramble` in particular is written
@@ -282,6 +283,43 @@ the refinement was worth nothing until the budget stopped being sliced. See
 Each phase owns its own tables and re-exports them, so the combining layer talks
 to `Solve.Phase1` and `Solve.Domino` rather than reaching into their table
 modules.
+
+## The pattern corpora
+
+199 published patterns — 110 for the 3x3x3, 89 for the 2x2x2 — with their
+provenance, the algorithm as published, a face-turn form, and a canonical
+identity. They live in `CubeSolve.Patterns.Standard` and
+`CubeSolve.Patterns.Pocket` as source, compiled into the library. They were
+under `test/` until they had consumers; a checked-in data file was considered and
+rejected, because it would add deployment paths, IO, decoding failures and cache
+invalidation to something small, immutable and versioned with the code. `Codec`
+and `Cache` serve generated binary tables and are the wrong tool for
+source-owned reference data.
+
+**One corpus, not two.** The tests consume these modules rather than keeping a
+copy, and compute identities with `Patterns.Standard.identify` and
+`Patterns.Pocket.identify` rather than reimplementing them, so what the tests
+check is what a consumer runs.
+
+**The two identities are not interchangeable**, and the difference is the same
+one the model draws. A 3x3x3's centres pin the frame, so two recordings of a
+pattern are related by conjugation. A 2x2x2 has none, so re-holding it moves
+pieces between slots — which is what a move does — and the relation is one-sided,
+with the whole-cube rotations spelled `R L'`, `U D'`, `F B'`. Building the 2x2x2
+corpus under the 3x3x3 relation was tried: it called distinct orientations
+distinct patterns and left four patterns with no coordinate at all.
+
+`recognize` returns the pattern together with the **orientation witness**, the
+re-holding that carries the recorded pattern onto the cube in hand, and
+`solutionFor` is what that witness is for. A witness that were off by an inverse
+would still name the pattern correctly, so the test replays the reframed solution
+rather than comparing tokens.
+
+**No solver consults any of this.** Recognising a scramble as a known pattern
+does not change the answer given for it. A shortcut firing on 110 states out of
+43 quintillion would be untestable in the ordinary case and would make solution
+length depend on whether a state happened to be famous. Exposing it as an
+explicit opt-in is a later decision, not a default.
 
 ## Testing strategy
 

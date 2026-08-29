@@ -1,5 +1,5 @@
 ///
-/// Every published 3x3x3 pattern this project knows about, as a fixture.
+/// Every published 3x3x3 pattern this project knows about.
 ///
 /// **Provenance.** Retrieved 2026-08-29:
 ///
@@ -53,9 +53,13 @@
 ///
 /// Generated. Regenerate rather than editing by hand.
 ///
-mod PatternFixtures {
+mod CubeSolve.Patterns.Standard {
 
-    use PatternFixtures.Pattern.Pattern
+    use CubeSolve.Model.Cube
+    use CubeSolve.Model.Facelets
+    use CubeSolve.Model.Move
+    use CubeSolve.Model.Rotation
+    use CubeSolve.Patterns.Standard.Pattern.Pattern
 
     ///
     /// A pattern: its name, where it came from, the published algorithm, the
@@ -83,7 +87,10 @@ mod PatternFixtures {
     ///
     /// The same pattern using face turns only.
     ///
-    pub def htm(p: Pattern): String = let Pattern(_, _, _, _, h) = p; h
+    /// Its inverse is a solution, which is what `knownSolution` returns. It is
+    /// a *known* one and not an optimal one -- see there.
+    ///
+    pub def faceTurns(p: Pattern): String = let Pattern(_, _, _, _, h) = p; h
 
     ///
     /// The pattern's identity: the smallest token over all 24 orientations.
@@ -91,16 +98,85 @@ mod PatternFixtures {
     pub def canonical(p: Pattern): String = let Pattern(_, c, _, _, _) = p; c
 
     ///
-    /// The URL a source id refers to.
+    /// The URL this pattern's source refers to.
     ///
-    pub def url(id: String): String = match id {
-        case "speedsolving" => "https://www.speedsolving.com/wiki/index.php/List_of_pretty_patterns"
-        case "ruwix1" => "https://ruwix.com/the-rubiks-cube/rubiks-cube-patterns-algorithms/"
-        case "ruwix2" =>
-            "https://ruwix.com/the-rubiks-cube/rubiks-cube-patterns-algorithms/"
-                + "more-rubiks-patterns/"
-        case _ => "unknown"
-    }
+    /// Delegates to `CubeSolve.Patterns.url`, which knows both collections.
+    ///
+    pub def url(id: String): String = CubeSolve.Patterns.url(id)
+
+    ///
+    /// A face-turn solution for the pattern as recorded upright.
+    ///
+    /// **Known, not optimal.** It is the recorded `faceTurns` run backwards, so
+    /// it is exactly as long as that sequence and nothing here claims it is the
+    /// shortest way to undo the pattern. The 3x3x3's optimal distances are not
+    /// known for these states and this project does not compute them; for a short
+    /// answer, ask the solver. The 2x2x2 corpus is the one that can promise
+    /// optimality, and it says so with a different name.
+    ///
+    pub def knownSolution(p: Pattern): Result[String, List[Move.Move]] =
+        Move.parse(faceTurns(p)) |> Result.map(Move.inverseOf)
+
+    ///
+    /// `knownSolution` renamed into the frame `witness` describes.
+    ///
+    /// `recognize` hands back the witness that goes with the cube it was given,
+    /// and this is what that witness is for: the corpus records every pattern
+    /// upright, so a cube held any other way needs the solution's face names
+    /// carried across before it applies.
+    ///
+    pub def solutionFor(
+        p: Pattern,
+        witness: Rotation.Rotation
+    ): Result[String, List[Move.Move]] =
+        knownSolution(p) |> Result.map(List.map(m -> Rotation.reframe(m, witness)))
+
+    ///
+    /// This cube's pattern identity: the smallest token over the 24
+    /// conjugations, or nothing if it is not a cube.
+    ///
+    /// Conjugation is the relation here because a 3x3x3's centres pin the frame.
+    /// See `CubeSolve.Patterns` for why the 2x2x2 cannot use it.
+    ///
+    pub def identify(c: Cube.Cube): Option[String] =
+        Rotation.all()
+            |> Vector.toList
+            |> List.filterMap(r -> Facelets.token(Cube.conjugate(r, c)) |> Result.toOption)
+            |> List.minimum
+
+    ///
+    /// The published pattern `c` is, and how it is being held.
+    ///
+    /// Nothing else in the engine calls this. Recognising a scramble as a known
+    /// pattern does not make the solver answer differently, by design: a
+    /// shortcut that fired on 110 states out of 43 quintillion would be
+    /// untestable in the ordinary case and would make solution length depend on
+    /// whether a state happened to be famous.
+    ///
+    pub def recognize(c: Cube.Cube): Option[(Pattern, Rotation.Rotation)] =
+        forM (
+            id <- identify(c);
+            found <- all() |> Vector.findLeft(p -> canonical(p) == id);
+            held <- heldAs(found, c)
+        ) yield (found, held)
+
+    ///
+    /// Which rotation carries the recorded pattern onto `c`.
+    ///
+    /// Recomputed from `faceTurns` rather than stored: a second copy of each
+    /// state in the source would be 110 more literals to keep in step with the
+    /// algorithms they came from, and this runs once per recognition rather than
+    /// in any loop worth counting.
+    ///
+    def heldAs(p: Pattern, c: Cube.Cube): Option[Rotation.Rotation] =
+        forM (
+            upright <- Cube.solved(3)
+                |> Result.flatMap(s -> Cube.applyNotation(faceTurns(p), s))
+                |> Result.toOption;
+            target <- Facelets.token(c) |> Result.toOption;
+            r <- Rotation.all() |> Vector.findLeft(r ->
+                Facelets.token(Cube.conjugate(r, upright)) == Ok(target))
+        ) yield r
 
     ///
     /// Every pattern.

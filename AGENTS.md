@@ -38,7 +38,9 @@ The wrapper adds verbs of its own, ahead of the compiler's:
 ## Layout
 
 - `src/CubeSolve.flix` — the root module
-- `src/CubeSolve/` — engine sources; directories mirror module paths
+- `src/CubeSolve/` — engine sources; directories mirror module paths.
+  `CubeSolve/Patterns/` holds the 199 published patterns as generated source:
+  one canonical copy, consumed by the tests rather than duplicated in them
 - `test/` — `@Test` functions, flat, one `TestX` per subject
 - `docs/` — architecture, conventions, design review, and dated ADRs
 - `ATTRIBUTION.md` — provenance and licence of anything not written here

@@ -1,5 +1,5 @@
 ///
-/// Every published 2x2x2 pattern this project knows about, as a fixture.
+/// Every published 2x2x2 pattern this project knows about.
 ///
 /// **Provenance.** Retrieved 2026-08-29:
 ///
@@ -59,9 +59,13 @@
 ///
 /// Generated. Regenerate rather than editing by hand.
 ///
-mod PocketPatternFixtures {
+mod CubeSolve.Patterns.Pocket {
 
-    use PocketPatternFixtures.Pattern.Pattern
+    use CubeSolve.Model.Cube
+    use CubeSolve.Model.Facelets
+    use CubeSolve.Model.Move
+    use CubeSolve.Model.Rotation
+    use CubeSolve.Patterns.Pocket.Pattern.Pattern
 
     ///
     /// A pattern: its name, where it came from, the published algorithm, the
@@ -97,13 +101,154 @@ mod PocketPatternFixtures {
     pub def canonical(p: Pattern): String = let Pattern(_, c, _, _, _) = p; c
 
     ///
-    /// The URL a source id refers to.
+    /// The URL this pattern's source refers to.
     ///
-    pub def url(id: String): String = match id {
-        case "speedsolving" => "https://www.speedsolving.com/wiki/index.php/List_of_pretty_patterns"
-        case "randelshofer" => "https://www.randelshofer.ch/rubik/patterns_pocket.html"
-        case _ => "unknown"
+    /// Delegates to `CubeSolve.Patterns.url`, which knows both collections.
+    ///
+    pub def url(id: String): String = CubeSolve.Patterns.url(id)
+
+    ///
+    /// The proven-shortest solution for the pattern as recorded.
+    ///
+    /// `optimal` is exact -- the 2x2x2's whole state space fits in a table -- so
+    /// running it backwards is exact too. This is the field the 3x3x3 corpus
+    /// cannot offer; there the equivalent is called `knownSolution` and is only
+    /// that.
+    ///
+    pub def optimalSolution(p: Pattern): Result[String, List[Move.Move]] =
+        Move.parse(optimal(p)) |> Result.map(Move.inverseOf)
+
+    ///
+    /// `optimalSolution` for a cube held as `witness` describes.
+    ///
+    /// Turning the cube back upright and then solving it, literally: the
+    /// re-holding is undone first and the recorded solution follows. Those
+    /// leading moves are a whole-cube turn, so they cost nothing in pieces moved
+    /// but they are real moves and are counted -- **the result is no longer
+    /// proven optimal unless the witness is the identity.** A caller who wants
+    /// the shortest answer for a cube in an awkward orientation should solve it.
+    ///
+    pub def solutionFor(
+        p: Pattern,
+        witness: Rotation.Rotation
+    ): Result[String, List[Move.Move]] =
+        match wordFor(witness) {
+            case None       => Err("that rotation is not one of the 24 re-holdings")
+            case Some(back) =>
+                forM (
+                    undo <- Move.parse(back) |> Result.map(Move.inverseOf);
+                    rest <- optimalSolution(p)
+                ) yield List.append(undo, rest)
+        }
+
+    ///
+    /// The 24 ways a centreless cube can be held, each as a rotation and the
+    /// moves that reach it.
+    ///
+    /// **On this puzzle a whole-cube turn is a pair of moves.** `x` is `R L'`,
+    /// `y` is `U D'`, `z` is `F B'`: with no centres to hold still, turning both
+    /// layers of an axis turns the cube. So these are `Layer` moves and not
+    /// `Frame` ones, and applying one changes the state rather than the frame --
+    /// which is the whole reason this corpus cannot use the 3x3x3's conjugation.
+    ///
+    /// Closed over the three generators rather than written out, so the table
+    /// cannot disagree with the group it is meant to be.
+    ///
+    pub def reorientations(): Vector[(Rotation.Rotation, String)] =
+        grow(List#{(Rotation.identity(), "")}) |> List.toVector
+
+    ///
+    /// The moves that reach the re-holding `r` names.
+    ///
+    pub def wordFor(r: Rotation.Rotation): Option[String] =
+        reorientations() |> Vector.findLeft(e -> fst(e) == r) |> Option.map(snd)
+
+    ///
+    /// This cube's pattern identity: the smallest token over the 24 re-holdings.
+    ///
+    pub def identify(c: Cube.Cube): Option[String] =
+        reorientations()
+            |> Vector.toList
+            |> List.filterMap(e -> tokenAfter(snd(e), c))
+            |> List.minimum
+
+    ///
+    /// The published pattern `c` is, and how it is being held.
+    ///
+    /// As on the 3x3x3, no solver consults this.
+    ///
+    pub def recognize(c: Cube.Cube): Option[(Pattern, Rotation.Rotation)] =
+        forM (
+            id <- identify(c);
+            found <- all() |> Vector.findLeft(p -> canonical(p) == id);
+            held <- heldAs(found, c)
+        ) yield (found, held)
+
+    ///
+    /// Which re-holding carries the recorded pattern onto `c`.
+    ///
+    def heldAs(p: Pattern, c: Cube.Cube): Option[Rotation.Rotation] =
+        forM (
+            upright <- Cube.solved(2)
+                |> Result.flatMap(s -> Cube.applyNotation(optimal(p), s))
+                |> Result.toOption;
+            target <- Facelets.token(c) |> Result.toOption;
+            e <- reorientations()
+                |> Vector.findLeft(e -> tokenAfter(snd(e), upright) == Some(target))
+        ) yield fst(e)
+
+    ///
+    /// `c`'s token after the moves `word`, if both work out.
+    ///
+    def tokenAfter(word: String, c: Cube.Cube): Option[String] =
+        Cube.applyNotation(word, c) |> Result.flatMap(Facelets.token) |> Result.toOption
+
+    ///
+    /// The generators of the re-holding group, with the moves that make them.
+    ///
+    def generators(): List[(Rotation.Rotation, String)] = List#{
+        (Rotation.x(), "R L'"),
+        (Rotation.y(), "U D'"),
+        (Rotation.z(), "F B'")
     }
+
+    ///
+    /// `found` closed under the generators.
+    ///
+    def grow(found: List[(Rotation.Rotation, String)]): List[(Rotation.Rotation, String)] =
+        let seen = found |> List.map(fst) |> List.toSet;
+        let fresh = found
+            |> List.flatMap(e -> generators() |> List.map(g -> extend(e, g)))
+            |> List.filter(e -> not Set.memberOf(fst(e), seen))
+            |> firstOfEachRotation;
+        if (List.isEmpty(fresh)) found else grow(List.append(found, fresh))
+
+    ///
+    /// One entry followed by one generator.
+    ///
+    def extend(
+        e: (Rotation.Rotation, String),
+        g: (Rotation.Rotation, String)
+    ): (Rotation.Rotation, String) =
+        let (r, w) = e;
+        let (gr, gw) = g;
+        (Rotation.andThen(r, gr), if (String.isEmpty(w)) gw else "${w} ${gw}")
+
+    ///
+    /// `es` with later entries for an already-seen rotation dropped.
+    ///
+    /// Keeping the first means the word for a rotation is the shortest one the
+    /// closure reached it by, which is what makes the table's words readable.
+    ///
+    def firstOfEachRotation(
+        es: List[(Rotation.Rotation, String)]
+    ): List[(Rotation.Rotation, String)] =
+        let keep = (acc, e) ->
+            if (List.exists(a -> fst(a) == fst(e), acc))
+                acc
+            else
+                List.append(acc, e :: Nil);
+        List.foldLeft(keep, Nil, es)
 
     ///
     /// Every pattern.

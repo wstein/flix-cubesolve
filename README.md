@@ -170,8 +170,8 @@ the strategy is stated explicitly in
   in both directions.
 - **Group laws.** Identity, inverse, `m⁴ = id`, opposite-face commutation.
 - **Two independent derivations** wherever one is available.
-- **Against published algorithms.** 199 patterns from three collections are
-  checked in as fixtures, and the solver is measured against every one that
+- **Against published algorithms.** 199 patterns from four collections ship in
+  `CubeSolve.Patterns`, and the solver is measured against every one that
   documents a half-turn move count.
 
 The suite takes **four to five minutes** — 233 s, 255 s and 328 s on three runs
@@ -186,7 +186,7 @@ is a handful of tests that either *run the solver* or *build a table*:
 | `TestDomino`, `TestStandard` — table sweeps | 20 s, 16 s |
 | everything else, including both fixture sweeps | under 10 s |
 
-The fixture sweeps are cheap and easy to misjudge: re-recording all 199 patterns
+The corpus sweeps are cheap and easy to misjudge: re-recording all 199 patterns
 from all 24 orientations costs **0.14 s and 0.05 s**. Solving is what is slow, and
 it is slow wherever it appears.
 

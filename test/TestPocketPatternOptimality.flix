@@ -1,5 +1,6 @@
 mod TestPocketPatternOptimality {
 
+    use CubeSolve.Patterns
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Sized
@@ -35,9 +36,9 @@ mod TestPocketPatternOptimality {
         match CubeSolve.Table.Pocket.build() {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected the tables")
             case Ok(t)  =>
-                let deepest = PocketPatternFixtures.all() |> Vector.foldLeft((worst, p) -> {
-                    let name = PocketPatternFixtures.name(p);
-                    let moves = PocketPatternFixtures.optimal(p);
+                let deepest = Patterns.Pocket.all() |> Vector.foldLeft((worst, p) -> {
+                    let name = Patterns.Pocket.name(p);
+                    let moves = Patterns.Pocket.optimal(p);
                     let stated = List.length(Move.parse(moves) |> Result.getWithDefault(Nil));
                     Assert.assertTrueWithMsg(stated >= 1 and stated <= Pocket.diameter(),
                         "'${name}' is ${stated} moves, outside 1 to ${Pocket.diameter()}");
@@ -58,14 +59,14 @@ mod TestPocketPatternOptimality {
                     "the deepest pattern should sit at the 2x2x2 diameter");
 
                 // and no published algorithm beats the exact solver
-                let slack = PocketPatternFixtures.all() |> Vector.foldLeft((acc, p) -> {
+                let slack = Patterns.Pocket.all() |> Vector.foldLeft((acc, p) -> {
                     let (looser, most) = acc;
-                    let name = PocketPatternFixtures.name(p);
+                    let name = Patterns.Pocket.name(p);
                     let shortest = List.length(
-                        Move.parse(PocketPatternFixtures.optimal(p))
+                        Move.parse(Patterns.Pocket.optimal(p))
                             |> Result.getWithDefault(Nil));
                     let published = List.length(
-                        Move.parse(PocketPatternFixtures.notation(p))
+                        Move.parse(Patterns.Pocket.notation(p))
                             |> Result.getWithDefault(Nil));
                     Assert.assertTrueWithMsg(published >= shortest,
                         "'${name}' is published in ${published} moves, shorter than the "

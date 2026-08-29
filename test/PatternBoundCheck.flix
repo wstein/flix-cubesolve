@@ -9,6 +9,7 @@
 ///
 mod PatternBoundCheck {
 
+    use CubeSolve.Patterns
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Sized
@@ -137,13 +138,13 @@ mod PatternBoundCheck {
         only: Vector[String]
     ): (Int32, Int32, Int32) \ Assert =
         let wanted = p ->
-            Vector.isEmpty(only) or Vector.memberOf(PatternFixtures.name(p), only);
-        PatternFixtures.all() |> Vector.filter(wanted) |> Vector.foldLeft((acc, p) -> {
+            Vector.isEmpty(only) or Vector.memberOf(Patterns.Standard.name(p), only);
+        Patterns.Standard.all() |> Vector.filter(wanted) |> Vector.foldLeft((acc, p) -> {
             let (comparable, longer, worst) = acc;
-            let name = PatternFixtures.name(p);
+            let name = Patterns.Standard.name(p);
             let documented = List.length(
-                Move.parse(PatternFixtures.htm(p)) |> Result.getWithDefault(Nil));
-            let cube = made(name, PatternFixtures.notation(p));
+                Move.parse(Patterns.Standard.faceTurns(p)) |> Result.getWithDefault(Nil));
+            let cube = made(name, Patterns.Standard.notation(p));
             match Sized.standardOf(cube)
                     |> Result.flatMap(s -> Standard.solutionWith(t, budget, s)) {
                 case Err(e) =>
@@ -158,7 +159,7 @@ mod PatternBoundCheck {
                         expected = Ok(true),
                         Cube.applyAll(ms, cube) |> Result.map(Cube.isSolved),
                         "the solution for '${name}' did not solve it");
-                    match Move.parse(PatternFixtures.notation(p)) {
+                    match Move.parse(Patterns.Standard.notation(p)) {
                         case Err(_) => acc
                         case Ok(published) =>
                             let want = List.length(published);

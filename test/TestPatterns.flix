@@ -1,5 +1,6 @@
 mod TestPatterns {
 
+    use CubeSolve.Patterns
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
     use CubeSolve.Model.Move
@@ -20,11 +21,16 @@ mod TestPatterns {
     /// This is a pattern's identity. Two algorithms make the same pattern when
     /// they reach the same state up to how the cube is held, and comparing raw
     /// tokens would call two orientations of one pattern different.
+    ///
+    /// The library's own identity function, not a copy of it.
+    ///
+    /// The assertions below compare a recorded `canonical` against what this
+    /// returns for the algorithm that is supposed to produce it, so they check
+    /// the data against the code that consumers will run. A second
+    /// implementation here would let the two drift and still pass.
+    ///
     def identityOf(c: Cube.Cube): String =
-        Rotation.all()
-            |> Vector.map(r -> Facelets.token(Cube.conjugate(r, c))
-                                   |> Result.getWithDefault("~"))
-            |> Vector.foldLeft((best, t) -> if (t < best) t else best, "~~~~~~~~~~~~~~")
+        Patterns.Standard.identify(c) |> Option.getWithDefault("not a cube")
 
     /// Everything the 3x3x3 collection must satisfy, in one pass.
     ///
@@ -42,33 +48,33 @@ mod TestPatterns {
     ///   published algorithm usually does not.
     @Test
     def theCollectionIsSoundCompleteAndTranslated(): Unit \ Assert =
-        let all = PatternFixtures.all();
+        let all = Patterns.Standard.all();
         Assert.assertEqWithMsg(expected = 110, Vector.length(all),
             "the collection should hold 110 distinct patterns");
-        let names = all |> Vector.map(PatternFixtures.name) |> Vector.toList;
+        let names = all |> Vector.map(Patterns.Standard.name) |> Vector.toList;
         Assert.assertEqWithMsg(
             expected = List.length(names), List.length(List.distinct(names)),
             "two patterns share a name");
-        let ids = all |> Vector.map(PatternFixtures.canonical) |> Vector.toList;
+        let ids = all |> Vector.map(Patterns.Standard.canonical) |> Vector.toList;
         Assert.assertEqWithMsg(
             expected = List.length(ids), List.length(List.distinct(ids)),
             "two patterns in the collection are the same pattern");
 
         all |> Vector.forEach(p -> {
-            let name = PatternFixtures.name(p);
+            let name = Patterns.Standard.name(p);
             Assert.assertTrueWithMsg(
-                PatternFixtures.url(PatternFixtures.source(p)) != "unknown",
-                "'${name}' cites an unknown source '${PatternFixtures.source(p)}'");
+                Patterns.Standard.url(Patterns.Standard.source(p)) != "unknown",
+                "'${name}' cites an unknown source '${Patterns.Standard.source(p)}'");
 
-            let published = made(name, PatternFixtures.notation(p));
+            let published = made(name, Patterns.Standard.notation(p));
             Assert.assertEqWithMsg(
-                expected = PatternFixtures.canonical(p), identityOf(published),
+                expected = Patterns.Standard.canonical(p), identityOf(published),
                 "'${name}' does not reach its recorded pattern");
             Assert.assertEqWithMsg(
                 expected = None, Validate.faultOf(published),
                 "'${name}' reaches a state turning cannot");
 
-            match Move.parse(PatternFixtures.htm(p)) {
+            match Move.parse(Patterns.Standard.faceTurns(p)) {
                 case Err(e) =>
                     Assert.assertEqWithMsg(expected = "", e,
                         "'${name}' half-turn form is not face turns")
@@ -77,9 +83,9 @@ mod TestPatterns {
                         List.forAll(m -> Vector.memberOf(m, Move.all()), ms),
                         "'${name}' uses something outside the face-turn alphabet")
             };
-            let translated = made(name, PatternFixtures.htm(p));
+            let translated = made(name, Patterns.Standard.faceTurns(p));
             Assert.assertEqWithMsg(
-                expected = PatternFixtures.canonical(p), identityOf(translated),
+                expected = Patterns.Standard.canonical(p), identityOf(translated),
                 "'${name}' half-turn form makes a different pattern");
             Assert.assertEqWithMsg(
                 expected = Rotation.identity(), Cube.orientation(translated),
@@ -94,8 +100,8 @@ mod TestPatterns {
     /// which source wins.
     @Test
     def thePatternsEveryoneKnowsAreHereUnderTheirSpeedsolvingNames(): Unit \ Assert =
-        let all = PatternFixtures.all();
-        let named = n -> Vector.findLeft(p -> PatternFixtures.name(p) == n, all);
+        let all = Patterns.Standard.all();
+        let named = n -> Vector.findLeft(p -> Patterns.Standard.name(p) == n, all);
         List.forEach(n ->
             Assert.assertTrueWithMsg(Option.nonEmpty(named(n)),
                 "the collection is missing '${n}'"),
@@ -110,7 +116,7 @@ mod TestPatterns {
         match named("Superflip") {
             case None    => Assert.assertTrueWithMsg(false, "no superflip")
             case Some(p) =>
-                let twice = "${PatternFixtures.htm(p)} ${PatternFixtures.htm(p)}";
+                let twice = "${Patterns.Standard.faceTurns(p)} ${Patterns.Standard.faceTurns(p)}";
                 Assert.assertTrueWithMsg(
                     Cube.isSolved(made("superflip twice", twice)),
                     "the superflip should be its own inverse")
