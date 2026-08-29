@@ -31,6 +31,31 @@ mod CubeSolve.Solve.Phase1 {
     use CubeSolve.Table.Standard
 
     ///
+    /// Phase one's tables.
+    ///
+    /// Re-exported so that a caller combining the phases talks to the phase and
+    /// not to its tables: which table module a phase keeps its data in is the
+    /// phase's business.
+    ///
+    pub type alias Tables = Standard.Tables
+
+    ///
+    /// Build phase one's tables.
+    ///
+    pub def buildTables(): Result[String, Tables] = Standard.build()
+
+    ///
+    /// Phase one's tables, from the cache where possible.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ CubeSolve.Table.Cache.Store =
+        Standard.cachedTables()
+
+    ///
+    /// The move with index `m` in phase one's alphabet.
+    ///
+    pub def moveOfIndex(m: Int32): Move.Move = Standard.moveOfIndex(m)
+
+    ///
     /// The deepest phase one is ever allowed to search.
     ///
     /// Twelve. The reference's own bound, and comfortably above the pruning

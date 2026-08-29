@@ -219,10 +219,41 @@ min2phase averages about **20.6** at `probeMin` 5, and the true optimum averages
 about **17.7**. So this solver is roughly 0.8 moves behind the reference and 3.7
 behind optimal.
 
-That gap is expected and its causes are known: no symmetry reduction (Stage 10a)
-and none of the Stage 10b refinements — three phase-one target axes, searching
-the inverse state simultaneously, pre-scramble. Each should be benchmarked
-separately against this row before being kept.
+### What Stage 10 actually bought
+
+Each change measured separately against that baseline, at **equal probe budget**
+so the comparison is not simply "spend more":
+
+| configuration | mean | worst |
+|---|---|---|
+| one direction, 60 handovers per depth | 21.4 | 23 |
+| one direction, 300 handovers | 21.3 | 23 |
+| one direction, 1200 handovers | 21.4 | 23 |
+| **both directions, 300 handovers** | **21.0** | 23 |
+
+Two findings, neither of which was the expected one.
+
+**Handover count alone does nothing.** Raising the number of phase-one solutions
+tried per depth from 60 to 1200 moves the mean by less than a tenth. The search
+was not handover-starved.
+
+**Searching the inverse state alone does almost nothing either** — measured at
+21.3 against 21.4 when the probe budget is split between the two directions,
+which is within noise. Halving each search very nearly cancels the benefit of
+having two of them.
+
+**Together they are worth 0.4 moves.** That is default-budget quality matching
+what previously took a patient budget of 900 probes. The refinement only pays
+when each direction has enough handovers to use its half of the budget, which is
+not something either measurement would have shown on its own — and is the
+argument for measuring one change at a time and then their combination, rather
+than assuming refinements add up.
+
+**Symmetry reduction (Stage 10a) was not done, and would not have helped this
+number.** It compresses equivalent states without changing a pruning value, and
+all three phase-one tables are already built, so the heuristic is already as
+strong as the reference's. Symmetry is a memory-and-speed optimisation here, not
+a quality one.
 
 **Gate 7.2 is not met and is not claimed.** Superflip is solved, but not in 20
 moves, and asserting that it were would be asserting a quality the solver does

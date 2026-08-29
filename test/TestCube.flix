@@ -1,6 +1,7 @@
 mod TestCube {
 
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Facelets
     use CubeSolve.Model.Move
     use CubeSolve.Model.Rotation
     use CubeSolve.Model.Move.Face.{U, R, F, D, L, B}
@@ -114,7 +115,7 @@ mod TestCube {
     /// had -- three facelets of colour R.
     @Test
     def aClockwiseUCarriesTheRightFaceToTheFront(): Unit \ Assert =
-        match Cube.facelets(scrambled(3, "U")) {
+        match Facelets.of(scrambled(3, "U")) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "facelets render")
             case Ok(fs) =>
                 let rightColour = Move.faceIndex(R);
@@ -132,7 +133,7 @@ mod TestCube {
     @Test
     def stateSurvivesARoundTripThroughFacelets(): Unit \ Assert =
         let c = scrambled(3, "R U2 F' L D B2 R' U");
-        match Cube.facelets(c) |> Result.flatMap(fs -> Cube.ofFacelets(3, fs)) {
+        match Facelets.of(c) |> Result.flatMap(fs -> Facelets.toCube(3, fs)) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "round trips")
             case Ok(back) => Assert.assertEq(expected = Cube.orbits(c), Cube.orbits(back))
         }
@@ -188,10 +189,56 @@ mod TestCube {
     /// failed on rather than only the seed that produced it.
     @Test
     def everyCubeCanNameItself(): Unit \ Assert =
-        Assert.assertOk(Cube.token(scrambled(3, "R U R'")));
+        Assert.assertOk(Facelets.token(scrambled(3, "R U R'")));
         Assert.assertNeq(
-            unexpected = Cube.token(scrambled(3, "R U R'")),
-            Cube.solved(3) |> Result.flatMap(Cube.token)
+            unexpected = Facelets.token(scrambled(3, "R U R'")),
+            Cube.solved(3) |> Result.flatMap(Facelets.token)
         )
+
+    // ---------- inversion ----------
+
+    /// The defining property: if a scramble produced `c`, then applying that
+    /// same scramble to the inverse of `c` returns to solved.
+    ///
+    /// This is what makes inversion usable by the solver, and it fails loudly
+    /// if the orientation half of the inversion is wrong -- which a permutation
+    /// check alone would not catch.
+    @Test
+    def invertingAStateUndoesTheScrambleThatMadeIt(): Unit \ Assert =
+        List.forEach(scramble -> {
+            let c = scrambled(3, scramble);
+            let undone = Cube.applyNotation(scramble, Cube.inverse(c))
+                |> Result.map(Cube.isSolved);
+            Assert.assertEqWithMsg(
+                expected = Ok(true), undone,
+                "'${scramble}' applied to the inverse of its own result should solve")
+        },
+        "R" :: "R U R' U'" :: "F R U' R' U' R U R' F'" :: "R U2 F' L D B2 R' U"
+            :: "U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2" :: Nil)
+
+    /// Inversion is an involution, and fixes exactly the self-inverse states.
+    @Test
+    def inversionIsAnInvolution(): Unit \ Assert =
+        List.forEach(scramble -> {
+            let c = scrambled(3, scramble);
+            Assert.assertEqWithMsg(
+                expected = Cube.orbits(c), Cube.orbits(Cube.inverse(Cube.inverse(c))),
+                "inverting '${scramble}' twice should return it")
+        },
+        "R" :: "R U R' U'" :: "R U2 F' L D B2 R' U" :: Nil);
+        // a solved cube and superflip are their own inverses
+        let solved = scrambled(3, "");
+        Assert.assertEq(expected = Cube.orbits(solved), Cube.orbits(Cube.inverse(solved)));
+        let superflip = scrambled(3, "R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U");
+        Assert.assertEq(
+            expected = Cube.orbits(superflip), Cube.orbits(Cube.inverse(superflip)))
+
+    /// Inversion works on a 2x2x2 too, where there is only a corner orbit.
+    @Test
+    def inversionWorksOnAPocketCube(): Unit \ Assert =
+        let c = scrambled(2, "R U2 F' R' U");
+        Assert.assertEq(
+            expected = Ok(true),
+            Cube.applyNotation("R U2 F' R' U", Cube.inverse(c)) |> Result.map(Cube.isSolved))
 
 }

@@ -19,8 +19,8 @@ mod CubeSolve.Solve.Standard {
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Solve.Phase1
     use CubeSolve.Solve.Standard.Budget.Budget
+    use CubeSolve.Solve.Domino
     use CubeSolve.Table.Cache
-    use CubeSolve.Table.Domino
 
     ///
     /// Every table a 3x3x3 solve needs, for both phases.
@@ -30,7 +30,7 @@ mod CubeSolve.Solve.Standard {
     /// it.
     ///
     pub enum Tables {
-        case Tables(CubeSolve.Table.Standard.Tables, Domino.Tables)
+        case Tables(Phase1.Tables, Domino.Tables)
     }
 
     ///
@@ -41,8 +41,8 @@ mod CubeSolve.Solve.Standard {
     ///
     pub def buildTables(): Result[String, Tables] =
         forM (
-            p1 <- CubeSolve.Table.Standard.build();
-            p2 <- Domino.build()
+            p1 <- Phase1.buildTables();
+            p2 <- Domino.buildTables()
         ) yield Tables.Tables(p1, p2)
 
     ///
@@ -50,7 +50,7 @@ mod CubeSolve.Solve.Standard {
     ///
     pub def cachedTables(): Result[String, Tables] \ Cache.Store =
         forM (
-            p1 <- CubeSolve.Table.Standard.cachedTables();
+            p1 <- Phase1.cachedTables();
             p2 <- Domino.cachedTables()
         ) yield Tables.Tables(p1, p2)
 
@@ -75,7 +75,7 @@ mod CubeSolve.Solve.Standard {
     /// answer everywhere.
     ///
     pub enum Budget {
-        case Budget({ probeMin = Int32, probeMax = Int32, maxDepth = Int32 })
+        case Budget({ probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 })
     }
 
     ///
@@ -86,12 +86,14 @@ mod CubeSolve.Solve.Standard {
     /// and chosen so the tests are a gate rather than a benchmark.
     ///
     pub def defaultBudget(): Budget =
-        Budget({ probeMin = 30, probeMax = 500, maxDepth = 25 })
+        Budget({ probeMin = 30, probeMax = 500, maxDepth = 25, handovers = 300 })
 
     ///
-    /// How many phase-one handovers to try at each depth.
+    /// A budget, from its parts.
     ///
-    def handoversPerDepth(): Int32 = 60
+    pub def budget(
+        parts: { probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 }
+    ): Budget = Budget(parts)
 
     ///
     /// A solution for `c`, or why there is none within the budget.
@@ -107,7 +109,71 @@ mod CubeSolve.Solve.Standard {
     /// fail mysteriously or solve the wrong cube.
     ///
     pub def solution(
-        p1: CubeSolve.Table.Standard.Tables,
+        p1: Phase1.Tables,
+        p2: Domino.Tables,
+        budget: Budget,
+        c: Sized.Standard
+    ): Result[String, List[Move.Move]] =
+        bothDirections(p1, p2, budget, c)
+
+    ///
+    /// Search the state and its inverse, and keep the shorter answer.
+    ///
+    /// A state and its inverse are equally far from solved -- inversion is a
+    /// symmetry of the cube group -- but a two-phase search does not treat them
+    /// alike, because phase one aims at a particular subgroup and the two sit
+    /// differently with respect to it. So the two searches find different
+    /// answers, and one is often shorter.
+    ///
+    /// The budget is **split between them** rather than spent twice, so this
+    /// costs no more probes than searching one direction and can be compared
+    /// with the recorded baseline directly.
+    ///
+    def bothDirections(
+        p1: Phase1.Tables,
+        p2: Domino.Tables,
+        budget: Budget,
+        c: Sized.Standard
+    ): Result[String, List[Move.Move]] =
+        let half = halved(budget);
+        let forwards = oneDirection(p1, p2, half, c);
+        let backwards = Sized.standardOf(Cube.inverse(Sized.cubeOfStandard(c)))
+            |> Result.flatMap(inverted -> oneDirection(p1, p2, half, inverted))
+            |> Result.map(Move.inverseOf);
+        match (forwards, backwards) {
+            case (Ok(a), Ok(b))   => Ok(shorterOf(a, b))
+            case (Ok(a), Err(_))  => Ok(a)
+            case (Err(_), Ok(b))  => Ok(b)
+            case (Err(e), Err(_)) => Err(e)
+        }
+
+    ///
+    /// The shorter of two solutions, keeping the first when they are equal.
+    ///
+    def shorterOf(a: List[Move.Move], b: List[Move.Move]): List[Move.Move] =
+        if (List.length(b) < List.length(a)) b else a
+
+    ///
+    /// The same budget, with its probes shared between two searches.
+    ///
+    def halved(budget: Budget): Budget =
+        let Budget(l) = budget;
+        Budget({
+            probeMin = Int32.max(1, l#probeMin / 2),
+            probeMax = Int32.max(1, l#probeMax / 2),
+            maxDepth = l#maxDepth,
+            handovers = l#handovers
+        })
+
+    ///
+    /// A solution found by searching `c` only, never its inverse.
+    ///
+    /// Kept public because it is the baseline the two-direction search is
+    /// measured against, and a comparison against something that is no longer
+    /// reachable is not a comparison.
+    ///
+    pub def oneDirection(
+        p1: Phase1.Tables,
         p2: Domino.Tables,
         budget: Budget,
         c: Sized.Standard
@@ -129,9 +195,9 @@ mod CubeSolve.Solve.Standard {
     /// What a solve carries through its depths.
     ///
     type alias Attempt = {
-        phase1 = CubeSolve.Table.Standard.Tables,
+        phase1 = Phase1.Tables,
         phase2 = Domino.Tables,
-        limits = { probeMin = Int32, probeMax = Int32, maxDepth = Int32 },
+        limits = { probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 },
         cube = Sized.Standard
     }
 
@@ -152,7 +218,7 @@ mod CubeSolve.Solve.Standard {
             best
         else {
             let handovers = IdaStar.enumerate(
-                Phase1.phaseOf(attempt#phase1), start, depth, handoversPerDepth());
+                Phase1.phaseOf(attempt#phase1), start, depth, limits#handovers);
             let (probed, improved) = tryHandovers(attempt, handovers, probes, best);
             byDepth(attempt, start, depth + 1, probed, improved)
         }
@@ -164,7 +230,7 @@ mod CubeSolve.Solve.Standard {
     def bestIsGoodEnough(
         best: Option[List[Move.Move]],
         probes: Int32,
-        limits: { probeMin = Int32, probeMax = Int32, maxDepth = Int32 }
+        limits: { probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 }
     ): Bool =
         Option.isEmpty(best) == false and probes >= limits#probeMin
 
@@ -198,7 +264,7 @@ mod CubeSolve.Solve.Standard {
         best: Option[List[Move.Move]]
     ): Option[List[Move.Move]] =
         let limits = attempt#limits;
-        let prefix = handover |> List.map(CubeSolve.Table.Standard.moveOfIndex);
+        let prefix = handover |> List.map(Phase1.moveOfIndex);
         let room = shorterThanBest(best, limits#maxDepth) - List.length(prefix);
         if (room < 0)
             best
@@ -231,9 +297,9 @@ mod CubeSolve.Solve.Standard {
         match coords {
             case Err(_) => None
             case Ok((cperm, eperm, mperm)) =>
-                let search = CubeSolve.Solve.Domino.phase2Of(attempt#phase2);
-                let state = CubeSolve.Solve.Domino.packPhase2(cperm, eperm, mperm);
-                let ceiling = CubeSolve.Solve.Domino.maxPhase2Depth();
+                let search = Domino.phase2Of(attempt#phase2);
+                let state = Domino.packPhase2(cperm, eperm, mperm);
+                let ceiling = Domino.maxPhase2Depth();
                 IdaStar.search(search, state, Int32.min(room, ceiling))
                     |> Result.map(f -> IdaStar.moves(f) |> List.map(Domino.moveOfIndex))
                     |> Result.toOption

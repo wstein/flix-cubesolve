@@ -226,6 +226,17 @@ each, because the *shortest* phase one very often leads to a long phase two.
 Termination is by **probe count** — one probe is one phase-two attempt — with
 `probeMin` as a quality floor and `probeMax` as the hard cap.
 
+It also searches **the state and its inverse**, splitting the probe budget
+between them. The two are equally far from solved, but a two-phase search does
+not treat them alike, because phase one aims at a particular subgroup and the
+two sit differently with respect to it. Measured at 0.4 moves — but only in
+combination with a large enough handover count; neither change is worth much
+alone. See [the design review](design-review.md).
+
+Each phase owns its own tables and re-exports them, so the combining layer talks
+to `Solve.Phase1` and `Solve.Domino` rather than reaching into their table
+modules.
+
 ## Testing strategy
 
 Cube code fails in ways that hand-picked examples do not catch.

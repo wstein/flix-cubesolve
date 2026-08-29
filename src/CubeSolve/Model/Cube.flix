@@ -229,40 +229,54 @@ mod CubeSolve.Model.Cube {
             }, slots);
             (moved, turned)
 
-    // ---------- interchange ----------
+    ///
+    /// The state that undoes `c`.
+    ///
+    /// If `c` is what a scramble produced, this is what its inverse would
+    /// produce. The two are equally far from solved -- inversion is a symmetry
+    /// of the cube group -- but a *two-phase* search does not treat them alike,
+    /// because phase one aims at a particular subgroup and the two states sit
+    /// differently with respect to it. Searching both and keeping the shorter
+    /// answer is a real refinement rather than a restatement.
+    ///
+    pub def inverse(c: Cube): Cube =
+        Cube(size(c), orientation(c), orbits(c) |> List.map(invertOrbit))
 
     ///
-    /// `c` as facelet colours, or why it cannot be drawn.
+    /// One orbit, inverted.
     ///
-    /// Delegates to `flix-orbit64`, whose facelet tables share no code with the
-    /// move tables here. Agreement between the two is therefore a second
-    /// derivation rather than a restatement, and it is what pins turn
-    /// *direction* -- a table with every cycle reversed satisfies every group
-    /// law and fails here.
+    /// The piece in slot `i` goes home to slot `p[i]`, so the inverse sends
+    /// `p[i]` to `i`. Its orientation goes with it and is negated: whatever
+    /// twist it acquired on the way out it must lose on the way back.
     ///
-    /// The rendering is of the *arrangement*, in the canonical frame -- the
-    /// cube as it would look rotated back upright. The frame itself is reported
-    /// by `orientation`, which is the only place it lives. Splitting the two is
-    /// not a shortcut: orbit64's own format excludes the fixed centres for
-    /// exactly this reason, so "arrangement plus frame" is the whole state.
-    ///
-    pub def facelets(c: Cube): Result[String, Vector[Int32]] =
-        Orbit64.Net.toFacelets(size(c), orbits(c))
+    def invertOrbit(o: Coord): Coord = match o {
+        case CornerCoord(p, t) => let (q, u) = invertOriented(p, t, 3); CornerCoord(q, u)
+        case MidgeCoord(p, t)  => let (q, u) = invertOriented(p, t, 2); MidgeCoord(q, u)
+        case WingCoord(p)      => WingCoord(invertPermutation(p))
+        case CenterCoord(cols) => CenterCoord(cols)
+    }
 
     ///
-    /// The cube those facelet colours describe.
+    /// A permutation and its orientations, inverted together.
     ///
-    pub def ofFacelets(n: Int32, fs: Vector[Int32]): Result[String, Cube] =
-        Orbit64.Net.fromFacelets(n, fs) |> Result.flatMap(os -> ofOrbits(n, os))
+    def invertOriented(
+        p: Vector[Int32],
+        t: Vector[Int32],
+        modulus: Int32
+    ): (Vector[Int32], Vector[Int32]) =
+        let n = Vector.length(p);
+        let inverted = invertPermutation(p);
+        let twist = Vector.init(i -> {
+            let came = Vector.get(i, inverted);
+            Int32.modulo(modulus - Vector.get(came, t), modulus)
+        }, n);
+        (inverted, twist)
 
     ///
-    /// `c` as a canonical URL-safe token.
+    /// The permutation that undoes `p`.
     ///
-    /// Every failure in this repository reports one, so that a failing case can
-    /// be replayed from the state rather than only from the seed that produced
-    /// it.
-    ///
-    pub def token(c: Cube): Result[String, String] =
-        Orbit64.encode(size(c), orbits(c))
+    def invertPermutation(p: Vector[Int32]): Vector[Int32] =
+        let n = Vector.length(p);
+        Vector.init(i -> Vector.indexOf(i, p) |> Option.getWithDefault(i), n)
 
 }

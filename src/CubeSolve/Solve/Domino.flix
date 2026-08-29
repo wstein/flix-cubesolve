@@ -14,6 +14,36 @@ mod CubeSolve.Solve.Domino {
     use CubeSolve.Table.Domino
 
     ///
+    /// Phase two's tables.
+    ///
+    /// Re-exported for the same reason phase one's are: a caller combining the
+    /// phases should talk to the phase, not to its table module.
+    ///
+    pub type alias Tables = Domino.Tables
+
+    ///
+    /// Build phase two's tables.
+    ///
+    pub def buildTables(): Result[String, Tables] = Domino.build()
+
+    ///
+    /// Phase two's tables, from the cache where possible.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ CubeSolve.Table.Cache.Store =
+        Domino.cachedTables()
+
+    ///
+    /// The move with index `m` in phase two's alphabet.
+    ///
+    pub def moveOfIndex(m: Int32): CubeSolve.Model.Move.Move = Domino.moveOfIndex(m)
+
+    ///
+    /// The phase-two coordinates of a cube, if it is inside the domino group.
+    ///
+    pub def coordsOf(c: CubeSolve.Model.Cube.Cube): Result[String, (Int32, Int32, Int32)] =
+        Domino.coordsOf(c)
+
+    ///
     /// The deepest phase two ever needs.
     ///
     /// Eighteen. The `CPerm x MPerm` pruning table reaches 14 and no domino

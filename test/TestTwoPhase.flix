@@ -94,7 +94,8 @@ mod TestTwoPhase {
                     "a solved cube should need no moves")
         };
 
-        let starved = Standard.Budget.Budget({ probeMin = 1, probeMax = 1, maxDepth = 4 });
+        let starved = Standard.budget(
+            { probeMin = 1, probeMax = 1, maxDepth = 4, handovers = 300 });
         let hard = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
         match Standard.solutionWith(t, starved, hard) {
             case Ok(ms) =>
@@ -105,9 +106,14 @@ mod TestTwoPhase {
                     "the refusal should name the probe budget, but said: ${e}")
         };
 
-        let quick = Standard.Budget.Budget({ probeMin = 1, probeMax = 40, maxDepth = 25 });
-        let patient = Standard.Budget.Budget({ probeMin = 80, probeMax = 400, maxDepth = 25 });
-        corpus() |> List.forEach(alg -> {
+        let quick = Standard.budget(
+            { probeMin = 1, probeMax = 40, maxDepth = 25, handovers = 300 });
+        let patient = Standard.budget(
+            { probeMin = 80, probeMax = 400, maxDepth = 25, handovers = 300 });
+        // Three of the corpus rather than all six: this solves each scramble
+        // twice, and the property is about the budget rather than about any
+        // particular cube.
+        corpus() |> List.take(3) |> List.forEach(alg -> {
             let cube = scrambled(alg);
             match (Standard.solutionWith(t, quick, cube),
                    Standard.solutionWith(t, patient, cube)) {
@@ -131,18 +137,20 @@ mod TestTwoPhase {
         //
         // A quality property, not a correctness one: a two-phase solver is
         // suboptimal by design, finding a good solution quickly rather than the
-        // shortest. Measured at the default budget over sixteen uniform states
-        // from a fixed seed, and recorded in docs/design-review.md:
+        // shortest. Measured over uniform states from a fixed seed, and
+        // recorded with its history in docs/design-review.md:
         //
-        //     fast     probeMax 60    mean 22.7   worst 25
-        //     default                 mean 21.4   worst 23
-        //     patient  probeMax 900   mean 21.0   worst 22
+        //     one direction, 60 handovers   mean 21.4   (the first baseline)
+        //     one direction, 300            mean 21.3
+        //     one direction, 1200           mean 21.4
+        //     both directions, 300          mean 21.0   (the default now)
         //
-        // min2phase averages about 20.6 and the true optimum about 17.7. The
-        // gap is what symmetry reduction and the Stage 10b refinements would
-        // close, and none of those are implemented. The band is loose enough
-        // not to trip on ordinary variation and tight enough that losing a move
-        // would show.
+        // min2phase averages about 20.6 and the true optimum about 17.7.
+        //
+        // The search is fully deterministic, so this figure is exactly
+        // reproducible rather than merely typical. The band is still a band:
+        // tight enough that losing half a move shows, loose enough that an
+        // improvement does not have to update the test.
         let samples = 16;
         def loop(i, seed, total, worst) =
             if (i <= 0) (total, worst)
@@ -165,14 +173,14 @@ mod TestTwoPhase {
         let (total, worst) = loop(samples, 4242i64, 0, 0);
         // tenths, to avoid floating point in a gate
         let mean = total * 10 / samples;
-        Assert.assertTrueWithMsg(mean <= 225,
+        Assert.assertTrueWithMsg(mean <= 215,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
-                + "above the recorded baseline of 21.4 by more than the margin");
+                + "above the recorded baseline of 21.0 by more than the margin");
         Assert.assertTrueWithMsg(mean >= 150,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
                 + "below the true optimum of about 17.7 -- which is impossible, so "
                 + "something is not solving what it claims");
-        Assert.assertTrueWithMsg(worst <= 25,
+        Assert.assertTrueWithMsg(worst <= 24,
             "the worst solution was ${worst} moves, over the recorded worst of 23")
 
 }

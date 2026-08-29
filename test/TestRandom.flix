@@ -1,6 +1,7 @@
 mod TestRandom {
 
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Facelets
     use CubeSolve.Model.Random
     use CubeSolve.Model.Validate
     use Orbit64.Coord.Coord.CornerCoord
@@ -24,9 +25,9 @@ mod TestRandom {
         List.forEach(n ->
             Assert.assertEq(
                 expected = Random.sampleDeterministic(20260828i64, n)
-                    |> Result.flatMap(match (c, _) -> Cube.token(c)),
+                    |> Result.flatMap(match (c, _) -> Facelets.token(c)),
                 Random.sampleDeterministic(20260828i64, n)
-                    |> Result.flatMap(match (c, _) -> Cube.token(c))
+                    |> Result.flatMap(match (c, _) -> Facelets.token(c))
             ),
             2 :: 3 :: Nil)
 
@@ -40,9 +41,9 @@ mod TestRandom {
                 Assert.assertNeq(unexpected = 7i64, next);
                 Assert.assertNeq(
                     unexpected = Random.sampleDeterministic(7i64, 3)
-                        |> Result.flatMap(match (c, _) -> Cube.token(c)),
+                        |> Result.flatMap(match (c, _) -> Facelets.token(c)),
                     Random.sampleDeterministic(next, 3)
-                        |> Result.flatMap(match (c, _) -> Cube.token(c))
+                        |> Result.flatMap(match (c, _) -> Facelets.token(c))
                 )
         }
 
@@ -50,7 +51,7 @@ mod TestRandom {
     /// pass every determinism test above.
     @Test
     def distinctSeedsGiveDistinctCubes(): Unit \ Assert =
-        let tokens = draw(3, 40, 1i64) |> List.map(Cube.token) |> List.distinct;
+        let tokens = draw(3, 40, 1i64) |> List.map(Facelets.token) |> List.distinct;
         Assert.assertTrueWithMsg(List.length(tokens) >= 38,
             "40 draws gave only ${List.length(tokens)} distinct cubes")
 
@@ -63,7 +64,7 @@ mod TestRandom {
         List.forEach(n ->
             draw(n, 60, 99i64) |> List.forEach(c ->
                 Assert.assertEqWithMsg(expected = None, Validate.faultOf(c),
-                    "sampled cube ${Cube.token(c)} is not reachable")),
+                    "sampled cube ${Facelets.token(c)} is not reachable")),
             2 :: 3 :: Nil)
 
     @Test
