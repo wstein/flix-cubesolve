@@ -1,4 +1,4 @@
-// flixw 0.26.0 -- stage 0. GENERATED: this is the documented source with its
+// flixw 0.26.1 -- stage 0. GENERATED: this is the documented source with its
 // comments removed, which is why it reads as bare mechanism.
 //
 // The commentary is the security story -- why each check exists, and which
@@ -8,7 +8,7 @@
 //   https://wstein.github.io/flixw/          docs, and the lock schema
 //   https://github.com/wstein/flixw          the source this was made from
 //
-// Reproducible on purpose: `java tests/strip.java 0.26.0` at tag vsrc/flixw.java <version> regenerates
+// Reproducible on purpose: `java tests/strip.java 0.26.1` at tag vsrc/flixw.java <version> regenerates
 // this file byte for byte, so the readable source and the running one can be
 // checked against each other rather than taken on trust.
 import java.io.ByteArrayOutputStream;
@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 
 public final class flixw {
 
-  static final String WRAPPER_VERSION = "0.26.0";
+  static final String WRAPPER_VERSION = "0.26.1";
   static final String WRAPPER_DIR = ".flixw";
   static final int MIN_JAVA = 21;
 
@@ -715,7 +715,7 @@ public final class flixw {
   static final String VALIDATE_USAGE = "usage: ./flixw validate";
   static final String EXAMPLES_USAGE =
      "usage: ./flixw examples list"
-    + "\n          or: ./flixw examples run|check|build|test <name> [-- args]";
+    + "\n          or: ./flixw examples run|check|build|test [flags] <name> [-- args]";
 
   static boolean wantsHelp(List<String> rest) {
     int dd = rest.indexOf("--");
@@ -1790,7 +1790,7 @@ public final class flixw {
   }
 
   static void wrapperVerb(String verb, List<String> rest, Path root, Lock lock, Path jar,
-              Jvm jvm, List<String> compilerVerbs) {
+              Jvm jvm, List<String> compilerVerbs, String verbId) {
     switch (verb) {
       case "pin" -> {
         if (wantsHelp(rest)) { System.out.println(PIN_USAGE); return; }
@@ -1892,9 +1892,12 @@ public final class flixw {
         Path asset = ensureAsset(EXAMPLES_ASSET);
 
         List<String> opts = jvmOpts();
+
+        String helpText = verbId == null ? "" : storedHelp(verbId);
         List<String> a = new ArrayList<>(List.of(root.toString(), jvm.exe().toString(),
                             jar.toString(), String.valueOf(opts.size())));
         a.addAll(opts);
+        a.add(helpText == null ? "" : helpText);
         a.addAll(rest.isEmpty() ? List.of("list") : rest);
         System.exit(runAsset(asset, null, a));
       }
@@ -3477,10 +3480,10 @@ public final class flixw {
         if (wantsHelp(rest)) System.out.println(PIN_USAGE);
         else pin(root, parsePin(rest, lock));
       } else if (bareHelp) {
-        wrapperVerb("help", List.of(), root, lock, null, null, null);
+        wrapperVerb("help", List.of(), root, lock, null, null, null, null);
       }
       else
-        wrapperVerb(first, argv.subList(1, argv.size()), root, lock, null, null, null);
+        wrapperVerb(first, argv.subList(1, argv.size()), root, lock, null, null, null, null);
       return;
     }
     if (lockError != null) throw lockError;
@@ -3571,7 +3574,7 @@ public final class flixw {
                 + " (forced by FLIX_BACKEND=wrapper; compiler " + lock.version()
                 + " also implements it)");
       else routingNotice(first, lock.version());
-      wrapperVerb(first, forward.subList(1, forward.size()), root, lock, jar, jvm, compilerVerbs);
+      wrapperVerb(first, forward.subList(1, forward.size()), root, lock, jar, jvm, compilerVerbs, verbId);
       return;
     }
     if (first != null && lock != null && compilerVerbs.contains(first)
