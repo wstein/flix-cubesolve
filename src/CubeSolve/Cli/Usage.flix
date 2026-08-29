@@ -21,19 +21,9 @@ mod CubeSolve.Cli.Usage {
             :: "  patterns [--size n]              the published corpus"
             :: "  help                             this"
             :: ""
-            :: "Sizes: ${sizes()}. Tables are cached after the first run."
+            :: "Solves ${CubeSolve.Cli.Args.written(CubeSolve.supportedSizes())}; "
+                + "draws ${CubeSolve.Cli.Args.written(CubeSolve.turnableSizes())}."
+            :: "Tables are cached after the first run."
             :: Nil)
-
-    ///
-    /// The supported sizes, written out.
-    ///
-    /// `CubeSolve.supportedSizes` is the authority and is asked rather than
-    /// repeated, so this stops being a lie the moment a 4x4x4 arrives.
-    ///
-    pub def sizes(): String =
-        CubeSolve.supportedSizes()
-            |> Vector.map(n -> "${n}x${n}x${n}")
-            |> Vector.toList
-            |> List.join(" and ")
 
 }

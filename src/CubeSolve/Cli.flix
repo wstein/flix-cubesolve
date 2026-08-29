@@ -14,6 +14,7 @@
 mod CubeSolve.Cli {
 
     use CubeSolve.Cli.Args
+    use CubeSolve.Cli.Args.Needs.{Turning, Solving, Corpus}
     use CubeSolve.Cli.Corpus
     use CubeSolve.Cli.Usage
     use CubeSolve.Cli.Engine
@@ -31,11 +32,13 @@ mod CubeSolve.Cli {
     /// One invocation.
     ///
     def dispatch(args: List[String]): Unit \ IO = match args {
-        case "solve" :: rest    => report(Args.withSize(rest, solveCommand))
-        case "show" :: rest     => report(Args.withSize(rest, showCommand))
-        case "identify" :: rest => report(Args.withSize(rest, identifyCommand))
-        case "scramble" :: rest => report(Args.withSize(rest, (n, _) -> Engine.scramble(n)))
-        case "patterns" :: rest => report(Args.withSize(rest, (n, _) -> Ok(Corpus.listing(n))))
+        case "solve" :: rest    => report(Args.withSize(rest, Solving, solveCommand))
+        case "show" :: rest     => report(Args.withSize(rest, Turning, showCommand))
+        case "identify" :: rest => report(Args.withSize(rest, Corpus, identifyCommand))
+        case "scramble" :: rest =>
+            report(Args.withSize(rest, Solving, (n, _) -> Engine.scramble(n)))
+        case "patterns" :: rest =>
+            report(Args.withSize(rest, Corpus, (n, _) -> Ok(Corpus.listing(n))))
         case "help" :: _        => println(Usage.text())
         case Nil                => println(Usage.text())
         case other :: _         =>

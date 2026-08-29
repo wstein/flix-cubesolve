@@ -306,6 +306,20 @@ sample of random ones. It passed first time; had a strip been read backwards it
 would have named the move and the seed. The group laws and a scramble-and-inverse
 round trip then run at all four sizes.
 
+### Turnable is not solvable
+
+`CubeSolve.supportedSizes` answers what can be solved and `turnableSizes` what
+can be turned, and the second is deliberately the weaker claim: a turnable size
+can be built, moved by any face, drawn and round-tripped through facelets, and
+need not be validatable, samplable, scramblable or solvable.
+
+Keeping one list for both is what made the command line refuse to draw a 4x4x4
+it could draw perfectly well. The command line now names which capability each
+command needs -- `Turning`, `Solving` or `Corpus` -- and the refusal names the
+one that is missing. Those are three questions, not two: `identify` and
+`patterns` want a published collection rather than a solver, and telling their
+caller "no solver" would be the same category error in a new place.
+
 ### What larger cubes still cannot do
 
 `after`, `inverse` and `conjugate` refuse any cube with a centre orbit, and

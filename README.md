@@ -42,10 +42,19 @@ scrambled or solved, and it cannot be composed with another cube — see
 [Layout](#layout) for why composition in particular is refused rather than
 approximated.
 
-`CubeSolve.supportedSizes()` reports what can be **solved**, is still `2` and
-`3`, and is covered by a test that builds and turns every size it lists, so the
-list cannot drift ahead of the implementation. The rest of this README describes
-the engine being built.
+Two capabilities, two lists. `CubeSolve.supportedSizes()` is what can be
+**solved** and is `2` and `3`; `CubeSolve.turnableSizes()` is what can be
+**turned** and is `2` through `5`. Both are covered by a test that builds and
+turns every size they list, so neither can drift ahead of the implementation,
+and a third asserts that turning stays the weaker claim. The command line asks
+whichever question a command actually needs:
+
+```sh
+cubesolve show --size 4 "R U"     # draws it
+cubesolve solve --size 4 "R U"    # a 4x4x4 can be turned and drawn but not solved
+```
+
+The rest of this README describes the engine being built.
 
 ## What it will do
 
