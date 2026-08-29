@@ -180,6 +180,19 @@ measurable. Time a test before restructuring it:
 If the suite has to come down, the lever is the solver-driven tests: stratify
 them the way `Gate 4.2` is stratified, and name the stratification.
 
+That has been done once already. `TestPatternBoundsFast` checks 27 patterns
+chosen by stated rules and runs everywhere; `TestPatternBoundsExhaustive` checks
+all 110 and is **off unless `CUBESOLVE_EXHAUSTIVE=1`**:
+
+```sh
+CUBESOLVE_EXHAUSTIVE=1 ./flixw test    # what CI runs on main and nightly
+```
+
+Two rules if you do this again. **Name the split** — two modules, not a quietly
+shortened list. And **make the skip loud**: the exhaustive test prints that it
+was skipped and how to run it, because a gate nobody knows is disabled is worse
+than no gate at all.
+
 ## Commits
 
 Conventional commits, single-purpose, with the type and scope naming the primary

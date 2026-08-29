@@ -180,7 +180,8 @@ is a handful of tests that either *run the solver* or *build a table*:
 
 | test | cost |
 |---|---|
-| `TestPatternBounds` — 110 pattern solves | 96–143 s |
+| `TestPatternBoundsFast` — 27 pattern solves | ~40 s |
+| `TestPatternBoundsExhaustive` — all 110 | ~80 s, **off by default** |
 | `TestTwoPhase`, `TestScrambleStandard` | ~30 s each |
 | `TestDomino`, `TestStandard` — table sweeps | 20 s, 16 s |
 | everything else, including both fixture sweeps | under 10 s |
@@ -188,6 +189,18 @@ is a handful of tests that either *run the solver* or *build a table*:
 The fixture sweeps are cheap and easy to misjudge: re-recording all 199 patterns
 from all 24 orientations costs **0.14 s and 0.05 s**. Solving is what is slow, and
 it is slow wherever it appears.
+
+The full 110-pattern gate is therefore stratified rather than dropped. 27
+patterns run everywhere, chosen by stated rules — both named hard cases, every
+pattern the solver already loses by four moves or more, two per published-length
+band, two per source, the slice-notation ones, and both extremes. The other 83
+run on main, nightly, and before a release:
+
+```sh
+CUBESOLVE_EXHAUSTIVE=1 ./flixw test
+```
+
+Skipping it says so out loud rather than passing in silence.
 
 There is no formatting gate: the pinned compiler's `format` has no check-only
 mode, so run `./flixw format` before you commit.

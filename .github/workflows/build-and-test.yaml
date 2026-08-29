@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Nightly, so the exhaustive pattern job below runs even in a quiet week.
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,6 +17,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Every pattern in the collection, not just the fast stratum. Kept out of the
+  # per-platform matrix because it is a property of the solver rather than of
+  # the platform, and out of pull requests because it costs about ninety seconds
+  # of solving. Runs on main, nightly, and on request -- so a regression that
+  # slips past the stratum is caught before a release rather than after one.
+  exhaustive-patterns:
+    name: all 110 patterns
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Test, including every pattern
+        run: ./flixw test
+        env:
+          CUBESOLVE_EXHAUSTIVE: '1'
+
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -82,6 +110,10 @@ jobs:
       - name: Check
         run: ${{ matrix.flixw }} check
 
+      # The pattern-bound gate runs over a 27-pattern stratum here and over all
+      # 110 in the job below. Solving the full collection takes about a minute
+      # and a half, which is worth paying once on main rather than three times
+      # on every pull request.
       - name: Test
         run: ${{ matrix.flixw }} test
 

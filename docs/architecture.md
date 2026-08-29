@@ -279,9 +279,12 @@ Four to five minutes, measured at 233 s, 255 s and 328 s on three runs of
 identical code — the spread is wide enough that no single figure means much.
 
 The cost is entirely in tests that **run the solver** or **build a table**.
-`TestPatternBounds` solves 110 patterns and accounts for roughly half the suite
-on its own; `TestTwoPhase` and `TestScrambleStandard` are about 30 s each; the
-two phase-table gates are 20 s and 16 s.
+Solving 110 patterns accounted for roughly half the suite on its own, so that
+gate is stratified: `TestPatternBoundsFast` covers 27 patterns chosen by stated
+rules and runs everywhere (~40 s), and `TestPatternBoundsExhaustive` covers all
+110 behind `CUBESOLVE_EXHAUSTIVE=1` (~80 s), which CI sets on main and nightly.
+`TestTwoPhase` and `TestScrambleStandard` are about 30 s each; the two
+phase-table gates are 20 s and 16 s.
 
 The fixture sweeps are not the slow tier, though they look like the most work:
 re-recording all 199 patterns from all 24 orientations costs 0.14 s and 0.05 s.
