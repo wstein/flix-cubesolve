@@ -367,6 +367,43 @@ needed.
 
 Both are asserted as gates, so a regression in either direction shows.
 
+## Self-symmetry view skipping: measured and rejected
+
+The six views a solve tries — three axes, each forwards and inverted — collapse
+for a symmetric cube. Superflip looks the same from all six. Skipping the
+duplicates is an obvious economy and it was implemented, measured and removed.
+
+**It made the solver worse.** Superflip went from 22 moves to **24**.
+
+The reason is worth writing down, because the redundancy is load-bearing. Each
+view is searched with `maxDepth` set to one shorter than the best answer so far.
+So re-searching an *identical* state is not a repeat: the tighter cap prunes
+everything at or above the current best and pushes the same probes deeper into
+what remains. The "duplicate" views were an iterative-improvement loop that
+nobody had named.
+
+Making that loop explicit — sweep the distinct views, then sweep them again
+against the answer just found, until a pass fails to improve — recovered
+superflip's 22 and let duplicates be skipped honestly. But measured against the
+recorded baselines it bought almost nothing:
+
+| corpus | before | after |
+|---|---|---|
+| 20 uniform random states, mean | 20.8 | **20.8** |
+| 102 patterns, total solver moves | 1467 | 1462 |
+| 102 patterns, longer than published | 32 | 32 |
+| 102 patterns, worst excess | 7 | 7 |
+
+Five moves across a hundred and two patterns, no change at all on random states,
+no measurable speed gain, one pattern regressed (`Vertical stripes`, 21 to 22),
+and a bookkeeping list threaded through the search. It was reverted.
+
+**The general lesson, and it is the second time this session:** an optimisation
+that removes apparent waste has to be measured against what the waste was
+quietly doing. Pre-scramble was rejected the same way. The suggestion to add
+self-symmetry deduplication is a sound one in a solver whose views are genuinely
+independent searches; in this one they are not.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be
