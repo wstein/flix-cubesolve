@@ -140,10 +140,12 @@ mod TestTwoPhase {
         // shortest. Measured over uniform states from a fixed seed, and
         // recorded with its history in docs/design-review.md:
         //
-        //     one direction, 60 handovers   mean 21.4   (the first baseline)
-        //     one direction, 300            mean 21.3
-        //     one direction, 1200           mean 21.4
-        //     both directions, 300          mean 21.0   (the default now)
+        //     single view, 60 handovers     mean 21.4   (the first baseline)
+        //     single view, 300 handovers    mean 21.3
+        //     single view, 1200 handovers   mean 21.4
+        //     two views, budget split       mean 21.0
+        //     six views, budget split       mean 21.1
+        //     six views, budget shared      mean 20.9   (the default now)
         //
         // min2phase averages about 20.6 and the true optimum about 17.7.
         //
@@ -173,14 +175,14 @@ mod TestTwoPhase {
         let (total, worst) = loop(samples, 4242i64, 0, 0);
         // tenths, to avoid floating point in a gate
         let mean = total * 10 / samples;
-        Assert.assertTrueWithMsg(mean <= 215,
+        Assert.assertTrueWithMsg(mean <= 212,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
-                + "above the recorded baseline of 21.0 by more than the margin");
+                + "above the recorded baseline of 20.9 by more than the margin");
         Assert.assertTrueWithMsg(mean >= 150,
             "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
                 + "below the true optimum of about 17.7 -- which is impossible, so "
                 + "something is not solving what it claims");
-        Assert.assertTrueWithMsg(worst <= 24,
-            "the worst solution was ${worst} moves, over the recorded worst of 23")
+        Assert.assertTrueWithMsg(worst <= 23,
+            "the worst solution was ${worst} moves, over the recorded worst of 22")
 
 }

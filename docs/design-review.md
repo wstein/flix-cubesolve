@@ -226,10 +226,13 @@ so the comparison is not simply "spend more":
 
 | configuration | mean | worst |
 |---|---|---|
-| one direction, 60 handovers per depth | 21.4 | 23 |
-| one direction, 300 handovers | 21.3 | 23 |
-| one direction, 1200 handovers | 21.4 | 23 |
-| **both directions, 300 handovers** | **21.0** | 23 |
+| single view, 60 handovers per depth | 21.4 | 23 |
+| single view, 300 handovers | 21.3 | 23 |
+| single view, 1200 handovers | 21.4 | 23 |
+| two views (state and inverse), budget split | 21.0 | 23 |
+| six views (three axes × two directions), budget split | 21.1 | 23 |
+| **six views, budget shared** | **20.9** | 22 |
+| six views, budget shared, 3× the probes | 20.7 | 22 |
 
 Two findings, neither of which was the expected one.
 
@@ -249,11 +252,30 @@ not something either measurement would have shown on its own — and is the
 argument for measuring one change at a time and then their combination, rather
 than assuming refinements add up.
 
+**Three phase-one axes, and how the budget is spent matters more than the
+refinement.** Phase one's goal is stated against the U/D axis and its Flip
+coordinate is defined against that axis specifically, so conjugating the cube by
+a rotation that carries another axis onto U/D lets the same tables aim at it.
+Six views — three axes × two directions — then compete.
+
+Slicing the probe budget six ways gave **21.1**, barely better than one view.
+Sharing one budget across the six, each search taking what is left and capped at
+one move shorter than the best so far, gave **20.9** at the same total. The
+refinement was worth nothing until the budget stopped being sliced; six searches
+on a sixth each are all too starved to use the diversity they were added for.
+
+That is the single most useful thing these measurements produced, and it would
+have been invisible without measuring the two arrangements separately.
+
 **Symmetry reduction (Stage 10a) was not done, and would not have helped this
 number.** It compresses equivalent states without changing a pruning value, and
 all three phase-one tables are already built, so the heuristic is already as
 strong as the reference's. Symmetry is a memory-and-speed optimisation here, not
 a quality one.
+
+**Where that leaves the gap.** 20.9 against min2phase's 20.6 and a true optimum
+of 17.7. The remaining named refinement is pre-scramble, which is worth less than
+the axes were.
 
 **Gate 7.2 is not met and is not claimed.** Superflip is solved, but not in 20
 moves, and asserting that it were would be asserting a quality the solver does

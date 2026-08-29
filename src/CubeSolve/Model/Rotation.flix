@@ -140,4 +140,92 @@ mod CubeSolve.Model.Rotation {
             case None    => m
         }
 
+    // ---------- what a rotation does to pieces ----------
+
+    ///
+    /// Where each corner slot's piece comes from, when the cube is turned by `r`.
+    ///
+    /// Derived from the face map rather than written out. A slot is the set of
+    /// faces it touches, a rotation permutes faces, so the slot a piece lands in
+    /// is found by mapping its faces and looking up the result.
+    ///
+    pub def cornerPermutation(r: Rotation): Vector[Int32] =
+        slotMap(Move.cornerFaces(), r)
+
+    ///
+    /// Where each edge slot's piece comes from, when the cube is turned by `r`.
+    ///
+    pub def edgePermutation(r: Rotation): Vector[Int32] =
+        slotMap(Move.edgeFaces(), r)
+
+    ///
+    /// The twist each corner slot's piece shows, after the cube is turned by `r`.
+    ///
+    /// A rotation moves no piece relative to any other, but it does change which
+    /// facelet each *slot* calls its first, so the recorded twist changes even
+    /// though nothing turned. This is that bookkeeping.
+    ///
+    pub def cornerTwist(r: Rotation): Vector[Int32] =
+        orientationShift(Move.cornerFaces(), r, 3)
+
+    ///
+    /// The flip each edge slot's piece shows, after the cube is turned by `r`.
+    ///
+    pub def edgeFlip(r: Rotation): Vector[Int32] =
+        orientationShift(Move.edgeFaces(), r, 2)
+
+    ///
+    /// For each destination slot, the slot whose piece arrives there.
+    ///
+    def slotMap(faces: Vector[Vector[Int32]], r: Rotation): Vector[Int32] =
+        let n = Vector.length(faces);
+        let arrivals = Vector.init(source -> destinationOf(faces, r, source), n);
+        Vector.init(dest ->
+            Vector.indexOf(dest, arrivals) |> Option.getWithDefault(dest), n)
+
+    ///
+    /// The slot the piece at `source` lands in, under `r`.
+    ///
+    def destinationOf(faces: Vector[Vector[Int32]], r: Rotation, source: Int32): Int32 =
+        let moved = Vector.get(source, faces) |> Vector.map(f -> facePositionOf(f, r));
+        let n = Vector.length(faces);
+        Vector.range(0, n)
+            |> Vector.findLeft(slot -> sameFaces(Vector.get(slot, faces), moved))
+            |> Option.getWithDefault(source)
+
+    ///
+    /// Where face `f` ends up under `r`.
+    ///
+    /// The face map says which face arrives at each position; this is the other
+    /// direction.
+    ///
+    def facePositionOf(f: Int32, r: Rotation): Int32 =
+        Vector.indexOf(f, faceMap(r)) |> Option.getWithDefault(f)
+
+    ///
+    /// Whether two slots touch the same faces, in any order.
+    ///
+    def sameFaces(a: Vector[Int32], b: Vector[Int32]): Bool =
+        let alsoInB = f -> Vector.memberOf(f, b);
+        Vector.length(a) == Vector.length(b) and Vector.forAll(alsoInB, a)
+
+    ///
+    /// For each destination slot, how far its arriving piece's first face has
+    /// rotated away from the slot's own first face.
+    ///
+    def orientationShift(
+        faces: Vector[Vector[Int32]],
+        r: Rotation,
+        modulus: Int32
+    ): Vector[Int32] =
+        let n = Vector.length(faces);
+        let comingFrom = slotMap(faces, r);
+        Vector.init(dest -> {
+            let source = Vector.get(dest, comingFrom);
+            let primary = facePositionOf(Vector.get(0, Vector.get(source, faces)), r);
+            Vector.indexOf(primary, Vector.get(dest, faces))
+                |> Option.getWithDefault(0)
+                |> (i -> Int32.modulo(i, modulus))
+        }, n)
+
 }

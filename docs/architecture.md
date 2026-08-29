@@ -226,12 +226,21 @@ each, because the *shortest* phase one very often leads to a long phase two.
 Termination is by **probe count** — one probe is one phase-two attempt — with
 `probeMin` as a quality floor and `probeMax` as the hard cap.
 
-It also searches **the state and its inverse**, splitting the probe budget
-between them. The two are equally far from solved, but a two-phase search does
-not treat them alike, because phase one aims at a particular subgroup and the
-two sit differently with respect to it. Measured at 0.4 moves — but only in
-combination with a large enough handover count; neither change is worth much
-alone. See [the design review](design-review.md).
+It searches **six views of the cube**: three axes, each forwards and inverted.
+
+Phase one's goal is stated against the U/D axis, and its Flip coordinate is
+defined against that axis specifically — a cube with every edge oriented in the
+U/D sense need not be oriented in the F/B sense. So `Cube.conjugate` re-records
+the state from a rotated frame, letting the same tables aim at the other two
+axes. And a state and its inverse are equally far from solved but sit
+differently with respect to phase one's subgroup, so each axis is searched both
+ways.
+
+**All six share one probe budget** rather than taking a sixth each, and each is
+capped at one move shorter than the best found so far. That distinction is not a
+detail: slicing the budget measured 21.1 moves and sharing it measured 20.9, so
+the refinement was worth nothing until the budget stopped being sliced. See
+[the design review](design-review.md).
 
 Each phase owns its own tables and re-exports them, so the combining layer talks
 to `Solve.Phase1` and `Solve.Domino` rather than reaching into their table

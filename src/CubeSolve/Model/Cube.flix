@@ -230,6 +230,87 @@ mod CubeSolve.Model.Cube {
             (moved, turned)
 
     ///
+    /// `c` as it would be recorded from a frame turned by `r`.
+    ///
+    /// Not the same as `rotate`, and the difference is the whole point.
+    /// `rotate` says the cube is being held differently and leaves the
+    /// coordinates alone. This *re-records* the same arrangement against
+    /// rotated slots, so the coordinates change while the cube does not.
+    ///
+    /// It is what lets one solver look at the cube along three different axes.
+    /// The 3x3x3's phase one aims at the `U`/`D` axis specifically, and its
+    /// Flip coordinate is defined against that axis -- a cube with every edge
+    /// oriented in the `U`/`D` sense need not be oriented in the `F`/`B` sense.
+    /// So conjugating by a rotation that carries another axis onto `U`/`D` lets
+    /// the same tables aim at it, and a scramble awkward for one axis is often
+    /// easy for another.
+    ///
+    /// This is a conjugation in the group sense -- `r' . c . r` -- rather than
+    /// a hand-derived relabelling. Deriving the orientation bookkeeping
+    /// geometrically is where this went wrong the first time: it produced a
+    /// rotated solved cube that read as twisted, which cannot be right. Written
+    /// as a composition, a solved cube stays solved because the identity is
+    /// conjugate only to itself, and nothing has to be argued.
+    ///
+    pub def conjugate(r: Rotation.Rotation, c: Cube): Cube =
+        let turned = asState(size(c), r);
+        after(after(turned, c), inverse(turned))
+
+    ///
+    /// The state a solved cube is in after being turned bodily by `r`.
+    ///
+    /// A rotation is not a move, but its effect on the pieces can be written as
+    /// one, and that is what makes it composable with states.
+    ///
+    def asState(n: Int32, r: Rotation.Rotation): Cube =
+        let corners = CornerCoord(Rotation.cornerPermutation(r), Rotation.cornerTwist(r));
+        let midges = MidgeCoord(Rotation.edgePermutation(r), Rotation.edgeFlip(r));
+        let orbits = if (n == 2) corners :: Nil else corners :: midges :: Nil;
+        Cube(n, Rotation.identity(), orbits)
+
+    ///
+    /// `first`, and then `second`.
+    ///
+    /// Cubie multiplication: the piece at slot `i` afterwards is whatever
+    /// `first` had at the slot `second` draws that slot from, and it carries
+    /// both orientations.
+    ///
+    pub def after(first: Cube, second: Cube): Cube =
+        let composed = List.zip(orbits(first), orbits(second)) |> List.map(afterOrbit);
+        Cube(size(first), orientation(first), composed)
+
+    ///
+    /// One orbit of a composition.
+    ///
+    def afterOrbit(pair: (Coord, Coord)): Coord = match pair {
+        case (CornerCoord(pa, oa), CornerCoord(pb, ob)) =>
+            let (p, o) = combine(pa, oa, pb, ob, 3);
+            CornerCoord(p, o)
+        case (MidgeCoord(pa, oa), MidgeCoord(pb, ob)) =>
+            let (p, o) = combine(pa, oa, pb, ob, 2);
+            MidgeCoord(p, o)
+        case (a, _) => a
+    }
+
+    ///
+    /// The permutation and orientation of a composition.
+    ///
+    def combine(
+        pa: Vector[Int32],
+        oa: Vector[Int32],
+        pb: Vector[Int32],
+        ob: Vector[Int32],
+        modulus: Int32
+    ): (Vector[Int32], Vector[Int32]) =
+        let n = Vector.length(pa);
+        let moved = Vector.init(i -> Vector.get(Vector.get(i, pb), pa), n);
+        let turned = Vector.init(i -> {
+            let carried = Vector.get(Vector.get(i, pb), oa);
+            Int32.modulo(carried + Vector.get(i, ob), modulus)
+        }, n);
+        (moved, turned)
+
+    ///
     /// The state that undoes `c`.
     ///
     /// If `c` is what a scramble produced, this is what its inverse would

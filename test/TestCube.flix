@@ -241,4 +241,60 @@ mod TestCube {
             expected = Ok(true),
             Cube.applyNotation("R U2 F' R' U", Cube.inverse(c)) |> Result.map(Cube.isSolved))
 
+    // ---------- conjugation ----------
+
+    /// A solved cube is solved from any angle. This is what distinguishes a
+    /// conjugation from merely permuting the pieces, and it fails immediately
+    /// if the piece renaming or the orientation shift is wrong.
+    @Test
+    def aSolvedCubeStaysSolvedUnderEveryConjugation(): Unit \ Assert =
+        match Cube.solved(3) {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved exists")
+            case Ok(c)  =>
+                Rotation.all() |> Vector.forEach(r ->
+                    Assert.assertTrueWithMsg(
+                        Cube.isSolved(Cube.conjugate(r, c)),
+                        "a solved cube conjugated by ${r} should still be solved"))
+        }
+
+    /// Conjugating by a rotation and then by its inverse returns the state.
+    @Test
+    def conjugationRoundTrips(): Unit \ Assert =
+        let c = scrambled(3, "R U2 F' L D B2 R' U");
+        Rotation.all() |> Vector.forEach(r ->
+            Assert.assertEqWithMsg(
+                expected = Cube.orbits(c),
+                Cube.orbits(Cube.conjugate(Rotation.inverse(r), Cube.conjugate(r, c))),
+                "conjugating by ${r} and back should return the state"))
+
+    /// Conjugation is a homomorphism: re-recording after a turn is the same as
+    /// re-recording and then making the turn the new frame calls by that name.
+    ///
+    /// This is the property the three-axis search rests on. Without it, solving
+    /// a conjugated cube and renaming the answer back would give a sequence
+    /// that does not solve the original -- and only for some scrambles, which
+    /// is the worst way to find out.
+    @Test
+    def conjugationCommutesWithTurning(): Unit \ Assert =
+        let c = scrambled(3, "R U2 F' L D B2 R' U");
+        Rotation.all() |> Vector.forEach(r ->
+            Move.all() |> Vector.forEach(m -> {
+                let turnedThenSeen = Cube.apply(m, c) |> Result.map(x -> Cube.conjugate(r, x));
+                let seenThenTurned = Cube.apply(Rotation.reframe(m, r), Cube.conjugate(r, c));
+                Assert.assertEqWithMsg(
+                    expected = turnedThenSeen |> Result.map(Cube.orbits),
+                    seenThenTurned |> Result.map(Cube.orbits),
+                    "conjugating by ${r} should commute with ${Move.show(m)}")
+            }))
+
+    /// Conjugation never leaves the set of legal cubes.
+    @Test
+    def conjugationPreservesLegality(): Unit \ Assert =
+        let c = scrambled(3, "B U2 R' F D2 L B' R U F2 D L' U2 B2 R");
+        Rotation.all() |> Vector.forEach(r ->
+            Cube.orbits(Cube.conjugate(r, c)) |> List.forEach(o ->
+                Assert.assertEqWithMsg(
+                    expected = None, Orbit64.Coord.faultOf(o),
+                    "conjugating by ${r} produced something that is not a cube")))
+
 }

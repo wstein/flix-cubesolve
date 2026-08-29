@@ -230,6 +230,48 @@ mod CubeSolve.Model.Move {
     // cube -- it is why the convention has to be written down.
 
     ///
+    /// The faces each corner slot touches, from its orientation facelet
+    /// clockwise.
+    ///
+    /// This is the geometry the move tables above encode implicitly, written
+    /// out so that it can be computed with. A whole-cube rotation permutes
+    /// faces, and knowing which faces a slot touches is what turns a face
+    /// permutation into a piece permutation -- without which the solver could
+    /// not look at the cube along a different axis.
+    ///
+    /// The first entry is the orientation facelet, so a piece's twist is how
+    /// far its own first face has rotated away from its slot's.
+    ///
+    pub def cornerFaces(): Vector[Vector[Int32]] = Vector#{
+        Vector#{0, 1, 2},
+        Vector#{0, 2, 4},
+        Vector#{0, 4, 5},
+        Vector#{0, 5, 1},
+        Vector#{3, 2, 1},
+        Vector#{3, 4, 2},
+        Vector#{3, 5, 4},
+        Vector#{3, 1, 5}
+    }
+
+    ///
+    /// The faces each edge slot touches, its orientation facelet first.
+    ///
+    pub def edgeFaces(): Vector[Vector[Int32]] = Vector#{
+        Vector#{0, 1},
+        Vector#{0, 2},
+        Vector#{0, 4},
+        Vector#{0, 5},
+        Vector#{3, 1},
+        Vector#{3, 2},
+        Vector#{3, 4},
+        Vector#{3, 5},
+        Vector#{2, 1},
+        Vector#{2, 4},
+        Vector#{5, 4},
+        Vector#{5, 1}
+    }
+
+    ///
     /// Where each corner slot's piece comes from, for one clockwise turn of `f`.
     ///
     pub def cornerPermutation(f: Face): Vector[Int32] = match f {

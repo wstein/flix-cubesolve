@@ -15,6 +15,7 @@ mod CubeSolve.Solve.Standard {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
+    use CubeSolve.Model.Rotation
     use CubeSolve.Model.Sized
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Solve.Phase1
@@ -114,37 +115,80 @@ mod CubeSolve.Solve.Standard {
         budget: Budget,
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
-        bothDirections(p1, p2, budget, c)
+        acrossAxes(p1, p2, budget, c)
 
     ///
-    /// Search the state and its inverse, and keep the shorter answer.
+    /// The three axes phase one can aim at.
     ///
-    /// A state and its inverse are equally far from solved -- inversion is a
-    /// symmetry of the cube group -- but a two-phase search does not treat them
-    /// alike, because phase one aims at a particular subgroup and the two sit
-    /// differently with respect to it. So the two searches find different
-    /// answers, and one is often shorter.
+    /// Phase one's goal is stated against the `U`/`D` axis, and its Flip
+    /// coordinate is defined against that axis specifically -- a cube with
+    /// every edge oriented in the `U`/`D` sense need not be oriented in the
+    /// `F`/`B` sense. So the same tables can aim at the other two axes by
+    /// looking at a conjugated cube: `x` carries `U`/`D` onto `F`/`B` and `z`
+    /// carries it onto `R`/`L`.
     ///
-    /// The budget is **split between them** rather than spent twice, so this
-    /// costs no more probes than searching one direction and can be compared
-    /// with the recorded baseline directly.
+    /// A scramble awkward for one axis is often easy for another, and this is
+    /// where most of the remaining solution length is.
     ///
-    def bothDirections(
+    def axes(): List[Rotation.Rotation] =
+        Rotation.identity() :: Rotation.x() :: Rotation.z() :: Nil
+
+    ///
+    /// Search every axis, and both directions of each, keeping the shortest.
+    ///
+    /// The probe budget is divided between the six searches rather than spent
+    /// six times over, so this costs no more probes than a single search and
+    /// can be compared with the recorded baseline directly.
+    ///
+    def acrossAxes(
         p1: Phase1.Tables,
         p2: Domino.Tables,
         budget: Budget,
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
-        let half = halved(budget);
-        let forwards = oneDirection(p1, p2, half, c);
-        let backwards = Sized.standardOf(Cube.inverse(Sized.cubeOfStandard(c)))
-            |> Result.flatMap(inverted -> oneDirection(p1, p2, half, inverted))
-            |> Result.map(Move.inverseOf);
-        match (forwards, backwards) {
-            case (Ok(a), Ok(b))   => Ok(shorterOf(a, b))
-            case (Ok(a), Err(_))  => Ok(a)
-            case (Err(_), Ok(b))  => Ok(b)
-            case (Err(e), Err(_)) => Err(e)
+        let Budget(limits) = budget;
+        let views = axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil);
+        let job = { tables = Tables.Tables(p1, p2), budget = budget, cube = c };
+        match sweep(job, views, 0, None) {
+            case Some(best) => Ok(best)
+            case None =>
+                Err("no solution within ${limits#probeMax} probes and "
+                    + "${limits#maxDepth} moves: raise the budget rather than "
+                    + "retrying this search unchanged")
+        }
+
+    ///
+    /// Work through the views of the cube, all drawing on one probe budget.
+    ///
+    /// Each search is given whatever is left rather than a fixed share, and is
+    /// capped at one move shorter than the best found so far -- so a later view
+    /// either improves on the answer or gives up quickly. That is what makes
+    /// six searches affordable within one budget.
+    ///
+    def sweep(
+        job: { tables = Tables, budget = Budget, cube = Sized.Standard },
+        views: List[(Rotation.Rotation, Bool)],
+        spent: Int32,
+        best: Option[List[Move.Move]]
+    ): Option[List[Move.Move]] =
+        let Tables.Tables(p1, p2) = job#tables;
+        let c = job#cube;
+        let Budget(limits) = job#budget;
+        let exhausted = spent >= limits#probeMax;
+        let satisfied = bestIsGoodEnough(best, spent, limits);
+        match views {
+            case Nil                                     => best
+            case _ :: _ if exhausted or satisfied        => best
+            case (r, inverted) :: rest                   =>
+                let remaining = Budget({
+                    probeMin = 1,
+                    probeMax = limits#probeMax - spent,
+                    maxDepth = shorterThanBest(best, limits#maxDepth),
+                    handovers = limits#handovers
+                });
+                let view = { rotation = r, inverted = inverted };
+                let (found, used) = alongAxis(p1, p2, remaining, c, view);
+                sweep(job, rest, spent + used, keepShorterOf(best, found))
         }
 
     ///
@@ -154,16 +198,57 @@ mod CubeSolve.Solve.Standard {
         if (List.length(b) < List.length(a)) b else a
 
     ///
-    /// The same budget, with its probes shared between two searches.
+    /// The shorter of what was already found and what a view just produced.
     ///
-    def halved(budget: Budget): Budget =
-        let Budget(l) = budget;
-        Budget({
-            probeMin = Int32.max(1, l#probeMin / 2),
-            probeMax = Int32.max(1, l#probeMax / 2),
-            maxDepth = l#maxDepth,
-            handovers = l#handovers
-        })
+    def keepShorterOf(
+        best: Option[List[Move.Move]],
+        found: Option[List[Move.Move]]
+    ): Option[List[Move.Move]] =
+        match (best, found) {
+            case (None, x)          => x
+            case (x, None)          => x
+            case (Some(a), Some(b)) => Some(shorterOf(a, b))
+        }
+
+    ///
+    /// Both directions along one axis, keeping the shorter.
+    ///
+    /// The cube is conjugated into the frame that puts this axis where phase
+    /// one looks, and the answer is renamed back out of it.
+    ///
+    def alongAxis(
+        p1: Phase1.Tables,
+        p2: Domino.Tables,
+        share: Budget,
+        c: Sized.Standard,
+        view: { rotation = Rotation.Rotation, inverted = Bool }
+    ): (Option[List[Move.Move]], Int32) =
+        let r = view#rotation;
+        let seen = Cube.conjugate(r, Sized.cubeOfStandard(c));
+        let looking = if (view#inverted) Cube.inverse(seen) else seen;
+        match Sized.standardOf(looking) {
+            case Err(_) => (None, 0)
+            case Ok(turned) =>
+                let (found, used) = searchOnce(p1, p2, share, turned);
+                let named = ms -> namedInTheCallersFrame(ms, r, view#inverted);
+                (found |> Option.map(named), used)
+        }
+
+    ///
+    /// A solution found in a conjugated, possibly inverted view, named back in
+    /// the frame the caller handed over.
+    ///
+    /// The rename is by the **inverse** rotation. Getting that backwards
+    /// produces a sequence of the right length that solves a different cube --
+    /// which the replay test catches, and nothing else would.
+    ///
+    def namedInTheCallersFrame(
+        ms: List[Move.Move],
+        r: Rotation.Rotation,
+        inverted: Bool
+    ): List[Move.Move] =
+        let undone = if (inverted) Move.inverseOf(ms) else ms;
+        undone |> List.map(m -> Rotation.reframe(m, Rotation.inverse(r)))
 
     ///
     /// A solution found by searching `c` only, never its inverse.
@@ -179,17 +264,36 @@ mod CubeSolve.Solve.Standard {
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
         let Budget(limits) = budget;
-        Phase1.stateOf(c) |> Result.flatMap(start -> {
-            let first = Phase1.heuristicAt(p1, start);
-            let search = { phase1 = p1, phase2 = p2, limits = limits, cube = c };
-            match byDepth(search, start, first, 0, None) {
-                case Some(best) => Ok(best)
-                case None =>
-                    Err("no solution within ${limits#probeMax} probes and "
-                        + "${limits#maxDepth} moves: raise the budget rather than "
-                        + "retrying this search unchanged")
-            }
-        })
+        match searchOnce(p1, p2, budget, c) {
+            case (Some(best), _) => Ok(best)
+            case (None, _) =>
+                Err("no solution within ${limits#probeMax} probes and "
+                    + "${limits#maxDepth} moves: raise the budget rather than "
+                    + "retrying this search unchanged")
+        }
+
+    ///
+    /// One search, reporting the probes it spent as well as what it found.
+    ///
+    /// The probe count is what lets several searches share a budget rather than
+    /// each being handed a slice of it. Slicing was measurably worse: six
+    /// searches on a sixth of the budget each are all too starved to use the
+    /// diversity they were added for.
+    ///
+    def searchOnce(
+        p1: Phase1.Tables,
+        p2: Domino.Tables,
+        budget: Budget,
+        c: Sized.Standard
+    ): (Option[List[Move.Move]], Int32) =
+        let Budget(limits) = budget;
+        match Phase1.stateOf(c) {
+            case Err(_) => (None, 0)
+            case Ok(start) =>
+                let first = Phase1.heuristicAt(p1, start);
+                let attempt = { phase1 = p1, phase2 = p2, limits = limits, cube = c };
+                byDepth(attempt, start, first, 0, None)
+        }
 
     ///
     /// What a solve carries through its depths.
@@ -210,12 +314,12 @@ mod CubeSolve.Solve.Standard {
         depth: Int32,
         probes: Int32,
         best: Option[List[Move.Move]]
-    ): Option[List[Move.Move]] =
+    ): (Option[List[Move.Move]], Int32) =
         let limits = attempt#limits;
         let spent = probes >= limits#probeMax;
         let satisfied = bestIsGoodEnough(best, probes, limits);
         if (depth > Phase1.maxDepth() or spent or satisfied)
-            best
+            (best, probes)
         else {
             let handovers = IdaStar.enumerate(
                 Phase1.phaseOf(attempt#phase1), start, depth, limits#handovers);
