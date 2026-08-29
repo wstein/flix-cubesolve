@@ -141,7 +141,8 @@ mod CubeSolve.Patterns.Standard {
     pub def identify(c: Cube.Cube): Option[String] =
         Rotation.all()
             |> Vector.toList
-            |> List.filterMap(r -> Facelets.token(Cube.conjugate(r, c)) |> Result.toOption)
+            |> List.filterMap(r ->
+                Cube.conjugate(r, c) |> Result.flatMap(Facelets.token) |> Result.toOption)
             |> List.minimum
 
     ///
@@ -175,7 +176,8 @@ mod CubeSolve.Patterns.Standard {
                 |> Result.toOption;
             target <- Facelets.token(c) |> Result.toOption;
             r <- Rotation.all() |> Vector.findLeft(r ->
-                Facelets.token(Cube.conjugate(r, upright)) == Ok(target))
+                Cube.conjugate(r, upright)
+                    |> Result.flatMap(Facelets.token) == Ok(target))
         ) yield r
 
     ///

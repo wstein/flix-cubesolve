@@ -286,6 +286,43 @@ Each phase owns its own tables and re-exports them, so the combining layer talks
 to `Solve.Phase1` and `Solve.Domino` rather than reaching into their table
 modules.
 
+## Turning a cube bigger than a 3x3x3
+
+The 2x2x2 and 3x3x3 turn through per-orbit move tables. Everything larger turns
+through `CubeSolve.Model.Stickers`, which unfolds the cube, spins one face,
+cycles four strips and folds it back.
+
+**The geometry is uniform in `n`, which is the whole argument for it.** A 4x4x4
+adds wing and centre orbits, a 5x5x5 adds more; writing move tables for each is
+work the geometry does not need, because neither rule mentions the size. The
+price is two conversions per move, paid in the model layer, where no search ever
+looks.
+
+**Nothing independent exists to check a 4x4x4 against**, so the check is that the
+same formula reproduces the sizes that are already trusted:
+`TestStickers.theStickerGeometryAgreesWithTheOrbitTables` runs all eighteen face
+turns against the orbit tables at both sizes, on the solved cube and a fixed
+sample of random ones. It passed first time; had a strip been read backwards it
+would have named the move and the seed. The group laws and a scramble-and-inverse
+round trip then run at all four sizes.
+
+### What larger cubes still cannot do
+
+`after`, `inverse` and `conjugate` refuse any cube with a centre orbit, and
+`Result` is how they say so.
+
+Centres are held as a multiset of colours rather than as a permutation of pieces,
+because the four centres of a face are interchangeable and pretending otherwise
+would make equal cubes compare unequal. Composition needs to know where the
+right-hand state sent each slot; a list of colours does not say, and nothing
+recovers it. Turning is unaffected — a turn is geometry, not composition.
+
+Both of these were silent before, and neither was reachable until a large cube
+could be turned. `afterOrbit` returned its left operand for wing and centre
+orbits, and `asState` built a two-orbit rotation that `List.zip` then silently
+truncated a three-orbit cube against. A refusal is the answer; a plausible cube
+is not.
+
 ## The command line
 
 `CubeSolve.Cli.main` is **module-scoped, never top-level**. Flix allows one

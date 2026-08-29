@@ -39,7 +39,12 @@ mod TestPatternRecognition {
             let name = Patterns.Standard.name(p);
             let upright = made(3, name, Patterns.Standard.faceTurns(p));
             Rotation.all() |> Vector.forEach(r -> {
-                let held = Cube.conjugate(r, upright);
+                let held = match Cube.conjugate(r, upright) {
+                    case Ok(x)  => x
+                    case Err(e) =>
+                        Assert.assertEqWithMsg(expected = "", e, "conjugating");
+                        upright
+                };
                 match Patterns.Standard.recognize(held) {
                     case None =>
                         Assert.assertTrueWithMsg(false,

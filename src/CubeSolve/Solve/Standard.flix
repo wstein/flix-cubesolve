@@ -460,9 +460,12 @@ mod CubeSolve.Solve.Standard {
         view: { rotation = Rotation.Rotation, inverted = Bool }
     ): (Option[List[Move.Move]], Int32) =
         let r = view#rotation;
-        let seen = Cube.conjugate(r, Sized.cubeOfStandard(c));
-        let looking = if (view#inverted) Cube.inverse(seen) else seen;
-        match Sized.standardOf(looking) {
+        // A 3x3x3 has no centre orbit, so neither of these can refuse; the
+        // Result is here for the sizes that do, and a refusal is treated as a
+        // view that found nothing rather than special-cased.
+        let looking = Cube.conjugate(r, Sized.cubeOfStandard(c))
+            |> Result.flatMap(seen -> if (view#inverted) Cube.inverse(seen) else Ok(seen));
+        match looking |> Result.flatMap(Sized.standardOf) {
             case Err(_) => (None, 0)
             case Ok(turned) =>
                 let (found, used) = searchOnce(p1, p2, share, turned);

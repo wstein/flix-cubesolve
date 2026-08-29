@@ -20,6 +20,11 @@ Six faces, numbered in Kociemba order:
 A facelet index is `face * n² + cell`, with cells numbered row-major from the
 face's top-left as drawn in the standard unfolded net.
 
+This layout is not only for input and output. `CubeSolve.Model.Stickers` turns
+cubes larger than a 3×3×3 by moving facelets directly, so the convention above
+is what a 4×4×4 move *is*, and `TestStickers` pins it against the 3×3×3 move
+tables.
+
 ## Permutations are slot-indexed
 
 `p[i]` is **the piece sitting in slot `i`**. The solved cube is the identity.

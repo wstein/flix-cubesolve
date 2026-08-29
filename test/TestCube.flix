@@ -8,6 +8,21 @@ mod TestCube {
     use CubeSolve.Model.Move.Move.Turn
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
+    /// `Cube.inverse` where it is defined, which is every size with no centre
+    /// orbit -- so the 2x2x2 and 3x3x3 this module tests.
+    def inverted(c: Cube.Cube): Cube.Cube \ Assert =
+        match Cube.inverse(c) {
+            case Ok(x)  => x
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "inverting"); c
+        }
+
+    /// `Cube.conjugate` where it is defined.
+    def conjugated(r: Rotation.Rotation, c: Cube.Cube): Cube.Cube \ Assert =
+        match Cube.conjugate(r, c) {
+            case Ok(x)  => x
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "conjugating"); c
+        }
+
     /// Applies `notation` to a solved `n`, failing the test if anything refuses.
     def scrambled(n: Int32, notation: String): Cube.Cube \ Assert =
         match Result.flatMap(c -> Cube.applyNotation(notation, c), Cube.solved(n)) {
@@ -172,16 +187,48 @@ mod TestCube {
         Cube.orbits(c) |> List.forEach(o ->
             Assert.assertEq(expected = None, Orbit64.Coord.faultOf(o)))
 
-    // ---------- sizes this engine cannot yet turn ----------
+    // ---------- what a cube with centre orbits can and cannot do ----------
 
-    /// A 4x4x4 has wing and centre orbits and no move tables for them yet. The
-    /// refusal names the size rather than failing somewhere downstream.
+    /// A 4x4x4 turns. It has wing and centre orbits with no move tables, and
+    /// goes through the sticker geometry instead; `TestStickers` is where that
+    /// is checked against the orbit tables at the sizes that have both.
+    ///
+    /// This replaces a test that asserted the opposite. Turning a 4x4x4 was
+    /// refused until the geometry existed, and the refusal was worth asserting
+    /// while it stood.
     @Test
-    def turningAnUnimplementedSizeIsRefusedByName(): Unit \ Assert =
-        match Result.flatMap(c -> Cube.apply(Turn(U, 1), c), Cube.solved(4)) {
-            case Ok(_)  => Assert.assertTrueWithMsg(false, "a 4x4x4 cannot be turned yet")
-            case Err(e) => Assert.assertTrue(String.contains(substr = "4x4x4", e))
+    def aCubeWithWingAndCentreOrbitsTurns(): Unit \ Assert =
+        let turnedU = c -> Cube.apply(Turn(U, 1), c);
+        Assert.assertOk(Cube.solved(4) |> Result.flatMap(turnedU));
+        Assert.assertOk(Cube.solved(5) |> Result.flatMap(turnedU))
+
+    /// Composing, inverting or conjugating one is refused, and the refusal says
+    /// why rather than failing somewhere downstream.
+    ///
+    /// Centres are a multiset of colours rather than a permutation of pieces,
+    /// because the four centres of a face are interchangeable. The price is that
+    /// nothing can say where the other cube sent each centre slot, so these
+    /// three operations have no definition at this size. Returning the left-hand
+    /// cube unchanged -- which is what this used to do -- is the shape of bug
+    /// that survives every test that does not look for it.
+    @Test
+    def composingACubeWithCentreOrbitsIsRefusedByName(): Unit \ Assert =
+        match Cube.solved(4) {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a solved 4x4x4")
+            case Ok(c)  =>
+                Assert.assertTrueWithMsg(refusesWithReason(Cube.inverse(c)),
+                    "inverting a 4x4x4 should be refused for the centre reason");
+                Assert.assertTrueWithMsg(refusesWithReason(Cube.after(c, c)),
+                    "composing a 4x4x4 should be refused for the centre reason");
+                Assert.assertTrueWithMsg(refusesWithReason(Cube.conjugate(Rotation.x(), c)),
+                    "conjugating a 4x4x4 should be refused for the centre reason")
         }
+
+    /// Whether a result was refused for the reason centres cannot compose.
+    def refusesWithReason(r: Result[String, Cube.Cube]): Bool = match r {
+        case Ok(_)    => false
+        case Err(why) => String.contains(substr = "multiset", why)
+    }
 
     // ---------- failure reproducibility ----------
 
@@ -207,7 +254,7 @@ mod TestCube {
     def invertingAStateUndoesTheScrambleThatMadeIt(): Unit \ Assert =
         List.forEach(scramble -> {
             let c = scrambled(3, scramble);
-            let undone = Cube.applyNotation(scramble, Cube.inverse(c))
+            let undone = Cube.applyNotation(scramble, inverted(c))
                 |> Result.map(Cube.isSolved);
             Assert.assertEqWithMsg(
                 expected = Ok(true), undone,
@@ -222,16 +269,16 @@ mod TestCube {
         List.forEach(scramble -> {
             let c = scrambled(3, scramble);
             Assert.assertEqWithMsg(
-                expected = Cube.orbits(c), Cube.orbits(Cube.inverse(Cube.inverse(c))),
+                expected = Cube.orbits(c), Cube.orbits(inverted(inverted(c))),
                 "inverting '${scramble}' twice should return it")
         },
         "R" :: "R U R' U'" :: "R U2 F' L D B2 R' U" :: Nil);
         // a solved cube and superflip are their own inverses
         let solved = scrambled(3, "");
-        Assert.assertEq(expected = Cube.orbits(solved), Cube.orbits(Cube.inverse(solved)));
+        Assert.assertEq(expected = Cube.orbits(solved), Cube.orbits(inverted(solved)));
         let superflip = scrambled(3, "R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U");
         Assert.assertEq(
-            expected = Cube.orbits(superflip), Cube.orbits(Cube.inverse(superflip)))
+            expected = Cube.orbits(superflip), Cube.orbits(inverted(superflip)))
 
     /// Inversion works on a 2x2x2 too, where there is only a corner orbit.
     @Test
@@ -239,7 +286,7 @@ mod TestCube {
         let c = scrambled(2, "R U2 F' R' U");
         Assert.assertEq(
             expected = Ok(true),
-            Cube.applyNotation("R U2 F' R' U", Cube.inverse(c)) |> Result.map(Cube.isSolved))
+            Cube.applyNotation("R U2 F' R' U", inverted(c)) |> Result.map(Cube.isSolved))
 
     // ---------- conjugation ----------
 
@@ -253,7 +300,7 @@ mod TestCube {
             case Ok(c)  =>
                 Rotation.all() |> Vector.forEach(r ->
                     Assert.assertTrueWithMsg(
-                        Cube.isSolved(Cube.conjugate(r, c)),
+                        Cube.isSolved(conjugated(r, c)),
                         "a solved cube conjugated by ${r} should still be solved"))
         }
 
@@ -264,7 +311,7 @@ mod TestCube {
         Rotation.all() |> Vector.forEach(r ->
             Assert.assertEqWithMsg(
                 expected = Cube.orbits(c),
-                Cube.orbits(Cube.conjugate(Rotation.inverse(r), Cube.conjugate(r, c))),
+                Cube.orbits(conjugated(Rotation.inverse(r), conjugated(r, c))),
                 "conjugating by ${r} and back should return the state"))
 
     /// Conjugation is a homomorphism: re-recording after a turn is the same as
@@ -279,8 +326,8 @@ mod TestCube {
         let c = scrambled(3, "R U2 F' L D B2 R' U");
         Rotation.all() |> Vector.forEach(r ->
             Move.all() |> Vector.forEach(m -> {
-                let turnedThenSeen = Cube.apply(m, c) |> Result.map(x -> Cube.conjugate(r, x));
-                let seenThenTurned = Cube.apply(Rotation.reframe(m, r), Cube.conjugate(r, c));
+                let turnedThenSeen = Cube.apply(m, c) |> Result.map(x -> conjugated(r, x));
+                let seenThenTurned = Cube.apply(Rotation.reframe(m, r), conjugated(r, c));
                 Assert.assertEqWithMsg(
                     expected = turnedThenSeen |> Result.map(Cube.orbits),
                     seenThenTurned |> Result.map(Cube.orbits),
@@ -292,7 +339,7 @@ mod TestCube {
     def conjugationPreservesLegality(): Unit \ Assert =
         let c = scrambled(3, "B U2 R' F D2 L B' R U F2 D L' U2 B2 R");
         Rotation.all() |> Vector.forEach(r ->
-            Cube.orbits(Cube.conjugate(r, c)) |> List.forEach(o ->
+            Cube.orbits(conjugated(r, c)) |> List.forEach(o ->
                 Assert.assertEqWithMsg(
                     expected = None, Orbit64.Coord.faultOf(o),
                     "conjugating by ${r} produced something that is not a cube")))

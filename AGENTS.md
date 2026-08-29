@@ -50,6 +50,8 @@ The wrapper adds verbs of its own, ahead of the compiler's:
 
 - `src/CubeSolve.flix` — the root module
 - `src/CubeSolve/` — engine sources; directories mirror module paths.
+  `Model/Stickers.flix` turns cubes larger than a 3x3x3 as facelets, since the
+  geometry is uniform in `n` where per-orbit move tables are not.
   `CubeSolve/Patterns/` holds the 199 published patterns as generated source:
   one canonical copy, consumed by the tests rather than duplicated in them
 - `test/` — `@Test` functions, flat, one `TestX` per subject

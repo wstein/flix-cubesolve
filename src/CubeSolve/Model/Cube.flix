@@ -18,7 +18,9 @@ mod CubeSolve.Model.Cube {
     use CubeSolve.Model.Move.Move.Turn
     use CubeSolve.Model.Notation
     use CubeSolve.Model.Notation.Op.{Layer, Frame}
+    use CubeSolve.Model.Orbits
     use CubeSolve.Model.Rotation
+    use CubeSolve.Model.Stickers
     use Orbit64.Coord.Coord
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord, WingCoord, CenterCoord}
 
@@ -120,16 +122,40 @@ mod CubeSolve.Model.Cube {
     ///
     /// `c` after the move `m`, or why the move could not be applied.
     ///
-    /// The refusal is by size rather than by orbit kind, because "this engine
-    /// cannot turn a 4x4x4 yet" is what the caller can act on, and "there is no
-    /// move table for the Wings orbit" is not.
+    /// Every size turns. The 2x2x2 and 3x3x3 go through per-orbit move tables
+    /// and everything larger through the sticker geometry, for the reasons the
+    /// two functions below give. A caller cannot tell which was used except by
+    /// timing it.
     ///
     pub def apply(m: Move.Move, c: Cube): Result[String, Cube] =
         let inFrame = Rotation.reframe(m, orientation(c));
         let f = Move.face(inFrame);
         let k = Move.amount(inFrame);
+        if (size(c) <= 3) byOrbitTable(f, k, c) else byFacelets(f, k, c)
+
+    ///
+    /// A turn applied through the per-orbit move tables.
+    ///
+    /// The path the 2x2x2 and 3x3x3 take. These are the sizes the search layer
+    /// works in, and its coordinate tables are built from the same
+    /// `Move.cornerPermutation` and `Move.edgePermutation` this uses, so model
+    /// and search cannot disagree about what a move does.
+    ///
+    def byOrbitTable(f: Face, k: Int32, c: Cube): Result[String, Cube] =
         orbits(c)
-            |> Result.traverse(o -> turn(size(c), f, k, o))
+            |> Result.traverse(o -> Orbits.turn(size(c), f, k, o))
+            |> Result.map(os -> Cube(size(c), orientation(c), os))
+
+    ///
+    /// A turn applied through the facelets.
+    ///
+    /// The path everything larger takes. A 4x4x4 has wing and centre orbits with
+    /// no move tables here, and writing four more tables per orbit is work the
+    /// geometry does not need: a face turn spins one face and cycles four strips
+    /// whatever the size. `CubeSolve.Model.Stickers` does it and says how.
+    ///
+    def byFacelets(f: Face, k: Int32, c: Cube): Result[String, Cube] =
+        Stickers.turnOrbits(size(c), Move.faceIndex(f), k, orbits(c))
             |> Result.map(os -> Cube(size(c), orientation(c), os))
 
     ///
@@ -176,58 +202,8 @@ mod CubeSolve.Model.Cube {
     pub def reframeSolution(ms: List[Move.Move], c: Cube): List[Move.Move] =
         ms |> List.map(m -> Rotation.reframe(m, orientation(c)))
 
-    ///
-    /// One orbit after `k` clockwise quarter turns of `f`.
-    ///
-    def turn(n: Int32, f: Face, k: Int32, o: Coord): Result[String, Coord] = match o {
-        case CornerCoord(p, t) =>
-            let step = turnOriented(Move.cornerPermutation(f), Move.cornerTwist(f), 3);
-            let (p1, t1) = repeatTurn(k, (p, t), step);
-            Ok(CornerCoord(p1, t1))
-        case MidgeCoord(p, t) =>
-            let step = turnOriented(Move.edgePermutation(f), Move.edgeFlip(f), 2);
-            let (p1, t1) = repeatTurn(k, (p, t), step);
-            Ok(MidgeCoord(p1, t1))
-        case _ =>
-            Err("turning a ${n}x${n}x${n} is not implemented: this engine has "
-                + "move tables for the corner and midge orbits, so for the "
-                + "2x2x2 and 3x3x3")
-    }
 
-    ///
-    /// `step` applied `k` times to `s`.
-    ///
-    def repeatTurn(
-        k: Int32,
-        s: (Vector[Int32], Vector[Int32]),
-        step: ((Vector[Int32], Vector[Int32])) -> (Vector[Int32], Vector[Int32])
-    ): (Vector[Int32], Vector[Int32]) =
-        if (k <= 0) s else repeatTurn(k - 1, step(s), step)
 
-    ///
-    /// One clockwise quarter turn on an orbit whose pieces carry orientation.
-    ///
-    /// Slot-indexed throughout: the new occupant of slot `i` is whatever sat in
-    /// slot `perm[i]`, and it arrives carrying that slot's orientation plus the
-    /// change the turn imposes.
-    ///
-    /// Corners and midges differ only in how many slots they have and in what
-    /// their orientation counts modulo, so they share this rather than each
-    /// carrying its own copy of the same two lines.
-    ///
-    def turnOriented(
-        perm: Vector[Int32],
-        delta: Vector[Int32],
-        modulus: Int32
-    ): ((Vector[Int32], Vector[Int32])) -> (Vector[Int32], Vector[Int32]) =
-        let slots = Vector.length(perm);
-        match (p, t) ->
-            let moved = Vector.init(i -> Vector.get(Vector.get(i, perm), p), slots);
-            let turned = Vector.init(i -> {
-                let carried = Vector.get(Vector.get(i, perm), t);
-                Int32.modulo(carried + Vector.get(i, delta), modulus)
-            }, slots);
-            (moved, turned)
 
     ///
     /// `c` as it would be recorded from a frame turned by `r`.
@@ -252,9 +228,13 @@ mod CubeSolve.Model.Cube {
     /// as a composition, a solved cube stays solved because the identity is
     /// conjugate only to itself, and nothing has to be argued.
     ///
-    pub def conjugate(r: Rotation.Rotation, c: Cube): Cube =
-        let turned = asState(size(c), r);
-        after(after(turned, c), inverse(turned))
+    pub def conjugate(r: Rotation.Rotation, c: Cube): Result[String, Cube] =
+        forM (
+            turned <- asState(size(c), r);
+            left <- after(turned, c);
+            back <- inverse(turned);
+            both <- after(left, back)
+        ) yield both
 
     ///
     /// The state a solved cube is in after being turned bodily by `r`.
@@ -262,11 +242,19 @@ mod CubeSolve.Model.Cube {
     /// A rotation is not a move, but its effect on the pieces can be written as
     /// one, and that is what makes it composable with states.
     ///
-    def asState(n: Int32, r: Rotation.Rotation): Cube =
-        let corners = CornerCoord(Rotation.cornerPermutation(r), Rotation.cornerTwist(r));
-        let midges = MidgeCoord(Rotation.edgePermutation(r), Rotation.edgeFlip(r));
-        let orbits = if (n == 2) corners :: Nil else corners :: midges :: Nil;
-        Cube(n, Rotation.identity(), orbits)
+    def asState(n: Int32, r: Rotation.Rotation): Result[String, Cube] =
+        if (n > 3)
+            // There are wing and centre orbits to fill and no rotation tables
+            // for them. Returning a two-orbit cube anyway is what this used to
+            // do, and `after` then zipped it against a three-orbit cube and
+            // silently dropped the last orbit.
+            Err(Orbits.centresDoNotCompose())
+        else
+            let corners =
+                CornerCoord(Rotation.cornerPermutation(r), Rotation.cornerTwist(r));
+            let midges = MidgeCoord(Rotation.edgePermutation(r), Rotation.edgeFlip(r));
+            let os = if (n == 2) corners :: Nil else corners :: midges :: Nil;
+            Ok(Cube(n, Rotation.identity(), os))
 
     ///
     /// `first`, and then `second`.
@@ -275,40 +263,21 @@ mod CubeSolve.Model.Cube {
     /// `first` had at the slot `second` draws that slot from, and it carries
     /// both orientations.
     ///
-    pub def after(first: Cube, second: Cube): Cube =
-        let composed = List.zip(orbits(first), orbits(second)) |> List.map(afterOrbit);
-        Cube(size(first), orientation(first), composed)
+    pub def after(first: Cube, second: Cube): Result[String, Cube] =
+        // Checked rather than left to `List.zip`, which truncates to the shorter
+        // list: two cubes with different orbits would otherwise compose into one
+        // missing an orbit, which is a wrong cube rather than a refusal.
+        if (List.length(orbits(first)) != List.length(orbits(second)))
+            Err("these two cubes do not have the same orbits, so they do not "
+                + "compose: ${size(first)}x${size(first)}x${size(first)} against "
+                + "${size(second)}x${size(second)}x${size(second)}")
+        else
+            List.zip(orbits(first), orbits(second))
+                |> Result.traverse(Orbits.afterOrbit)
+                |> Result.map(os -> Cube(size(first), orientation(first), os))
 
-    ///
-    /// One orbit of a composition.
-    ///
-    def afterOrbit(pair: (Coord, Coord)): Coord = match pair {
-        case (CornerCoord(pa, oa), CornerCoord(pb, ob)) =>
-            let (p, o) = combine(pa, oa, pb, ob, 3);
-            CornerCoord(p, o)
-        case (MidgeCoord(pa, oa), MidgeCoord(pb, ob)) =>
-            let (p, o) = combine(pa, oa, pb, ob, 2);
-            MidgeCoord(p, o)
-        case (a, _) => a
-    }
 
-    ///
-    /// The permutation and orientation of a composition.
-    ///
-    def combine(
-        pa: Vector[Int32],
-        oa: Vector[Int32],
-        pb: Vector[Int32],
-        ob: Vector[Int32],
-        modulus: Int32
-    ): (Vector[Int32], Vector[Int32]) =
-        let n = Vector.length(pa);
-        let moved = Vector.init(i -> Vector.get(Vector.get(i, pb), pa), n);
-        let turned = Vector.init(i -> {
-            let carried = Vector.get(Vector.get(i, pb), oa);
-            Int32.modulo(carried + Vector.get(i, ob), modulus)
-        }, n);
-        (moved, turned)
+
 
     ///
     /// The state that undoes `c`.
@@ -320,44 +289,9 @@ mod CubeSolve.Model.Cube {
     /// differently with respect to it. Searching both and keeping the shorter
     /// answer is a real refinement rather than a restatement.
     ///
-    pub def inverse(c: Cube): Cube =
-        Cube(size(c), orientation(c), orbits(c) |> List.map(invertOrbit))
-
-    ///
-    /// One orbit, inverted.
-    ///
-    /// The piece in slot `i` goes home to slot `p[i]`, so the inverse sends
-    /// `p[i]` to `i`. Its orientation goes with it and is negated: whatever
-    /// twist it acquired on the way out it must lose on the way back.
-    ///
-    def invertOrbit(o: Coord): Coord = match o {
-        case CornerCoord(p, t) => let (q, u) = invertOriented(p, t, 3); CornerCoord(q, u)
-        case MidgeCoord(p, t)  => let (q, u) = invertOriented(p, t, 2); MidgeCoord(q, u)
-        case WingCoord(p)      => WingCoord(invertPermutation(p))
-        case CenterCoord(cols) => CenterCoord(cols)
-    }
-
-    ///
-    /// A permutation and its orientations, inverted together.
-    ///
-    def invertOriented(
-        p: Vector[Int32],
-        t: Vector[Int32],
-        modulus: Int32
-    ): (Vector[Int32], Vector[Int32]) =
-        let n = Vector.length(p);
-        let inverted = invertPermutation(p);
-        let twist = Vector.init(i -> {
-            let came = Vector.get(i, inverted);
-            Int32.modulo(modulus - Vector.get(came, t), modulus)
-        }, n);
-        (inverted, twist)
-
-    ///
-    /// The permutation that undoes `p`.
-    ///
-    def invertPermutation(p: Vector[Int32]): Vector[Int32] =
-        let n = Vector.length(p);
-        Vector.init(i -> Vector.indexOf(i, p) |> Option.getWithDefault(i), n)
+    pub def inverse(c: Cube): Result[String, Cube] =
+        orbits(c)
+            |> Result.traverse(Orbits.invertOrbit)
+            |> Result.map(os -> Cube(size(c), orientation(c), os))
 
 }

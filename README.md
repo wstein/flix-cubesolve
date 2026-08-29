@@ -19,7 +19,7 @@ Under construction. What works today:
 
 | | 2×2×2 | 3×3×3 | 4×4×4 | 5×5×5 |
 |---|---|---|---|---|
-| model, moves, notation | ✅ | ✅ | — | — |
+| model, moves, notation | ✅ | ✅ | ✅ turning only | ✅ turning only |
 | slice, wide and rotation notation | rotations only | ✅ | — | — |
 | reachability validation | ✅ | ✅ | — | — |
 | uniform random state | ✅ | ✅ | — | — |
@@ -36,9 +36,16 @@ can certify *bounds* but not an exact distance, which is what the
 bounded-difficulty row is — every 3×3×3 scramble carries an upper bound
 certified by a real solution and a lower bound from the pruning tables.
 
-`CubeSolve.supportedSizes()` reports this at runtime and is covered by a test
-that builds and turns every size it lists, so the list cannot drift ahead of the
-implementation. The rest of this README describes the engine being built.
+The 4×4×4 and 5×5×5 rows say *turning only* and mean it. A cube of either size
+can be built, turned by any face and drawn; it cannot be validated, sampled,
+scrambled or solved, and it cannot be composed with another cube — see
+[Layout](#layout) for why composition in particular is refused rather than
+approximated.
+
+`CubeSolve.supportedSizes()` reports what can be **solved**, is still `2` and
+`3`, and is covered by a test that builds and turns every size it lists, so the
+list cannot drift ahead of the implementation. The rest of this README describes
+the engine being built.
 
 ## What it will do
 

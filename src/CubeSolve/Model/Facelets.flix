@@ -47,4 +47,5 @@ mod CubeSolve.Model.Facelets {
     pub def token(c: Cube): Result[String, String] =
         Orbit64.encode(Cube.size(c), Cube.orbits(c))
 
+
 }

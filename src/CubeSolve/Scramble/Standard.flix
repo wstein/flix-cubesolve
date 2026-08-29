@@ -104,7 +104,9 @@ mod CubeSolve.Scramble.Standard {
         let axes = Rotation.identity() :: Rotation.x() :: Rotation.z() :: Nil;
         axes |> List.foldLeft((best, r) -> {
             let seen = Cube.conjugate(r, Sized.cubeOfStandard(c));
-            match Sized.standardOf(seen) |> Result.flatMap(Phase1.stateOf) {
+            match seen
+                |> Result.flatMap(Sized.standardOf)
+                |> Result.flatMap(Phase1.stateOf) {
                 case Ok(s)  => Int32.max(best, Phase1.heuristicAt(p1, s))
                 case Err(_) => best
             }
