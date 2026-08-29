@@ -64,15 +64,23 @@ mod CubeSolve.Model.Holding {
     ///
     /// Whether `a` and `b` are the same pattern, however each is held.
     ///
-    /// `false` when either identity is unavailable. A size this engine cannot
-    /// canonicalise is not a size at which two cubes quietly compare equal:
-    /// answering "no" to a question that cannot be answered is safe, and
-    /// answering "yes" is not.
+    /// - `Some(true)` -- the same pattern.
+    /// - `Some(false)` -- comparable, and different.
+    /// - `None` -- not comparable: at least one has a centre orbit, so this
+    ///   engine has no holding identity for it.
     ///
-    pub def sameUpToHolding(a: Cube.Cube, b: Cube.Cube): Bool =
+    /// **Three answers rather than two, because there are three cases.** An
+    /// earlier version returned a bare `Bool` and reported the unsupported case
+    /// as `false`, which reads as "different patterns" and is not what it means.
+    /// It also made the relation non-reflexive -- `sameUpToHolding(c, c)` was
+    /// false for a 4x4x4 -- so it was not an equivalence at all. It is one on
+    /// the domain where it is defined, and `None` is how that domain announces
+    /// its edge.
+    ///
+    pub def sameUpToHolding(a: Cube.Cube, b: Cube.Cube): Option[Bool] =
         match (identityOf(a), identityOf(b)) {
-            case (Some(x), Some(y)) => x == y
-            case _                  => false
+            case (Some(x), Some(y)) => Some(x == y)
+            case _                  => None
         }
 
     ///

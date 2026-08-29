@@ -419,10 +419,13 @@ it, and each had grown its own implementation of a rule subtle enough that two
 of them would drift.
 
 `identityOf` returns `None` for any size with centre orbits, and
-`sameUpToHolding` is then `false` — including against itself. Reflexivity is the
-one law you would expect to hold unconditionally, and it deliberately does not:
-answering "yes" to a question the engine cannot answer is the failure worth
-avoiding, and a reflexive `true` would be exactly that.
+`sameUpToHolding` returns `Option[Bool]` rather than `Bool`: `Some(true)` for the
+same pattern, `Some(false)` for comparable-but-different, `None` for a
+comparison this engine cannot make. Three answers because there are three cases
+— a bare `Bool` has to report the unsupported one as `false`, which reads as
+"different patterns" and makes the relation non-reflexive, so not an equivalence
+at all. On the domain where it is defined it is a genuine one, and the tests
+check reflexivity, symmetry and transitivity there.
 
 **`Eq` on a cube stays exact state equality.** The group laws, the round trips
 and the sticker geometry all read `==` as *identical*; making it mean

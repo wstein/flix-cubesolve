@@ -70,24 +70,35 @@ mod TestHolding {
         let cubes = Vector#{
             made(3, "R U R' U'"), made(3, "M2 S2 E2"), made(3, ""), made(3, "F2 B2")
         };
+        // On the supported domain it is a genuine equivalence: reflexive,
+        // symmetric, and exactly identity equality.
         cubes |> Vector.forEach(a -> {
-            Assert.assertTrueWithMsg(Holding.sameUpToHolding(a, a), "reflexive");
+            Assert.assertEqWithMsg(expected = Some(true), Holding.sameUpToHolding(a, a),
+                "reflexive");
             cubes |> Vector.forEach(b -> {
                 Assert.assertEqWithMsg(
                     expected = Holding.sameUpToHolding(a, b), Holding.sameUpToHolding(b, a),
                     "symmetric");
                 Assert.assertEqWithMsg(
-                    expected = Holding.identityOf(a) == Holding.identityOf(b),
+                    expected = Some(Holding.identityOf(a) == Holding.identityOf(b)),
                     Holding.sameUpToHolding(a, b),
                     "agrees with identity equality")
             })
         });
+        // Transitive too, which is the law the other two do not imply.
+        cubes |> Vector.forEach(a -> cubes |> Vector.forEach(b -> cubes |> Vector.forEach(c ->
+            if (Holding.sameUpToHolding(a, b) == Some(true)
+                    and Holding.sameUpToHolding(b, c) == Some(true))
+                Assert.assertEqWithMsg(expected = Some(true), Holding.sameUpToHolding(a, c),
+                    "transitive")
+            else ())));
         // The point of the whole module: same pattern, different state.
         let upright = made(3, "R U R' U'");
         match Cube.conjugate(Rotation.y(), upright) {
             case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "conjugating")
             case Ok(held) =>
-                Assert.assertTrueWithMsg(Holding.sameUpToHolding(upright, held),
+                Assert.assertEqWithMsg(expected = Some(true),
+                    Holding.sameUpToHolding(upright, held),
                     "a re-held cube is the same pattern");
                 Assert.assertNeqWithMsg(unexpected = Cube.orbits(upright), Cube.orbits(held),
                     "and is not the same state -- Eq must stay exact")
@@ -116,7 +127,8 @@ mod TestHolding {
                     case Ok(back) =>
                         Assert.assertEqWithMsg(expected = canon, identity("canonical", back),
                             "a canonical token is its own identity");
-                        Assert.assertTrueWithMsg(Holding.sameUpToHolding(c, back),
+                        Assert.assertEqWithMsg(expected = Some(true),
+                            Holding.sameUpToHolding(c, back),
                             "and describes the same pattern")
                 }
             })
@@ -125,10 +137,10 @@ mod TestHolding {
     /// A cube with centre orbits has no identity here, and does not compare
     /// equal to anything up to holding -- including itself.
     ///
-    /// Returning `None` is the honest answer: centres are a multiset of colours,
-    /// so nothing can say where another state sent each centre slot. Answering
-    /// "no" to a question that cannot be answered is safe; answering "yes" is
-    /// not, and a reflexive `true` here would be exactly that.
+    /// `None` rather than `false`, because "cannot compare" and "different
+    /// patterns" are different answers. Reporting the first as the second is
+    /// what made an earlier version of this non-reflexive, and so not an
+    /// equivalence relation at all.
     ///
     @Test
     def sizesWithCentreOrbitsHaveNoHoldingIdentity(): Unit \ Assert =
@@ -136,8 +148,8 @@ mod TestHolding {
             let c = made(n, "R U");
             Assert.assertEqWithMsg(expected = None, Holding.identityOf(c),
                 "a ${n}x${n}x${n} has no holding identity yet");
-            Assert.assertFalseWithMsg(Holding.sameUpToHolding(c, c),
-                "and cannot be compared up to holding, even with itself")
+            Assert.assertEqWithMsg(expected = None, Holding.sameUpToHolding(c, c),
+                "and reports the comparison as unavailable rather than as false")
         });
         // It is still a perfectly good cube, and still exactly equal to itself.
         let big = made(4, "R U");
