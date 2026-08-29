@@ -411,6 +411,24 @@ copy, and compute identities with `Patterns.Standard.identify` and
 `Patterns.Pocket.identify` rather than reimplementing them, so what the tests
 check is what a consumer runs.
 
+`CubeSolve.Model.Holding` owns identity up to holding — `identityOf`,
+`sameUpToHolding` and `ofToken` — and both corpora delegate to it rather than
+keeping a copy. It sits in the model because it is a fact about cubes, not about
+the published collections; the corpora were simply the first thing that needed
+it, and each had grown its own implementation of a rule subtle enough that two
+of them would drift.
+
+`identityOf` returns `None` for any size with centre orbits, and
+`sameUpToHolding` is then `false` — including against itself. Reflexivity is the
+one law you would expect to hold unconditionally, and it deliberately does not:
+answering "yes" to a question the engine cannot answer is the failure worth
+avoiding, and a reflexive `true` would be exactly that.
+
+**`Eq` on a cube stays exact state equality.** The group laws, the round trips
+and the sticker geometry all read `==` as *identical*; making it mean
+*equivalent* would silently weaken every one of them. A named function says which
+comparison is being asked for.
+
 **The two identities are not interchangeable**, and the difference is the same
 one the model draws. A 3x3x3's centres pin the frame, so two recordings of a
 pattern are related by conjugation. A 2x2x2 has none, so re-holding it moves

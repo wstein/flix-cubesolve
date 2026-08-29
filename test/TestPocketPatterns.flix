@@ -2,6 +2,7 @@ mod TestPocketPatterns {
 
     use CubeSolve.Patterns
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Holding
     use CubeSolve.Model.Facelets
     use CubeSolve.Model.Move
     use CubeSolve.Model.Validate
@@ -29,7 +30,7 @@ mod TestPocketPatterns {
 
     /// The words the library re-holds a pocket cube by.
     def reorientations(): Vector[String] =
-        Patterns.Pocket.reorientations() |> Vector.map(snd)
+        Holding.reorientations() |> Vector.map(snd)
 
     /// Everything the 2x2x2 collection must satisfy, in one pass.
     ///

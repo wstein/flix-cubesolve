@@ -57,6 +57,7 @@ mod CubeSolve.Patterns.Standard {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
+    use CubeSolve.Model.Holding
     use CubeSolve.Model.Move
     use CubeSolve.Model.Rotation
     use CubeSolve.Patterns.Standard.Pattern.Pattern
@@ -136,14 +137,10 @@ mod CubeSolve.Patterns.Standard {
     /// conjugations, or nothing if it is not a cube.
     ///
     /// Conjugation is the relation here because a 3x3x3's centres pin the frame.
-    /// See `CubeSolve.Patterns` for why the 2x2x2 cannot use it.
+    /// `CubeSolve.Model.Holding` owns that rule and the 2x2x2's different one;
+    /// this is the name the corpus knows it by.
     ///
-    pub def identify(c: Cube.Cube): Option[String] =
-        Rotation.all()
-            |> Vector.toList
-            |> List.filterMap(r ->
-                Cube.conjugate(r, c) |> Result.flatMap(Facelets.token) |> Result.toOption)
-            |> List.minimum
+    pub def identify(c: Cube.Cube): Option[String] = Holding.identityOf(c)
 
     ///
     /// The published pattern `c` is, and how it is being held.

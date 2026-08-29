@@ -12,6 +12,7 @@
 mod TestPatternRecognition {
 
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Holding
     use CubeSolve.Model.Move
     use CubeSolve.Model.Rotation
     use CubeSolve.Patterns
@@ -84,7 +85,7 @@ mod TestPatternRecognition {
         Patterns.Pocket.all() |> Vector.forEach(p -> {
             let name = Patterns.Pocket.name(p);
             let upright = made(2, name, Patterns.Pocket.optimal(p));
-            Patterns.Pocket.reorientations() |> Vector.forEach(match (r, word) -> {
+            Holding.reorientations() |> Vector.forEach(match (r, word) -> {
                 let held = match Cube.applyNotation(word, upright) {
                     case Ok(c)  => c
                     case Err(e) =>
@@ -171,7 +172,7 @@ mod TestPatternRecognition {
     ///
     @Test
     def thePocketReHoldingsAreTwentyFourComposingTurns(): Unit \ Assert =
-        let table = Patterns.Pocket.reorientations();
+        let table = Holding.reorientations();
         Assert.assertEqWithMsg(expected = 24, Vector.length(table),
             "a centreless cube can be held 24 ways");
         let rotations = table |> Vector.map(fst) |> Vector.toList;
