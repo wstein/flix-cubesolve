@@ -25,6 +25,22 @@ cubes larger than a 3×3×3 by moving facelets directly, so the convention above
 is what a 4×4×4 move *is*, and `TestStickers` pins it against the 3×3×3 move
 tables.
 
+## Written notation
+
+Beyond the eighteen face turns, the parser reads slice moves `M E S`,
+whole-cube rotations `x y z`, wide turns (`r` or `Rw`), **bracketed groups**,
+repeat counts and postfix inverses. `(M z)4` is four of `M z`; `(R U R' U')` is
+one, its brackets marking where a hand regrips.
+
+Both spellings appear side by side in published algorithms, so brackets are
+parsed rather than stripped — removing them turns the first into the second and
+loses the count with nothing to show for it. A count applies to whatever
+precedes it, a `'` inverts it, and the two compose in either written order:
+`R2'` and `R'2` are both `R2`, since a half turn is its own inverse.
+
+Inverting a group reverses it and inverts each step, frame rotations included,
+so an inverse restores the frame as well as the pieces.
+
 ## Permutations are slot-indexed
 
 `p[i]` is **the piece sitting in slot `i`**. The solved cube is the identity.

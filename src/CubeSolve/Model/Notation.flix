@@ -50,10 +50,267 @@ mod CubeSolve.Model.Notation {
     /// at every size, and at some sizes means nothing at all: a 2x2x2 has no
     /// middle layer for `M` to turn.
     ///
+    /// **Groups are grammar, not decoration.** Published algorithms are written
+    /// with brackets, and a bracket sometimes carries a repeat count: `(M z)4`
+    /// is four of `M z`, while `(R U R' U')` is one and the brackets only show
+    /// where the fingers go. Stripping brackets would silently turn the first
+    /// into the second, so they are parsed rather than removed. Groups nest, and
+    /// take the same suffixes a move does.
+    ///
     pub def parse(n: Int32, s: String): Result[String, List[Op]] =
-        String.words(s)
-            |> Result.traverse(t -> parseToken(n, t))
-            |> Result.map(List.flatten)
+        forM (
+            lexemes <- lex(s);
+            parsed <- sequence(n, lexemes, Nil);
+            ops <- endsCleanly(parsed)
+        ) yield ops
+
+    ///
+    /// A parsed sequence and whatever was left after it.
+    ///
+    type alias Parsed = { ops = List[Op], rest = List[Lexeme] }
+
+    ///
+    /// The result of a top-level parse, if nothing was left over.
+    ///
+    def endsCleanly(p: Parsed): Result[String, List[Op]] =
+        if (List.isEmpty(p#rest))
+            Ok(p#ops)
+        else
+            Err("unmatched ')': there is a closing bracket with no opening one")
+
+    ///
+    /// One written symbol.
+    ///
+    enum Lexeme with Eq, ToString {
+        case Open
+        case Close
+        case Word(String)
+        case Count(Int32)
+        case Prime
+    }
+
+    ///
+    /// `s` as symbols, or why it is not written in this notation.
+    ///
+    def lex(s: String): Result[String, List[Lexeme]] =
+        lexFrom(String.toList(s), Nil)
+
+    ///
+    /// Symbols from a list of characters.
+    ///
+    def lexFrom(cs: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] =
+        match cs {
+            case Nil       => Ok(List.reverse(acc))
+            case c :: rest => lexOne(c, rest, cs, acc)
+        }
+
+    ///
+    /// One character, which is either skipped, a symbol on its own, or the
+    /// start of a run.
+    ///
+    def lexOne(
+        c: Char,
+        rest: List[Char],
+        all: List[Char],
+        acc: List[Lexeme]
+    ): Result[String, List[Lexeme]] =
+        if (Char.isWhitespace(c))
+            lexFrom(rest, acc)
+        else
+            match onItsOwn(c) {
+                case Some(l) => lexFrom(rest, l :: acc)
+                case None    => lexRun(c, all, acc)
+            }
+
+    ///
+    /// The symbols that are one character each.
+    ///
+    /// The curly apostrophe is here because it is what a word processor leaves
+    /// behind, and an algorithm pasted out of one is still an algorithm.
+    ///
+    def onItsOwn(c: Char): Option[Lexeme] =
+        if (c == '(') Some(Lexeme.Open)
+        else if (c == ')') Some(Lexeme.Close)
+        else if (c == '\'' or c == '\u2019') Some(Lexeme.Prime)
+        else None
+
+    ///
+    /// A run of digits or of letters, or a character this notation has no use
+    /// for.
+    ///
+    def lexRun(
+        c: Char,
+        all: List[Char],
+        acc: List[Lexeme]
+    ): Result[String, List[Lexeme]] =
+        if (Char.isDigit(c))
+            lexCount(all, acc)
+        else if (Char.isLetter(c))
+            lexWord(all, acc)
+        else
+            Err("'${c}' has no meaning in this notation")
+
+    ///
+    /// A run of letters as a move name.
+    ///
+    def lexWord(all: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] =
+        let (word, after) = spanOf(Char.isLetter, all);
+        lexFrom(after, Lexeme.Word(word) :: acc)
+
+    ///
+    /// A run of digits as a repeat count.
+    ///
+    def lexCount(all: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] =
+        let (digits, after) = spanOf(Char.isDigit, all);
+        match Int32.fromString(digits) {
+            case Some(k) => lexFrom(after, Lexeme.Count(k) :: acc)
+            case None    => Err("'${digits}' is not a number this notation can use")
+        }
+
+    ///
+    /// The longest prefix of `cs` satisfying `p`, as a string, and the rest.
+    ///
+    def spanOf(p: Char -> Bool, cs: List[Char]): (String, List[Char]) =
+        let taken = List.takeWhile(p, cs);
+        (taken |> List.map(Char.toString) |> List.join(""), List.dropWhile(p, cs))
+
+    ///
+    /// Items until a closing bracket or the end of the input.
+    ///
+    def sequence(n: Int32, lexemes: List[Lexeme], acc: List[Op]): Result[String, Parsed] =
+        match lexemes {
+            case Nil                  => Ok({ ops = List.reverse(acc), rest = Nil })
+            case Lexeme.Close :: _    => Ok({ ops = List.reverse(acc), rest = lexemes })
+            case _                    =>
+                forM (
+                    item <- item(n, lexemes);
+                    done <- sequence(n, item#rest, List.append(List.reverse(item#ops), acc))
+                ) yield done
+        }
+
+    ///
+    /// One move or one bracketed group, with its suffix applied.
+    ///
+    def item(n: Int32, lexemes: List[Lexeme]): Result[String, Parsed] =
+        match lexemes {
+            case Lexeme.Word(w) :: rest =>
+                forM (
+                    base <- expand(n, w, w);
+                    out <- suffixed(base, rest, w)
+                ) yield out
+            case Lexeme.Open :: rest    => group(n, rest)
+            case Lexeme.Count(k) :: _   =>
+                Err("'${k}' stands on its own: a repeat count has to follow a move "
+                    + "or a bracketed group")
+            case Lexeme.Prime :: _      =>
+                Err("\"'\" stands on its own: an inverse has to follow a move or a "
+                    + "bracketed group")
+            case _                      => Err("nothing to read here")
+        }
+
+    ///
+    /// A bracketed group: its contents, its closing bracket, and its suffix.
+    ///
+    def group(n: Int32, lexemes: List[Lexeme]): Result[String, Parsed] =
+        forM (
+            inner <- sequence(n, lexemes, Nil);
+            closed <- closing(inner);
+            out <- suffixed(inner#ops, closed, "( ... )")
+        ) yield out
+
+    ///
+    /// What follows a group's closing bracket, or why there is none.
+    ///
+    def closing(inner: Parsed): Result[String, List[Lexeme]] =
+        match inner#rest {
+            case Lexeme.Close :: after =>
+                if (List.isEmpty(inner#ops))
+                    Err("'()' is empty: a group has to contain at least one move")
+                else
+                    Ok(after)
+            case _ => Err("unmatched '(': there is an opening bracket with no closing one")
+        }
+
+    ///
+    /// `ops` with any repeat count and inverse that follow applied.
+    ///
+    /// A count repeats and a prime inverts, and the two compose in either
+    /// written order because inverting a repetition and repeating an inverse
+    /// come to the same sequence.
+    ///
+    def suffixed(
+        ops: List[Op],
+        lexemes: List[Lexeme],
+        what: String
+    ): Result[String, Parsed] =
+        forM (
+            read <- readSuffix(lexemes, None, false, what)
+        ) yield {
+            ops = applySuffix(ops, read#count |> Option.getWithDefault(1), read#inverted),
+            rest = read#rest
+        }
+
+    ///
+    /// A suffix, which is at most one count and at most one prime.
+    ///
+    def readSuffix(
+        lexemes: List[Lexeme],
+        count: Option[Int32],
+        inverted: Bool,
+        what: String
+    ): Result[String, { count = Option[Int32], inverted = Bool, rest = List[Lexeme] }] =
+        match lexemes {
+            case Lexeme.Count(k) :: rest =>
+                if (Option.isEmpty(count))
+                    if (k < 1)
+                        Err("a repeat count has to be at least 1, and '${what}' has ${k}")
+                    else if (k > repeatCeiling())
+                        Err("a repeat count of ${k} on '${what}' is beyond the "
+                            + "${repeatCeiling()} this notation will expand")
+                    else
+                        readSuffix(rest, Some(k), inverted, what)
+                else
+                    Err("'${what}' has two repeat counts, and one is the most a move "
+                        + "or group can take")
+            case Lexeme.Prime :: rest =>
+                if (inverted)
+                    Err("'${what}' is inverted twice, which says nothing the plain "
+                        + "form does not")
+                else
+                    readSuffix(rest, count, true, what)
+            case _ => Ok({ count = count, inverted = inverted, rest = lexemes })
+        }
+
+    ///
+    /// The largest repetition this notation will write out.
+    ///
+    /// Published algorithms repeat a group a handful of times at most, so a
+    /// larger number is a typo rather than an intention, and expanding it would
+    /// spend memory on a mistake.
+    ///
+    def repeatCeiling(): Int32 = 64
+
+    ///
+    /// `ops` repeated `k` times, inverted if asked.
+    ///
+    def applySuffix(ops: List[Op], k: Int32, inverted: Bool): List[Op] =
+        let repeated = List.flatten(List.repeat(k, ops));
+        if (inverted) invert(repeated) else repeated
+
+    ///
+    /// The sequence that undoes `ops`.
+    ///
+    /// Reversed, with every step inverted. A frame rotation inverts to its own
+    /// inverse and a layer turn to its opposite amount; a layer turn is named in
+    /// whatever frame is current when it runs, and reversing the sequence
+    /// restores that frame before the turn is undone, so the names still mean
+    /// what they meant.
+    ///
+    def invert(ops: List[Op]): List[Op] =
+        ops |> List.reverse |> List.map(op -> match op {
+            case Layer(m) => Layer(Move.inverse(m))
+            case Frame(r) => Frame(Rotation.inverse(r))
+        })
 
     ///
     /// Only the layer turns of `ops`, in order.
@@ -68,29 +325,6 @@ mod CubeSolve.Model.Notation {
             case Layer(m) => Some(m)
             case Frame(_) => None
         })
-
-    ///
-    /// The steps one written token expands to.
-    ///
-    def parseToken(n: Int32, token: String): Result[String, List[Op]] =
-        let (base, k) = splitAmount(token);
-        if (k == 0)
-            Err("'${token}' does not name a move: a move is a name, optionally "
-                + "followed by '2' or \"'\"")
-        else
-            match expand(n, base, token) {
-                case Err(why)   => Err(why)
-                case Ok(oneTurn) => Ok(List.flatten(List.repeat(k, oneTurn)))
-            }
-
-    ///
-    /// The name and the number of quarter turns `token` asks for, or `0` when
-    /// the suffix is not one this notation has.
-    ///
-    def splitAmount(token: String): (String, Int32) =
-        if (String.endsWith(suffix = "2", token)) (String.dropRight(1, token), 2)
-        else if (String.endsWith(suffix = "'", token)) (String.dropRight(1, token), 3)
-        else (token, 1)
 
     ///
     /// What one quarter turn of `base` does, as layer turns and a frame rotation.

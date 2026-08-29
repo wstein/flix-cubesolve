@@ -160,8 +160,13 @@ mod TestNotation {
     @Test
     def parseRejectsUnknownTokensByName(): Unit \ Assert =
         Assert.assertErr(Notation.parse(3, "R U Q"));
-        Assert.assertErr(Notation.parse(3, "M3"));
-        Assert.assertErr(Notation.parse(3, "Rw3"))
+        Assert.assertErr(Notation.parse(3, "M0"));
+        Assert.assertErr(Notation.parse(3, "Rw-1"));
+        // `M3` and `Rw3` were refused while a suffix could only be `2` or `'`.
+        // A repeat count is now a count, so three of a quarter turn is three of
+        // a quarter turn -- the same relaxation that lets `(M z)4` be written.
+        Assert.assertOk(Notation.parse(3, "M3"));
+        Assert.assertOk(Notation.parse(3, "Rw3"))
 
     // ---------- expressing a solution in the caller's frame ----------
 
