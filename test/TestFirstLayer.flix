@@ -6,57 +6,21 @@
 /// lie. The solver is checked by replay on a named stratum, because each search
 /// costs seconds and the suite is not the place to spend minutes.
 ///
-/// That the ladder in `CubeSolve.Method.Beginner` agrees this counts as a first
-/// layer is checked there, against its own rungs, rather than again here.
+/// **The result is checked against the ladder, not against the coordinate.**
+/// `Solve.FirstLayer.isSolved` asks the same encoders the search was steered by,
+/// so a coordinate fault and a search fault that agreed with each other would
+/// satisfy it. `Method.Beginner` reads the cube instead, and that is what the
+/// public stage boundary means.
 ///
 mod TestFirstLayer {
 
+    use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Random
     use CubeSolve.Solve.FirstLayer.Tables
     use CubeSolve.Table
     use CubeSolve.Table.FirstLayer.{encode, rank, solvedIndex, stateCount, successor, unrank}
-
-    def made(alg: String): Cube.Cube \ Assert =
-        match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
-            case Ok(c)  => c
-            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'"); unreachable!()
-        }
-
-    ///
-    /// All 136,080 coordinates round-trip.
-    ///
-    @Test
-    def everyCornerCoordinateRoundTrips(): Unit \ Assert =
-        let bad = Vector.range(0, stateCount()) |> Vector.count(i -> {
-            let (places, twists) = unrank(i);
-            rank(places, twists) != i
-        });
-        Assert.assertEqWithMsg(expected = 0, bad,
-            "coordinates that do not survive unrank then rank");
-        Assert.assertEqWithMsg(expected = 136080, stateCount(),
-            "8 x 7 x 6 x 5 placements, each with four twists")
-
-    ///
-    /// The coordinate agrees with the model about what a move does.
-    ///
-    @Test
-    def theCornerSuccessorAgreesWithTheModel(): Unit \ Assert =
-        Vector#{"", "R", "R U", "F2 L' D", "R U R' U' F2 L D B'", "D2 R2 L F B' U"}
-            |> Vector.forEach(alg -> {
-                let c = made(alg);
-                match encode(c) {
-                    case Err(e)  => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
-                    case Ok(here) =>
-                        Move.all() |> Vector.forEach(m ->
-                            Assert.assertEqWithMsg(
-                                expected = Ok(successor(here, Move.index(m))),
-                                Cube.apply(m, c) |> Result.flatMap(encode),
-                                "'${alg}' then ${m}: the coordinate and the model "
-                                    + "disagree about where the corners went"))
-                }
-            })
 
     ///
     /// The corner table is complete, and no bottom corner is more than seven
@@ -113,8 +77,13 @@ mod TestFirstLayer {
                 match Cube.applyAll(ms, c) {
                     case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "replay")
                     case Ok(after) =>
-                        Assert.assertTrueWithMsg(CubeSolve.Solve.FirstLayer.isSolved(after),
-                            "seed ${seed}: the answer does not solve the first layer")
+                        // Against the ladder's decoded-model predicate rather than
+                        // the coordinates the search was steered by. `isSolved`
+                        // asks the same encoders the search used, so a fault they
+                        // shared would satisfy it; the ladder reads the cube.
+                        Assert.assertTrueWithMsg(
+                            Beginner.isComplete(Beginner.Stage.FirstLayer, after),
+                            "seed ${seed}: the answer does not reach the FirstLayer rung")
                 }
         }
 

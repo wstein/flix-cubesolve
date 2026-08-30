@@ -443,8 +443,15 @@ algorithm that was memorised for it. These are different products, and neither
 is a better version of the other — a method answer is longer than a searched one
 and is not offered as a solution to an arbitrary cube.
 
-`Method.Cross` is the first step of CFOP and `Method.Oll` and `Method.Pll` the
-last two. `CubeSolve.Method.lastLayer` runs those two together and returns the
+**Two namespaces, and the split is real.** A step that *searches* lives in
+`CubeSolve.Solve` beside the general solver, because it is one — `Solve.Cross`
+and `Solve.FirstLayer` are IDA* over coordinates and tables, and differ from
+`Solve.Standard` only in what they aim at. A step that *recognises and replays*
+lives in `CubeSolve.Method`, because a corpus lookup is a different kind of
+thing. `Method.Beginner` names the stages either kind can reach.
+
+So the first steps of CFOP are `Solve.Cross` and `Solve.FirstLayer`, and the last
+two are `Method.Oll` and `Method.Pll`. `CubeSolve.Method.lastLayer` runs those two together and returns the
 answer as **stages** rather than one sequence, which is the shape a method
 explanation needs: which step, which case, which moves, and what it cost.
 
