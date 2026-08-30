@@ -139,3 +139,25 @@ cube's own state -- which piece sits in which slot, and which way round -- and
 each is checked against the model rather than trusted because a tutorial printed
 it. Any algorithm this method comes to need will be derived by search and
 verified by replay, or taken from a source with explicit permissive licensing.
+
+## Kewbz pattern variants
+
+`src/CubeSolve/Patterns/Kewbz.flix` records 36 algorithms from KewbzUK's
+published pattern guides, retrieved 2026-08-30:
+
+<https://kewbz.co.uk/blogs/solutions-guides/cool-3x3-rubiks-cube-patterns>
+<https://kewbz.co.uk/blogs/solutions-guides/4x4-patterns>
+<https://kewbz.co.uk/blogs/solutions-guides/5x5-patterns>
+
+Each fixture carries the specific page identifier (`kewbz3`, `kewbz4`, or
+`kewbz5`) that supplied its algorithm. The 4x4 page gives its entries no names;
+those variants are labelled by their stable page order, not by an inferred image
+title. The notation is copied as functional move data, normalized only from
+typographic to ASCII primes, and every resulting state token is independently
+derived by replaying it from solved.
+
+The associated notation guides informed acceptance of `Fw`/`Rw`, lower-case
+inner slices, and `3Fw` on a 5x5x5:
+
+<https://kewbz.co.uk/blogs/solutions-guides/4x4-notation>
+<https://kewbz.co.uk/blogs/solutions-guides/5x5-notation>

@@ -4,7 +4,9 @@
 /// One module per puzzle, because the corpora differ in more than their
 /// contents. `CubeSolve.Patterns.Standard` holds 110 3x3x3 patterns and
 /// `CubeSolve.Patterns.Pocket` 89 2x2x2 ones, each with its provenance,
-/// the algorithm as published, and a canonical identity.
+/// the algorithm as published, and a canonical identity. Source collections
+/// such as `CubeSolve.Patterns.Kewbz` retain every published variant instead
+/// of merging it into the canonical-name catalogues.
 ///
 /// **The two identities are computed under different equivalence relations, and
 /// substituting one for the other is wrong rather than approximate.** A 3x3x3's
@@ -40,6 +42,12 @@ mod CubeSolve.Patterns {
                 + "more-rubiks-patterns/"
         case "randelshofer" =>
             "https://www.randelshofer.ch/rubik/patterns_pocket.html"
+        case "kewbz3" =>
+            "https://kewbz.co.uk/blogs/solutions-guides/cool-3x3-rubiks-cube-patterns"
+        case "kewbz4" =>
+            "https://kewbz.co.uk/blogs/solutions-guides/4x4-patterns"
+        case "kewbz5" =>
+            "https://kewbz.co.uk/blogs/solutions-guides/5x5-patterns"
         case _ => "unknown"
     }
 

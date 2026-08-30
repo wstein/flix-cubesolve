@@ -120,7 +120,7 @@ mod Args {
             |> List.join(", ")
 
     ///
-    /// Read a scramble from the remaining arguments and hand the cube on.
+    /// Read a scramble or token from the remaining arguments and hand the cube on.
     ///
     pub def onCube(
         size: Int32,
@@ -129,10 +129,52 @@ mod Args {
     ): Result[String, String] \ ef =
         let written = String.trim(List.join(" ", rest));
         if (String.isEmpty(written))
-            Err("give a scramble, for example: R U R' U'")
+            Err("give a scramble or token, for example: R U R' U' or AAAAAAAAAAf_")
         else
+            parseCube(size, written)
+                |> Result.flatMap(c -> k(Cube.size(c), c))
+
+    def isTokenChar(c: Char): Bool =
+        Char.isLetter(c) or Char.isDigit(c) or c == '_' or c == '-'
+
+    def cleanInput(raw: String): String = {
+        let trimmed = String.trim(raw);
+        if (String.contains(substr = "#", trimmed)) {
+            match String.split(regex = "#", trimmed) {
+                case _ :: fragment :: _ => String.trim(fragment)
+                case _ => trimmed
+            }
+        } else trimmed
+    }
+
+    def autodetectSize(token: String): Option[Int32] = match String.length(token) {
+        case 8  => Some(2)
+        case 12 => Some(3)
+        case 27 => Some(4)
+        case 42 => Some(5)
+        case _  => None
+    }
+
+    def parseCube(size: Int32, raw: String): Result[String, Cube.Cube] = {
+        let input = cleanInput(raw);
+        let isTokenLike = not String.isEmpty(input)
+            and not String.contains(substr = " ", input)
+            and List.forAll(isTokenChar, String.toList(input));
+        if (isTokenLike) {
+            let targetSize = match autodetectSize(input) {
+                case Some(s) if size == 3 => s
+                case _ => size
+            };
+            match CubeSolve.Model.Holding.ofToken(targetSize, input) {
+                case Ok(c) => Ok(c)
+                case Err(_) =>
+                    Cube.solved(size)
+                        |> Result.flatMap(c -> Cube.applyNotation(input, c))
+            }
+        } else {
             Cube.solved(size)
-                |> Result.flatMap(c -> Cube.applyNotation(written, c))
-                |> Result.flatMap(c -> k(size, c))
+                |> Result.flatMap(c -> Cube.applyNotation(input, c))
+        }
+    }
 
 }

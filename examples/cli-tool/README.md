@@ -33,18 +33,31 @@ project would. It carries no wrapper of its own and is not driven by this
 repository's `flixw`; run it with your own Flix install, or from the root
 project with `./flixw examples run cli-tool -- <args>`:
 
-```
+```sh
+# Using the repository flixw wrapper:
+./flixw examples run cli-tool -- solve "R U R' U'"
+./flixw examples run cli-tool -- solve "AAAAAAAAAAf_"
+./flixw examples run cli-tool -- show "M2 E2 S2"
+./flixw examples run cli-tool -- show --size 4 "AH0Hmo16YfPV7lTF3_VGkq_Ontg"
+./flixw examples run cli-tool -- show "https://cubesolve.org/#FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN"
+./flixw examples run cli-tool -- identify "AAAAAAAAAAf_"
+./flixw examples run cli-tool -- scramble
+./flixw examples run cli-tool -- patterns --size 2
+./flixw examples run cli-tool -- help
+
+# Or directly with your own Flix install:
 cd examples/cli-tool
-flix run -- solve R U R' U'
-flix run -- show R U R' U'
-flix run -- identify R U R' U'
-flix run -- scramble
-flix run -- patterns --size 2
-flix run -- help
+flix run -- solve "R U R' U'"
+flix run -- show "AAAAAAAAAAf_"
 ```
 
+All commands accepting cube inputs autodetect the input format:
+- **Move notations**: Face turns (`R`, `U`), slice moves (`M`, `E`, `S`, `2D`), wide turns (`Rw`, `2-4Fw`), and reorientations (`x`, `y`, `z`).
+- **Orbit64 tokens**: State tokens (`[A-Za-z0-9_-]`) with automatic size detection (2x2: 8 chars, 3x3: 12 chars, 4x4: 27 chars, 5x5: 42 chars).
+- **URLs**: `https://cubesolve.org/#...` links containing tokens.
+
 ```
-$ flix run -- solve R U R' U'
+$ ./flixw examples run cli-tool -- solve "R U R' U'"
 U R U' R'
 4 moves
 ```

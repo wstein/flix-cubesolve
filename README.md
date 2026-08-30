@@ -90,12 +90,28 @@ depended on. There is still a command line; it lives in its own package:
 
 ## Trying it
 
+Run the demo CLI tool directly with `./flixw examples run cli-tool -- <command>`:
+
 ```sh
+# Solve a move scramble or Orbit64 token
 ./flixw examples run cli-tool -- solve "R U R' U' F2 L D B'"
-./flixw examples run cli-tool -- show "M2 E2 S2"       # a coloured net
-./flixw examples run cli-tool -- identify "M2 E2 S2"   # Pons Asinorum
+./flixw examples run cli-tool -- solve "AAAAAAAAAAf_"
+
+# Show a coloured net (supports 2x2 through 5x5, move notation, tokens, and URLs)
+./flixw examples run cli-tool -- show "M2 E2 S2"
+./flixw examples run cli-tool -- show "AAAAAAAAAAf_"
+./flixw examples run cli-tool -- show --size 4 "AH0Hmo16YfPV7lTF3_VGkq_Ontg"
+./flixw examples run cli-tool -- show "https://cubesolve.org/#FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN"
+
+# Identify a published pattern from notation, token, or URL
+./flixw examples run cli-tool -- identify "M2 E2 S2"       # Pons Asinorum
+./flixw examples run cli-tool -- identify "AAAAAAAAAAf_"   # Superflip
+
+# Generate a uniform random scramble
 ./flixw examples run cli-tool -- scramble
 ```
+
+The CLI tool autodetects input formats: move notations (including slice turns `M`, `E`, `S`, wide turns `Rw`, `2-4Fw`, and multi-layer ranges), Orbit64 state tokens (`[A-Za-z0-9_-]`), and `https://cubesolve.org/#...` URLs.
 
 The first solve builds the tables and takes about twenty seconds; every solve
 after that reads them from the cache and takes about one. The library itself
