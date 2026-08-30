@@ -109,7 +109,13 @@ mod CubeSolve.Render.Qr {
                 drawObliqueLogo(g, n, facelets, size, scale)
             else ();
             g.dispose();
-            let _ = ImageIO.write(img, "png", new File(path));
+            let file = new File(path);
+            let parent = file.getParentFile();
+            if (not Object.isNull(parent)) {
+                let _ = parent.mkdirs();
+                ()
+            } else ();
+            let _ = ImageIO.write(img, "png", file);
             Result.Ok(())
         } catch {
             case _ex: Throwable => Result.Err("Failed to write PNG file")
