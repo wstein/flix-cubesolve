@@ -281,6 +281,15 @@ that job is green.
 version anyone may already have resolved must not change under them, so never
 retag: fix forward with `vX.Y.Z+1`.
 
+**`v0.4.0` is `qualify-example`'s first end-to-end run — watch it.** The job was
+added after `v0.3.0` had already published, so it has never run against a real
+release. Its two guards were exercised on their own: the version-pin check was
+run against `examples/cli-tool/flix.toml`, and the "no test count means it ran
+nothing" guard is the one from `build-and-test.yaml`, which was watched failing
+correctly while `./flixw examples` was broken. The wiring between them was not.
+So on the next release, read that job's log rather than only its colour, and
+confirm it reports a test count from the version just published.
+
 ## Commits
 
 Conventional commits, single-purpose, with the type and scope naming the primary
