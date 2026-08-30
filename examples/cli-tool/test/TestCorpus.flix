@@ -3,14 +3,14 @@ mod TestCorpus {
     use CubeSolve.Model.Cube
     use CubeSolve.Render
 
-    /// `show` includes the rendered net and the Orbit64 token.
+    /// `show` includes the rendered colored net and the Orbit64 token.
     @Test
     def showUsesThePortableFaceLetterNetAndToken(): Unit \ Assert = {
         let shown = Cube.solved(3)
             |> Result.flatMap(Corpus.show)
             |> Result.getWithDefault("");
         let expectedNet = Cube.solved(3)
-            |> Result.flatMap(RenderNet.net)
+            |> Result.flatMap(RenderNet.colouredNet)
             |> Result.getWithDefault("");
         Assert.assertTrue(String.contains(substr = expectedNet, shown));
         Assert.assertTrue(String.contains(substr = "orbit64: ", shown))

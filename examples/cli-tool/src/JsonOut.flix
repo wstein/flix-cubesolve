@@ -27,14 +27,35 @@ mod JsonOut {
         });
         "${obj}"
 
-    /// Solve response JSON
-    pub def solution(size: Int32, token: String, sol: String, moves: List[String]): String =
+    /// Solve response JSON with method and pattern provenance
+    pub def solution(
+        size: Int32,
+        token: String,
+        sol: String,
+        moves: List[String],
+        method: String,
+        metric: String,
+        patternOpt: Option[(String, String)]
+    ): String =
+        let patObj = match patternOpt {
+            case Some((name, url)) => JObject(Map#{
+                "found" => bool(true),
+                "name" => str(name),
+                "url" => str(url)
+            })
+            case None => JObject(Map#{
+                "found" => bool(false)
+            })
+        };
         let obj = JObject(Map#{
             "command" => str("solve"),
             "size" => num(size),
             "token" => str(token),
             "solution" => str(sol),
             "length" => num(List.length(moves)),
+            "metric" => str(metric),
+            "method" => str(method),
+            "pattern" => patObj,
             "moves" => strArray(moves)
         });
         "${obj}"

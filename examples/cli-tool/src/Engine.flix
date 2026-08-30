@@ -11,15 +11,31 @@ mod Engine {
     use CubeSolve.Model.Move
     use CubeSolve.Model.Random
     use CubeSolve.Model.Sized
+    use CubeSolve.Patterns
     use CubeSolve.Solve.Standard
     use CubeSolve.Table
 
     ///
-    /// A solution for `c`, and how many moves it took.
+    /// A solution for `c`, with move count, metric, method provenance, and pattern DB recognition.
     ///
     pub def solveCube(size: Int32, c: Cube.Cube): Result[String, String] \ IO =
-        movesFor(size, c) |> Result.map(ms ->
-            "${Move.showAll(ms)}${String.lineSeparator()}${List.length(ms)} moves")
+        forM (
+            tok <- CubeSolve.Model.Facelets.token(c);
+            ms <- movesFor(size, c)
+        ) yield {
+            let sol = Move.showAll(ms);
+            let len = List.length(ms);
+            let meth = if (size == 2) "optimal BFS" else "Kociemba two-phase";
+            let patLine = match patternFor(size, c) {
+                case Some((name, url)) => "pattern: ${name} (${url})"
+                case None              => "pattern: none (search)"
+            };
+            "${sol}${String.lineSeparator()}"
+                + "${len} moves (HTM)${String.lineSeparator()}"
+                + "method:  ${meth}${String.lineSeparator()}"
+                + "${patLine}${String.lineSeparator()}"
+                + "orbit64: ${tok}"
+        }
 
     ///
     /// A solution for `c` as structured JSON.
@@ -31,8 +47,26 @@ mod Engine {
         ) yield {
             let sol = Move.showAll(ms);
             let moveStrs = ms |> List.map(Move.show);
-            JsonOut.solution(size, tok, sol, moveStrs)
+            let meth = if (size == 2) "optimal BFS" else "Kociemba two-phase";
+            let patOpt = patternFor(size, c);
+            JsonOut.solution(size, tok, sol, moveStrs, meth, "HTM", patOpt)
         }
+
+    def patternFor(size: Int32, c: Cube.Cube): Option[(String, String)] =
+        if (size == 2)
+            match Patterns.Pocket.recognize(c) {
+                case Some((p, _)) =>
+                    Some((Patterns.Pocket.name(p), Patterns.Pocket.url(Patterns.Pocket.source(p))))
+                case None => None
+            }
+        else if (size == 3)
+            match Patterns.Standard.recognize(c) {
+                case Some((p, _)) =>
+                    Some((Patterns.Standard.name(p), Patterns.Standard.url(Patterns.Standard.source(p))))
+                case None => None
+            }
+        else
+            None
 
     ///
     /// A uniform random-state scramble, with the bounds it can promise.

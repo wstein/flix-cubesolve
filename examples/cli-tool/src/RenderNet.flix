@@ -10,6 +10,24 @@ mod RenderNet {
     pub def net(c: Cube.Cube): Result[String, String] =
         draw(c, i -> " " + letterOf(i) + " ")
 
+    /// The net with ANSI 24-bit background colors in box-drawing format.
+    pub def colouredNet(c: Cube.Cube): Result[String, String] =
+        draw(c, i -> paint(i, " " + letterOf(i) + " "))
+
+    /// Paint background color with dark foreground text for high contrast.
+    pub def paint(face: Int32, s: String): String =
+        let (r, g, b) = match face {
+            case 0 => (245, 245, 245)
+            case 1 => (200, 40, 40)
+            case 2 => (30, 160, 70)
+            case 3 => (240, 210, 40)
+            case 4 => (235, 130, 30)
+            case 5 => (40, 90, 200)
+            case _ => (120, 120, 120)
+        };
+        let esc = Char.toString('\u001B');
+        "${esc}[48;2;${r};${g};${b}m${esc}[38;2;20;20;20m${s}${esc}[0m"
+
     /// Face code letter in URFDLB order.
     pub def letterOf(face: Int32): String = match face {
         case 0 => "U"

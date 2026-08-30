@@ -20,10 +20,21 @@ mod TestJson {
     /// Test solve JSON format.
     @Test
     def solveFormatProducesExpectedFields(): Unit \ Assert = {
-        let json = JsonOut.solution(3, "tok123", "R U R' U'", "R" :: "U" :: "R'" :: "U'" :: Nil);
+        let json = JsonOut.solution(
+            3,
+            "tok123",
+            "R U R' U'",
+            "R" :: "U" :: "R'" :: "U'" :: Nil,
+            "Kociemba two-phase",
+            "HTM",
+            Some(("Pons Asinorum", "https://example.com"))
+        );
         Assert.assertTrue(String.contains(substr = "\"command\":\"solve\"", json));
         Assert.assertTrue(String.contains(substr = "\"size\":3", json));
         Assert.assertTrue(String.contains(substr = "\"length\":4", json));
+        Assert.assertTrue(String.contains(substr = "\"metric\":\"HTM\"", json));
+        Assert.assertTrue(String.contains(substr = "\"method\":\"Kociemba two-phase\"", json));
+        Assert.assertTrue(String.contains(substr = "\"pattern\":{\"found\":true,\"name\":\"Pons Asinorum\"", json));
         Assert.assertTrue(String.contains(substr = "\"solution\":\"R U R' U'\"", json))
     }
 

@@ -14,11 +14,11 @@ mod Corpus {
     use CubeSolve.Render
 
     ///
-    /// The cube as a portable face-letter net in box-drawing format, plus Orbit64 token.
+    /// The cube as a colored face-letter net in box-drawing format, plus Orbit64 token.
     ///
     pub def show(c: Cube.Cube): Result[String, String] =
         forM (
-            netStr <- RenderNet.net(c);
+            netStr <- RenderNet.colouredNet(c);
             tok <- CubeSolve.Model.Facelets.token(c)
         ) yield "${netStr}${String.lineSeparator()}orbit64: ${tok}"
 
