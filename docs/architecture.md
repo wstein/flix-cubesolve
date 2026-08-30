@@ -416,6 +416,23 @@ be thirteen megabytes to save a dozen array reads. The two-phase solver's tables
 exist because its successors are the hot loop of a search running tens of
 millions of steps; this one runs a few thousand.
 
+**The first layer combines two exact tables.** The cross has 190,080 states and
+the four bottom corners 136,080, and each holds the true distance to solved.
+Neither alone bounds the pair, but the larger of the two always does — a
+sequence finishing both is at least as long as one finishing either — so IDA*
+over the packed pair searches with an admissible heuristic. It is the
+construction phase one of the two-phase solver uses, at a size where both
+projections happen to be exact rather than merely admissible.
+
+Measured over 25 uniform random states: **mean 9 moves, worst 11**, with the
+bottom corners never more than 7 from home. That is the number that mattered
+before committing to the rest of the ladder — a staged solver emitting 150-move
+answers would be correct and useless for teaching. The suite asserts the worst
+case on a named six-seed stratum, because each search costs seconds.
+
+The search is bounded at 16 moves and **reports failure rather than guessing**
+if a state needs more.
+
 **The cross is fixed on `D`.** Which face carries it is method policy rather
 than arithmetic, and fixing it keeps one coordinate rather than six. A caller
 wanting another face turns the cube first.
