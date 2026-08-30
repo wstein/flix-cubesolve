@@ -10,6 +10,7 @@ mod TestBeginnerSolution {
 
     use CubeSolve.Method.Beginner
     use CubeSolve.Method.Plan
+    use CubeSolve.Method.Profile.Profile.SourceFirst
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Holding
 
@@ -58,17 +59,20 @@ mod TestBeginnerSolution {
     /// One cube: solved in stages, replayed, and judged.
     ///
     def check(t: Beginner.Tables, token: String, c: Cube.Cube): Unit \ Assert =
-        match Beginner.solution(t, c) {
+        match Beginner.solution(t, SourceFirst, c) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "token ${token}")
             case Ok(p)  =>
-                Assert.assertEq(expected = "Cross" :: "First layer" :: "Middle edges" :: Nil,
-                    p#steps |> List.map(s -> s#label));
+                let labels = p#steps |> List.map(s -> s#label);
+                Assert.assertEqWithMsg(expected = 5, List.length(labels),
+                    "cross, first layer, middle edges, OLL, PLL");
+                Assert.assertTrueWithMsg(
+                    List.take(3, labels) == "Cross" :: "First layer" :: "Middle edges" :: Nil,
+                    "the searched stages come first: ${labels}");
                 match Cube.applyNotation(Plan.sequenceOf(p), c) {
                     case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "replaying")
                     case Ok(after) =>
-                        Assert.assertTrueWithMsg(
-                            Beginner.isComplete(Beginner.Stage.TwoLayers, after),
-                            "${token}: the plan did not reach TwoLayers");
+                        Assert.assertTrueWithMsg(Cube.isSolved(after),
+                            "${token}: the plan did not solve the cube");
                         Assert.assertTrueWithMsg(Plan.layerTurns(p) > 0,
                             "${token}: a plan that spends no moves solved nothing")
                 }
@@ -84,11 +88,12 @@ mod TestBeginnerSolution {
     def eachStageLeavesTheCubeAtItsOwnRung(t: Beginner.Tables): Unit \ Assert =
                 match Holding.ofToken(3, "AJmiz2F3jagE") {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "decoding")
-                    case Ok(c)  => match Beginner.solution(t, c) {
+                    case Ok(c)  => match Beginner.solution(t, SourceFirst, c) {
                         case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solving")
                         case Ok(p)  => walk(c, p#steps,
                             Beginner.Stage.Cross :: Beginner.Stage.FirstLayer
-                                :: Beginner.Stage.TwoLayers :: Nil)
+                                :: Beginner.Stage.TwoLayers :: Beginner.Stage.TopCross
+                                :: Beginner.Stage.Solved :: Nil)
                     }
                 }
 
@@ -120,13 +125,13 @@ mod TestBeginnerSolution {
     def anAlreadySolvedTwoLayersCostsNothing(t: Beginner.Tables): Unit \ Assert =
                 match Cube.solved(3) {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
-                    case Ok(c)  => match Beginner.solution(t, c) {
+                    case Ok(c)  => match Beginner.solution(t, SourceFirst, c) {
                         case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solving")
                         case Ok(p)  =>
                             Assert.assertEqWithMsg(expected = 0, Plan.layerTurns(p),
                                 "a solved cube needs no moves");
-                            Assert.assertEqWithMsg(expected = 3, List.length(p#steps),
-                                "and still reports all three stages")
+                            Assert.assertEqWithMsg(expected = 5, List.length(p#steps),
+                                "and still reports every stage")
                     }
                 }
 
