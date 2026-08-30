@@ -45,7 +45,7 @@ mod CubeSolve.Solve.Revenge {
         forM (
             wingPar <- Revenge.hasWingParity(c);
             (cAfterOll, ollOps) <- applyOllIf(wingPar, c);
-            cornPar <- Revenge.hasCornerParity(cAfterOll);
+            cornPar <- Revenge.hasPllParity(cAfterOll);
             (cAfterPll, pllOps) <- applyPllIf(cornPar, cAfterOll);
             c3 <- Revenge.toStandard(cAfterPll);
             c3_sized <- Sized.standardOf(c3);

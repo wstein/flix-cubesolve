@@ -12,6 +12,7 @@ mod CubeSolve.Model.Revenge {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
+    use CubeSolve.Model.Validate
     use Orbit64.Coord.Coord.{CornerCoord, WingCoord}
 
     /// The standard OLL edge-flip parity algorithm.
@@ -76,7 +77,14 @@ mod CubeSolve.Model.Revenge {
         }
 
     ///
-    /// Check if the 8 corners form an odd permutation (PLL parity when reduced).
+    /// Whether the eight physical corners form an odd permutation.
+    ///
+    /// **This is not PLL parity and must not be used to detect it.** A legal
+    /// 3x3x3 has an odd corner permutation half the time, matched by an odd edge
+    /// permutation; testing corners alone would fire the parity algorithm on
+    /// legal cubes and break them. It is kept because it is a true statement
+    /// about the puzzle and because the parity algorithm's *not* changing it is
+    /// worth asserting. Use `hasPllParity`.
     ///
     pub def hasCornerParity(c: Cube.Cube): Result[String, Bool] =
         if (Cube.size(c) != 4)
@@ -91,6 +99,29 @@ mod CubeSolve.Model.Revenge {
                 case _ => Err("expected exactly one corner orbit for 4x4x4")
             }
         }
+
+    ///
+    /// Whether a reduced cube needs the PLL parity algorithm.
+    ///
+    /// **Not "the corners form an odd permutation".** That was the first
+    /// reading and it is not what parity means: a perfectly legal 3x3x3 has an
+    /// odd corner permutation half the time, matched by an odd edge
+    /// permutation. Testing corners alone would fire the parity algorithm on
+    /// legal cubes and break them.
+    ///
+    /// PLL parity is the case where the corner and dedge permutations
+    /// *disagree*, which is a state no 3x3x3 can reach. So the question is
+    /// asked of the reduced cube directly: reduce, and see whether what comes
+    /// out is a legal 3x3x3. `Validate.faultOf` already decides that, and
+    /// deciding it twice is how the two would come to differ.
+    ///
+    /// The algorithm this answers for, `pllParity`, is `2R2 U2 2R2 Uw2 2R2 2u2`
+    /// -- every move in it that touches a corner is a half turn, so it cannot
+    /// change corner permutation parity at all. It swaps two dedges, which is
+    /// exactly the disagreement above.
+    ///
+    pub def hasPllParity(c: Cube.Cube): Result[String, Bool] =
+        toStandard(c) |> Result.map(c3 -> not Option.isEmpty(Validate.faultOf(c3)))
 
     ///
     /// Convert a reduced 4x4x4 cube to its equivalent 3x3x3 representation.

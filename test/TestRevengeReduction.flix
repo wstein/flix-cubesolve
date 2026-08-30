@@ -65,11 +65,37 @@ mod TestRevengeReduction {
         Assert.assertEq(expected = Ok(true), Revenge.hasWingParity(c))
     }
 
-    /// PLL parity algorithm creates corner parity.
+    /// The PLL parity algorithm leaves a cube that does not reduce to a legal
+    /// 3x3x3, and a solved one does.
+    ///
+    /// It asserted odd corner permutation before, which the algorithm cannot
+    /// produce: every move in it that touches a corner is a half turn, so
+    /// corner parity is unchanged. What it does is swap two dedges, so the
+    /// corner and dedge permutations disagree and the reduction is illegal.
     @Test
-    def pllParityAlgorithmCreatesCornerParity(): Unit \ Assert = {
+    def pllParityIsTheReducedMismatchAndNotCornerParity(): Unit \ Assert = {
+        // 1. a solved cube reduces to a legal 3x3x3
+        match Cube.solved(4) {
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a solved 4x4x4")
+            case Ok(s)  =>
+                Assert.assertEqWithMsg(expected = Ok(false), Revenge.hasPllParity(s),
+                    "a solved cube has no parity to fix")
+        };
+        // 2. the parity algorithm creates the condition
         let c = made(4, Revenge.pllParity());
-        Assert.assertEq(expected = Ok(true), Revenge.hasCornerParity(c))
+        Assert.assertEqWithMsg(expected = Ok(true), Revenge.hasPllParity(c),
+            "the parity algorithm should leave an illegal reduction");
+        // 3. applying it again clears it -- the algorithm is its own undo
+        let fixed = made(4, "${Revenge.pllParity()} ${Revenge.pllParity()}");
+        Assert.assertEqWithMsg(expected = Ok(false), Revenge.hasPllParity(fixed),
+            "the correction should clear the condition");
+        // 4. and the physical corner permutation is even throughout, which is
+        //    why reading it was the wrong test: every corner-touching move in
+        //    the algorithm is a half turn.
+        Assert.assertEqWithMsg(expected = Ok(false), Revenge.hasCornerParity(c),
+            "the parity algorithm cannot change corner permutation parity");
+        Assert.assertEqWithMsg(expected = Ok(false), Revenge.hasCornerParity(fixed),
+            "nor can applying it twice")
     }
 
     /// Reduced scrambled 4x4 is solved back to identity through 3x3 reduction.
