@@ -115,4 +115,14 @@ mod TestArgs {
         Assert.assertErr(Args.onCube(3, Nil, inspect))
     }
 
+    /// Solving an unreachable cube state returns an Err with the reachability reason.
+    @Test
+    def unreachableTokenIsRejectedWhenSolving(): Unit \ {Assert, IO} = {
+        let res = Args.onCube(3, "AK-bRtpiQ000" :: Nil, Engine.solveCube);
+        match res {
+            case Ok(_) => Assert.assertTrueWithMsg(false, "unreachable cube should fail to solve")
+            case Err(why) => Assert.assertTrue(String.contains(substr = "parity", why))
+        }
+    }
+
 }

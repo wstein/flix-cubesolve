@@ -141,7 +141,10 @@ mod Engine {
     /// is the only caller of.
     ///
     def movesFor(size: Int32, c: Cube.Cube): Result[String, List[Move.Move]] \ IO =
-        Store.cached(() -> if (size == 2) pocket(c) else standard(c))
+        match CubeSolve.Model.Validate.faultOf(c) {
+            case Some(why) => Err(why)
+            case None      => Store.cached(() -> if (size == 2) pocket(c) else standard(c))
+        }
 
     ///
     /// A 2x2x2 solution, which is exact.
