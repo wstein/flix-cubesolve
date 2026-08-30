@@ -436,6 +436,35 @@ layer that arrives oriented has no OLL case and one that arrives solved has no
 PLL case; both are welcome and both are reported, because a reader given two
 stages where they expected three should be told which went and why.
 
+`CubeSolve.Method.Plan` is the written form of a staged answer, and the one
+people already write by hand:
+
+```
+Scramble: R U R' U' F2 L D B'
+
+y // Inspection
+D' L' // Cross
+// OLL skip
+R U R' U' R' F R2 U' R' U' R U R' F' // PLL: T-PLL
+```
+
+`//` is what it writes and both `//` and `#` are accepted when reading. Three
+rules make it safe to hand around:
+
+- **A rotation is a move, not a note.** `y` above is a `Frame` operation and
+  stays one, because it changes how every later move name resolves. `Plan.ops`
+  is the flattened sequence a replay runs, and it is checked against the same
+  moves applied directly.
+- **`Scramble:` is context.** It is shown above the plan and never joins the
+  moves — concatenating it would return a sequence that scrambles the cube
+  before solving it.
+- **A label is part of the contract.** A step is labelled with the case a method
+  actually recognised, checked from decoded model state. It is not decoration,
+  and a step must not claim a name it has not established.
+
+`CubeSolve.Model.Notation` stays strict and flat and knows nothing about any of
+this: it parses algorithms, `Plan` parses documents.
+
 F2L, which joins the cross to the last layer, is not implemented, so the method
 cannot yet answer a whole cube.
 

@@ -16,6 +16,7 @@ mod CubeSolve.Method {
     use CubeSolve.Method.LastLayer
     use CubeSolve.Method.Oll
     use CubeSolve.Method.Pll
+    use CubeSolve.Method.Plan
     use CubeSolve.Method.Profile
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
@@ -43,6 +44,32 @@ mod CubeSolve.Method {
         stages = List[Stage],
         layerTurns = Int32
     }
+
+    ///
+    /// The answer as a plan, ready to print or replay.
+    ///
+    /// A stage becomes a labelled line, and a skip becomes a line with a label
+    /// and no moves -- which is what keeps a plan's steps in step with the
+    /// method's, rather than silently shorter. The label names the step and the
+    /// case it recognised, because "OLL" alone does not say what was seen.
+    ///
+    /// Rotations inside a stage stay rotations. `Plan.ops` is the flattened
+    /// sequence a replay runs, and a `y` in it is a frame operation there just
+    /// as it was in the algorithm it came from.
+    ///
+    pub def planOf(s: Staged): Result[String, Plan.Plan] =
+        s#stages
+            |> Result.traverse(stage -> Plan.step(3, labelOf(stage), stage#sequence))
+            |> Result.map(Plan.of)
+
+    ///
+    /// What a stage is called in a plan.
+    ///
+    def labelOf(stage: Stage): String =
+        if (stage#caseName == "skip")
+            "${stage#step} skip -- ${stage#note}"
+        else
+            "${stage#step}: ${stage#caseName}"
 
     ///
     /// The whole thing to execute, the stages run together.
