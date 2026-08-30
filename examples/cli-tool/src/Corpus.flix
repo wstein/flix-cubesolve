@@ -14,14 +14,17 @@ mod Corpus {
     use CubeSolve.Render
 
     ///
-    /// The cube as a portable face-letter net.
+    /// The cube as a portable face-letter net, plus its Orbit64 token.
     ///
     /// This is deliberately the library renderer rather than the optional
     /// ZXing/AWT graphics path: it is readable in a terminal, can be pasted
     /// back to `show`, and does not depend on terminal colour support.
     ///
     pub def show(c: Cube.Cube): Result[String, String] =
-        Render.net(c)
+        forM (
+            netStr <- Render.net(c);
+            tok <- CubeSolve.Model.Facelets.token(c)
+        ) yield "${netStr}${String.lineSeparator()}orbit64: ${tok}"
 
     ///
     /// The cube as structured JSON.
@@ -74,36 +77,44 @@ mod Corpus {
             }
 
     ///
-    /// The corpus for a size, one pattern per line.
+    /// The corpus for a size, one pattern per line: name, orbit64 token, notation.
     ///
     pub def listing(size: Int32): String =
         if (size == 2)
             Patterns.Pocket.all()
-                |> Vector.map(p -> "${Patterns.Pocket.name(p)}\t${Patterns.Pocket.optimal(p)}")
+                |> Vector.map(p -> "${Patterns.Pocket.name(p)}\t"
+                    + "${Patterns.Pocket.canonical(p)}\t${Patterns.Pocket.optimal(p)}")
                 |> Vector.toList
                 |> lines
         else
             Patterns.Standard.all()
                 |> Vector.map(p -> "${Patterns.Standard.name(p)}\t"
-                    + "${Patterns.Standard.notation(p)}")
+                    + "${Patterns.Standard.canonical(p)}\t${Patterns.Standard.notation(p)}")
                 |> Vector.toList
                 |> lines
 
     ///
     /// The corpus for a size as structured JSON.
     ///
-    pub def patternsJson(size: Int32): String =
-        if (size == 2) {
-            let items = Patterns.Pocket.all()
-                |> Vector.map(p -> (Patterns.Pocket.name(p), Patterns.Pocket.optimal(p)))
+    pub def patternsJson(size: Int32): String = {
+        let items = if (size == 2)
+            Patterns.Pocket.all()
+                |> Vector.map(p -> (
+                    Patterns.Pocket.name(p),
+                    Patterns.Pocket.canonical(p),
+                    Patterns.Pocket.optimal(p)
+                ))
+                |> Vector.toList
+        else
+            Patterns.Standard.all()
+                |> Vector.map(p -> (
+                    Patterns.Standard.name(p),
+                    Patterns.Standard.canonical(p),
+                    Patterns.Standard.notation(p)
+                ))
                 |> Vector.toList;
-            JsonOut.patterns(size, items)
-        } else {
-            let items = Patterns.Standard.all()
-                |> Vector.map(p -> (Patterns.Standard.name(p), Patterns.Standard.notation(p)))
-                |> Vector.toList;
-            JsonOut.patterns(size, items)
-        }
+        JsonOut.patterns(size, items)
+    }
 
     ///
     /// What the 3x3x3 corpus says about this cube.

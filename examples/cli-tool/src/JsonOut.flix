@@ -89,6 +89,7 @@ mod JsonOut {
     pub def scramble(
         size: Int32,
         text: String,
+        token: String,
         atMost: Int32,
         atLeast: Int32,
         moves: List[String]
@@ -96,6 +97,7 @@ mod JsonOut {
         let obj = JObject(Map#{
             "command" => str("scramble"),
             "size" => num(size),
+            "token" => str(token),
             "scramble" => str(text),
             "atMostMoves" => num(atMost),
             "atLeastMoves" => num(atLeast),
@@ -123,10 +125,14 @@ mod JsonOut {
         "${obj}"
 
     /// Patterns listing response JSON
-    pub def patterns(size: Int32, items: List[(String, String)]): String = {
+    pub def patterns(size: Int32, items: List[(String, String, String)]): String = {
         let patternObjs = items |> List.map(item -> {
-            let (name, notat) = item;
-            JObject(Map#{ "name" => str(name), "notation" => str(notat) })
+            let (name, tok, notat) = item;
+            JObject(Map#{
+                "name" => str(name),
+                "token" => str(tok),
+                "notation" => str(notat)
+            })
         }) |> List.toVector;
         let obj = JObject(Map#{
             "command" => str("patterns"),

@@ -84,6 +84,11 @@ mod CubeSolve {
     pub def generator(): String = "cubesolve 0.3.0"
 
     ///
+    /// The cube sizes with a published pattern collection.
+    ///
+    pub def patternSizes(): Vector[Int32] = Vector#{2, 3, 4, 5}
+
+    ///
     /// Whether this engine solves an `n x n x n`.
     ///
     pub def supports(n: Int32): Bool = Vector.memberOf(n, supportedSizes())
@@ -92,5 +97,10 @@ mod CubeSolve {
     /// Whether this engine can turn an `n x n x n`.
     ///
     pub def canTurn(n: Int32): Bool = Vector.memberOf(n, turnableSizes())
+
+    ///
+    /// Whether this engine has a pattern collection for an `n x n x n`.
+    ///
+    pub def hasPatterns(n: Int32): Bool = Vector.memberOf(n, patternSizes())
 
 }

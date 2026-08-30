@@ -67,19 +67,37 @@ mod Engine {
                     let text = CubeSolve.Scramble.Standard.show(s);
                     let atMost = CubeSolve.Scramble.Standard.atMostMoves(s);
                     let atLeast = CubeSolve.Scramble.Standard.atLeastMoves(s);
-                    let ms = CubeSolve.Scramble.Standard.moves(s) |> List.map(Move.show);
-                    JsonOut.scramble(size, text, atMost, atLeast, ms)
+                    let rawMoves = CubeSolve.Scramble.Standard.moves(s);
+                    let ms = rawMoves |> List.map(Move.show);
+                    let tok = match Cube.solved(3) {
+                        case Ok(sol) =>
+                            Cube.applyNotation(text, sol)
+                                |> Result.flatMap(CubeSolve.Model.Facelets.token)
+                                |> Result.getWithDefault("")
+                        case Err(_)  => ""
+                    };
+                    JsonOut.scramble(size, text, tok, atMost, atLeast, ms)
                 })
 
     ///
-    /// A scramble and what is known about how hard it is.
+    /// A scramble and what is known about how hard it is, plus Orbit64 token.
     ///
-    def describe(s: CubeSolve.Scramble.Standard.Scramble): String =
+    def describe(s: CubeSolve.Scramble.Standard.Scramble): String = {
         let show = CubeSolve.Scramble.Standard.show;
         let atMost = CubeSolve.Scramble.Standard.atMostMoves;
         let atLeast = CubeSolve.Scramble.Standard.atLeastMoves;
-        "${show(s)}${String.lineSeparator()}"
+        let text = show(s);
+        let tok = match Cube.solved(3) {
+            case Ok(sol) =>
+                Cube.applyNotation(text, sol)
+                    |> Result.flatMap(CubeSolve.Model.Facelets.token)
+                    |> Result.getWithDefault("")
+            case Err(_)  => ""
+        };
+        "${text}${String.lineSeparator()}"
             + "solvable in ${atMost(s)} moves, and no fewer than ${atLeast(s)}"
+            + (if (String.length(tok) > 0) "${String.lineSeparator()}orbit64: ${tok}" else "")
+    }
 
     ///
     /// Solve at whichever size, through the cache.

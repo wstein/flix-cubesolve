@@ -53,7 +53,17 @@ mod TestJson {
         let json = Corpus.patternsJson(2);
         Assert.assertTrue(String.contains(substr = "\"command\":\"patterns\"", json));
         Assert.assertTrue(String.contains(substr = "\"count\":89", json));
-        Assert.assertTrue(String.contains(substr = "\"patterns\":[", json))
+        Assert.assertTrue(String.contains(substr = "\"patterns\":[", json));
+        Assert.assertTrue(String.contains(substr = "\"token\":", json))
+    }
+
+    /// Test scramble JSON format.
+    @Test
+    def scrambleFormatProducesExpectedFields(): Unit \ Assert = {
+        let json = JsonOut.scramble(3, "R U R'", "AAAAAAAAAAf_", 20, 15, "R" :: "U" :: "R'" :: Nil);
+        Assert.assertTrue(String.contains(substr = "\"command\":\"scramble\"", json));
+        Assert.assertTrue(String.contains(substr = "\"token\":\"AAAAAAAAAAf_\"", json));
+        Assert.assertTrue(String.contains(substr = "\"atMostMoves\":20", json))
     }
 
     /// Test withJson extracts --json flag from argument list.
