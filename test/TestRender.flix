@@ -363,5 +363,52 @@ mod TestRender {
         Assert.assertEq(expected = Ok(()), Render.qrWritePng(pathWith, c, true));
         Assert.assertEq(expected = Ok(()), Render.qrWritePng(pathWithout, c, false))
 
+    ///
+    /// QR code generation with specific error correction levels produces expected dimensions.
+    ///
+    @Test
+    def qrCodeDimensionsAcrossEcLevels(): Unit \ Assert =
+        let c3 = made(3, "U R F");
+        let c4 = made(4, "U R F");
+        let qr3L = Render.qrWith(c3, CubeSolve.Render.Qr.EcLevel.L, true)
+            |> Result.getWithDefault("");
+        let qr3H = Render.qrWith(c3, CubeSolve.Render.Qr.EcLevel.H, true)
+            |> Result.getWithDefault("");
+        let lines3L = String.split(regex = "\r?\n", qr3L);
+        let lines3H = String.split(regex = "\r?\n", qr3H);
+        Assert.assertEq(expected = 15, List.length(lines3L));
+        Assert.assertEq(expected = 17, List.length(lines3H));
+
+        let qr4L = Render.qrWith(c4, CubeSolve.Render.Qr.EcLevel.L, true)
+            |> Result.getWithDefault("");
+        let qr4M = Render.qrWith(c4, CubeSolve.Render.Qr.EcLevel.M, true)
+            |> Result.getWithDefault("");
+        let qr4Q = Render.qrWith(c4, CubeSolve.Render.Qr.EcLevel.Q, true)
+            |> Result.getWithDefault("");
+        let qr4H = Render.qrWith(c4, CubeSolve.Render.Qr.EcLevel.H, true)
+            |> Result.getWithDefault("");
+        let lines4L = String.split(regex = "\r?\n", qr4L);
+        let lines4M = String.split(regex = "\r?\n", qr4M);
+        let lines4Q = String.split(regex = "\r?\n", qr4Q);
+        let lines4H = String.split(regex = "\r?\n", qr4H);
+        Assert.assertEq(expected = 17, List.length(lines4L));
+        Assert.assertEq(expected = 19, List.length(lines4M));
+        Assert.assertEq(expected = 19, List.length(lines4Q));
+        Assert.assertEq(expected = 21, List.length(lines4H))
+
+    ///
+    /// QR code with full web URL produces valid UTF-8 graphic and PNG file.
+    ///
+    @Test
+    def qrCodeWithUrlGeneratesValidMatrixAndFile(): Unit \ { Assert, IO } =
+        let c = made(3, "U R F");
+        let prefix = "https://cubesolve.org/#";
+        let qr = Render.qrWithUrl(c, prefix, CubeSolve.Render.Qr.EcLevel.H)
+            |> Result.getWithDefault("");
+        let hasBlock = String.contains(substr = "█", qr) or String.contains(substr = "▀", qr);
+        Assert.assertTrue(hasBlock);
+        let path = "build/test_qr_url.png";
+        Assert.assertEq(expected = Ok(()), Render.qrWritePngWithUrl(path, c, prefix, true))
+
 }
 

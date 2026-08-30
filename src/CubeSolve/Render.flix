@@ -100,6 +100,30 @@ mod CubeSolve.Render {
         }
 
     ///
+    /// Render a compact UTF-8 QR code encoding a full web URL with the cube token.
+    ///
+    pub def qrWithUrl(c: Cube.Cube, urlPrefix: String, ec: Qr.EcLevel): Result[String, String] =
+        Facelets.token(c) |> Result.map(tok ->
+            Qr.renderWith(ec, true, urlPrefix + tok)
+        )
+
+    ///
+    /// Write a high-resolution PNG QR code encoding a full web URL with optional real 3D cube logo.
+    ///
+    pub def qrWritePngWithUrl(
+        path: String,
+        c: Cube.Cube,
+        urlPrefix: String,
+        withLogo: Bool
+    ): Result[String, Unit] \ IO =
+        match (Facelets.of(c), Facelets.token(c)) {
+            case (Ok(fs), Ok(tok)) =>
+                Qr.writeCubePng(path, Cube.size(c), fs, urlPrefix + tok, withLogo)
+            case (Err(e), _) => Err(e)
+            case (_, Err(e)) => Err(e)
+        }
+
+    ///
     /// Generate a compact UTF-8 graphic QR code from text.
     ///
     pub def qrOf(text: String): String =

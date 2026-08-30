@@ -82,13 +82,9 @@ mod CubeSolve.Render.Qr {
         try {
             let bytes = String.toList(token) |> List.map(Char.toBmpCodePoint);
             let len = List.length(bytes);
-            let (ver, totalData, numBlocks, dataPerBlock, ecPerBlock) =
-                versionParams(EcLevel.H, len);
-            let codewords = encodeBytes(
-                (totalData, numBlocks, dataPerBlock, ecPerBlock),
-                bytes
-            );
-            let matrix = buildOptimalMatrix(ver, EcLevel.H, codewords);
+            let s = versionParams(EcLevel.H, len);
+            let codewords = encodeBytes(s, bytes);
+            let matrix = buildOptimalMatrix(s#ver, EcLevel.H, codewords);
             let size = Vector.length(matrix);
             let scale = 14;
             let pad = 4;
@@ -179,8 +175,8 @@ mod CubeSolve.Render.Qr {
         let centerMod = (size / 2) + pad;
         let cx = Int32.toFloat64(centerMod * scale + (scale / 2));
         let cy = Int32.toFloat64(centerMod * scale + (scale / 2));
-        let s = Int32.toFloat64(scale) * 5.4;
-        let sCut = s + Int32.toFloat64(scale) * 0.55;
+        let s = Int32.toFloat64(scale) * 7.02;
+        let sCut = s + Int32.toFloat64(scale) * 0.60;
         let colWhite = new Color(255, 255, 255);
         let colDark = new Color(15, 23, 42);
 
@@ -329,26 +325,30 @@ mod CubeSolve.Render.Qr {
         )
     }
 
+    type alias QrSpec = {
+        ver = Int32,
+        totalData = Int32,
+        g1B = Int32,
+        g1D = Int32,
+        g2B = Int32,
+        g2D = Int32,
+        ec = Int32
+    }
+
     ///
     /// Generate a compact UTF-8 QR code string with explicit EC level and theme.
     ///
     pub def renderWith(ec: EcLevel, darkTheme: Bool, text: String): String =
         let bytes = String.toList(text) |> List.map(Char.toBmpCodePoint);
-        let len = List.length(bytes);
-        let (ver, totalData, numBlocks, dataPerBlock, ecPerBlock) =
-            versionParams(ec, len);
-        let codewords = encodeBytes(
-            (totalData, numBlocks, dataPerBlock, ecPerBlock),
-            bytes
-        );
-        let matrix = buildOptimalMatrix(ver, ec, codewords);
+        let s = versionParams(ec, List.length(bytes));
+        let codewords = encodeBytes(s, bytes);
+        let matrix = buildOptimalMatrix(s#ver, ec, codewords);
         drawMatrix(matrix, darkTheme)
 
     ///
-    /// Determine QR version (1-4) and block parameters for a given EC level and byte length.
-    /// Returns: (version, totalData, numBlocks, dataPerBlock, ecPerBlock).
+    /// Determine QR version (1-6) and block parameters for a given EC level and byte length.
     ///
-    def versionParams(ec: EcLevel, len: Int32): (Int32, Int32, Int32, Int32, Int32) =
+    def versionParams(ec: EcLevel, len: Int32): QrSpec =
         match ec {
             case EcLevel.L => paramsL(len)
             case EcLevel.M => paramsM(len)
@@ -356,77 +356,98 @@ mod CubeSolve.Render.Qr {
             case EcLevel.H => paramsH(len)
         }
 
-    def paramsL(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
-        if (len <= 17)
-            (1, 19, 1, 19, 7)
-        else if (len <= 32)
-            (2, 34, 1, 34, 10)
-        else if (len <= 53)
-            (3, 55, 1, 55, 15)
-        else
-            (4, 80, 1, 80, 20)
-    }
+    def makeSpec(
+        ver: Int32,
+        total: Int32,
+        g1: (Int32, Int32),
+        g2: (Int32, Int32),
+        ec: Int32
+    ): QrSpec =
+        let (g1b, g1d) = g1;
+        let (g2b, g2d) = g2;
+        { ver = ver, totalData = total, g1B = g1b, g1D = g1d, g2B = g2b, g2D = g2d, ec = ec }
 
-    def paramsM(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
-        if (len <= 14)
-            (1, 16, 1, 16, 10)
-        else if (len <= 26)
-            (2, 28, 1, 28, 16)
-        else if (len <= 42)
-            (3, 44, 1, 44, 26)
-        else
-            (4, 64, 2, 32, 18)
-    }
+    def findSpec(table: List[(Int32, QrSpec)], defaultSpec: QrSpec, len: Int32): QrSpec =
+        match List.find(match (maxLen, _) -> len <= maxLen, table) {
+            case Some((_, s)) => s
+            case None         => defaultSpec
+        }
 
-    def paramsQ(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
-        if (len <= 11)
-            (1, 13, 1, 13, 13)
-        else if (len <= 20)
-            (2, 22, 1, 22, 22)
-        else if (len <= 32)
-            (3, 34, 2, 17, 18)
-        else
-            (4, 48, 2, 24, 26)
-    }
+    def paramsL(len: Int32): QrSpec =
+        let table =
+            (17, makeSpec(1, 19, (1, 19), (0, 0), 7)) ::
+            (32, makeSpec(2, 34, (1, 34), (0, 0), 10)) ::
+            (53, makeSpec(3, 55, (1, 55), (0, 0), 15)) ::
+            (78, makeSpec(4, 80, (1, 80), (0, 0), 20)) ::
+            (106, makeSpec(5, 108, (1, 108), (0, 0), 26)) :: Nil;
+        findSpec(table, makeSpec(6, 136, (2, 68), (0, 0), 18), len)
 
-    def paramsH(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
-        if (len <= 7)
-            (1, 9, 1, 9, 17)
-        else if (len <= 14)
-            (2, 16, 1, 16, 28)
-        else if (len <= 24)
-            (3, 26, 2, 13, 22)
-        else
-            (4, 36, 4, 9, 16)
-    }
+    def paramsM(len: Int32): QrSpec =
+        let table =
+            (14, makeSpec(1, 16, (1, 16), (0, 0), 10)) ::
+            (26, makeSpec(2, 28, (1, 28), (0, 0), 16)) ::
+            (42, makeSpec(3, 44, (1, 44), (0, 0), 26)) ::
+            (62, makeSpec(4, 64, (2, 32), (0, 0), 18)) ::
+            (84, makeSpec(5, 86, (2, 43), (0, 0), 24)) :: Nil;
+        findSpec(table, makeSpec(6, 108, (4, 27), (0, 0), 16), len)
+
+    def paramsQ(len: Int32): QrSpec =
+        let table =
+            (11, makeSpec(1, 13, (1, 13), (0, 0), 13)) ::
+            (20, makeSpec(2, 22, (1, 22), (0, 0), 22)) ::
+            (32, makeSpec(3, 34, (2, 17), (0, 0), 18)) ::
+            (46, makeSpec(4, 48, (2, 24), (0, 0), 26)) ::
+            (60, makeSpec(5, 62, (2, 15), (2, 16), 18)) :: Nil;
+        findSpec(table, makeSpec(6, 76, (4, 19), (0, 0), 24), len)
+
+    def paramsH(len: Int32): QrSpec =
+        let table =
+            (7, makeSpec(1, 9, (1, 9), (0, 0), 17)) ::
+            (14, makeSpec(2, 16, (1, 16), (0, 0), 28)) ::
+            (24, makeSpec(3, 26, (2, 13), (0, 0), 22)) ::
+            (34, makeSpec(4, 36, (4, 9), (0, 0), 16)) ::
+            (44, makeSpec(5, 46, (2, 11), (2, 12), 22)) :: Nil;
+        findSpec(table, makeSpec(6, 60, (4, 15), (0, 0), 28), len)
 
     ///
     /// Encode raw bytes into QR data codewords + interleaved Reed-Solomon EC codewords.
     ///
     def encodeBytes(
-        params: (Int32, Int32, Int32, Int32),
+        spec: QrSpec,
         bytes: List[Int32]
     ): List[Int32] = {
-        let (totalData, numBlocks, dataPerBlock, ecPerBlock) = params;
+        let totalData = spec#totalData;
+        let g1B = spec#g1B;
+        let g1D = spec#g1D;
+        let g2B = spec#g2B;
+        let g2D = spec#g2D;
+        let ecPerBlock = spec#ec;
         let bitBuf = buildBitBuffer(bytes, totalData);
         let dataCodewords = bitBufferToBytes(bitBuf, totalData);
         let dataVector = List.toVector(dataCodewords);
-        let dataBlocks = List.range(0, numBlocks) |> List.map(b ->
-            List.range(0, dataPerBlock) |> List.map(i ->
-                Vector.get(b * dataPerBlock + i, dataVector)
+        let g1List = List.range(0, g1B) |> List.map(b ->
+            List.range(0, g1D) |> List.map(i ->
+                Vector.get(b * g1D + i, dataVector)
             )
         );
-        let ecBlocks = dataBlocks |> List.map(blk -> computeRs(blk, ecPerBlock));
-        let dataBlocksVec = List.map(List.toVector, dataBlocks) |> List.toVector;
-        let ecBlocksVec = List.map(List.toVector, ecBlocks) |> List.toVector;
-        let interleavedData = List.range(0, dataPerBlock) |> List.flatMap(col ->
-            List.range(0, numBlocks) |> List.map(b ->
-                Vector.get(col, Vector.get(b, dataBlocksVec))
+        let g1Offset = g1B * g1D;
+        let g2List = List.range(0, g2B) |> List.map(b ->
+            List.range(0, g2D) |> List.map(i ->
+                Vector.get(g1Offset + b * g2D + i, dataVector)
             )
+        );
+        let allBlocks = List.append(g1List, g2List);
+        let ecBlocks = allBlocks |> List.map(blk -> computeRs(blk, ecPerBlock));
+        let maxData = Int32.max(g1D, g2D);
+        let interleavedData = List.range(0, maxData) |> List.flatMap(col ->
+            allBlocks |> List.filterMap(blk -> {
+                let blkVec = List.toVector(blk);
+                if (col < Vector.length(blkVec)) Some(Vector.get(col, blkVec)) else None
+            })
         );
         let interleavedEc = List.range(0, ecPerBlock) |> List.flatMap(col ->
-            List.range(0, numBlocks) |> List.map(b ->
-                Vector.get(col, Vector.get(b, ecBlocksVec))
+            ecBlocks |> List.map(ecBlk ->
+                Vector.get(col, List.toVector(ecBlk))
             )
         );
         List.append(interleavedData, interleavedEc)
@@ -626,9 +647,10 @@ mod CubeSolve.Render.Qr {
         addFinder(0, size - 7, size, grid, isFunc);
         addFinder(size - 7, 0, size, grid, isFunc);
 
-        if (ver == 2) addAlignment(18, 18, size, grid, isFunc) else ();
-        if (ver == 3) addAlignment(22, 22, size, grid, isFunc) else ();
-        if (ver == 4) addAlignment(26, 26, size, grid, isFunc) else ();
+        if (ver >= 2 and ver <= 6) {
+            let alignCoord = 4 * ver + 10;
+            addAlignment(alignCoord, alignCoord, size, grid, isFunc)
+        } else ();
 
         List.range(8, size - 8) |> List.forEach(i -> {
             let val = if (Int32.modulo(i, 2) == 0) 1 else 0;
@@ -723,7 +745,7 @@ mod CubeSolve.Render.Qr {
             }))
 
     ///
-    /// Place format information around top-left (LSB..MSB) and split (LSB..MSB).
+    /// Place format information around top-left (MSB..LSB) and split (MSB..LSB).
     ///
     def addFormatInfo(
         size: Int32,
@@ -733,8 +755,7 @@ mod CubeSolve.Render.Qr {
         isFunc: Array[Int32, rc]
     ): Unit \ rc =
         let code = formatInfoCode(ec, mask);
-        let bitsLsb = List.range(0, 15)
-            |> List.map(i -> Int32.bitwiseAnd(Int32.rightShift(code, i), 1));
+        let bits = intToBits(code, 15);
         let tl1 = (8, 0) :: (8, 1) :: (8, 2) :: (8, 3) :: Nil;
         let tl2 = (8, 4) :: (8, 5) :: (8, 7) :: (8, 8) :: Nil;
         let tl3 = (7, 8) :: (5, 8) :: (4, 8) :: (3, 8) :: Nil;
@@ -754,11 +775,11 @@ mod CubeSolve.Render.Qr {
             |> List.append(sp5)
             |> List.append(sp6)
             |> List.append(sp7);
-        List.zip(bitsLsb, coordsTopLeft) |> List.forEach(match (bit, (r, c)) -> {
+        List.zip(bits, coordsTopLeft) |> List.forEach(match (bit, (r, c)) -> {
             Array.put(bit, r * size + c, grid);
             Array.put(1, r * size + c, isFunc)
         });
-        List.zip(bitsLsb, coordsSplit) |> List.forEach(match (bit, (r, c)) -> {
+        List.zip(bits, coordsSplit) |> List.forEach(match (bit, (r, c)) -> {
             Array.put(bit, r * size + c, grid);
             Array.put(1, r * size + c, isFunc)
         })
@@ -837,6 +858,16 @@ mod CubeSolve.Render.Qr {
                 if (v00 == v01 and v00 == v10 and v00 == v11) 3 else 0
             }) |> List.sum
         ) |> List.sum;
+        let n3Row = List.range(0, size) |> List.map(r -> {
+            let row = Vector.get(r, matrix);
+            evalN3(row)
+        }) |> List.sum;
+        let n3Col = List.range(0, size) |> List.map(c -> {
+            let col = List.range(0, size)
+                |> List.map(r -> Vector.get(c, Vector.get(r, matrix)))
+                |> List.toVector;
+            evalN3(col)
+        }) |> List.sum;
         let darkCount = List.range(0, size) |> List.map(r ->
             List.range(0, size)
                 |> List.map(c -> Vector.get(c, Vector.get(r, matrix)))
@@ -848,7 +879,20 @@ mod CubeSolve.Render.Qr {
         let n4Diff1 = Int32.abs(prevMult - 50) / 5;
         let n4Diff2 = Int32.abs(nextMult - 50) / 5;
         let n4 = Int32.min(n4Diff1, n4Diff2) * 10;
-        n1Row + n1Col + n2 + n4
+        n1Row + n1Col + n2 + n3Row + n3Col + n4
+
+    ///
+    /// Evaluate 1:1:3:1:1 patterns for rule N3 (40 points per match).
+    ///
+    def evalN3(line: Vector[Int32]): Int32 = {
+        let len = Vector.length(line);
+        let pat1 = Vector#{1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0};
+        let pat2 = Vector#{0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1};
+        List.range(0, len - 10) |> List.map(i -> {
+            let sub = Vector.slice(start = i, end = i + 11, line);
+            if (sub == pat1 or sub == pat2) 40 else 0
+        }) |> List.sum
+    }
 
     ///
     /// Evaluate consecutive runs for rule N1.

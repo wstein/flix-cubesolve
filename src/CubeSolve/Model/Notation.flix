@@ -446,27 +446,21 @@ mod CubeSolve.Model.Notation {
     def back(r: Rotation.Rotation): Rotation.Rotation = Rotation.inverse(r)
 
     ///
-    /// A move that needs a middle layer to turn, which only odd cubes have.
+    /// A move that needs inner layers to turn, which cubes of size 3 and larger have.
     ///
-    /// The expansion given is the 3x3x3's. Larger odd cubes have more than one
-    /// inner slice, so `M` alone would not say which, and the refusal names the
-    /// size rather than guessing.
+    /// The expansion is `L' R x'` (or the corresponding axis), which turns all
+    /// inner slices while leaving the outer faces in place.
     ///
     def middleLayer(n: Int32, token: String, ops: List[Op]): Result[String, List[Op]] =
-        if (n == 3) Ok(ops)
-        else if (Int32.modulo(n, 2) == 0)
-            Err("'${token}' does not name a move on a ${n}x${n}x${n}: a cube with an "
-                + "even number of layers has no middle slice")
+        if (n >= 3) Ok(ops)
         else
-            Err("'${token}' is ambiguous on a ${n}x${n}x${n}: it has more than one "
-                + "inner slice, so the slice has to be named")
+            Err("'${token}' does not name a move on a 2x2x2: a cube with only two layers "
+                + "has no inner slice to turn")
 
     ///
     /// A wide turn: the opposite face's layer, plus a rotation about that axis.
     ///
-    /// On a 3x3x3 a wide turn is exactly two layers. On larger cubes it is
-    /// still two by default but the outer-layer count can be written, and this
-    /// module does not yet read that, so it refuses rather than assume.
+    /// On an n x n x n (n >= 3) a wide turn turns all layers except the opposite face.
     ///
     def wide(
         n: Int32,
@@ -474,14 +468,11 @@ mod CubeSolve.Model.Notation {
         opposite: Face,
         r: Rotation.Rotation
     ): Result[String, List[Op]] =
-        if (n == 3)
+        if (n >= 3)
             Ok(Layer(Turn(opposite, 1)) :: Frame(r) :: Nil)
-        else if (n == 2)
+        else
             Err("'${token}' does not name a move on a 2x2x2: both of its layers are "
                 + "outer layers, so a wide turn would be the whole cube -- write a "
                 + "rotation instead")
-        else
-            Err("'${token}' is not supported on a ${n}x${n}x${n} yet: this engine "
-                + "implements wide turns for the 3x3x3 only")
 
 }
