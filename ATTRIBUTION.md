@@ -118,3 +118,16 @@ recorded optimum is what the same page gives under *Optimal Algorithms*. The
 page lists many algorithms per case and states that a longer one may be faster
 for a given person, so no claim is made here that the recorded choice is the
 fastest.
+
+## Layer-by-layer stage structure
+
+`src/CubeSolve/Method/Beginner.flix` follows the stage order every beginner
+guide teaches. The published guide at <https://cubesolve.com/> was **consulted as
+pedagogy** for that ordering and for nothing else.
+
+Its terms reserve all rights and grant no reuse licence, so no move sequence,
+wording or table of its appears here. The stage predicates were written from the
+cube's own state -- which piece sits in which slot, and which way round -- and
+each is checked against the model rather than trusted because a tutorial printed
+it. Any algorithm this method comes to need will be derived by search and
+verified by replay, or taken from a source with explicit permissive licensing.
