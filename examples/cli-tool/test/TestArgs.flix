@@ -87,4 +87,32 @@ mod TestArgs {
         Assert.assertErr(Args.withSize("--size" :: "4" :: Nil, Solving, echo));
         Assert.assertErr(Args.withSize("--size" :: "banana" :: Nil, Turning, echo))
 
+    ///
+    /// onCube parses move notation, tokens, and URLs, autodetecting the size where appropriate.
+    ///
+    @Test
+    def onCubeAutodetectsNotationTokensAndUrls(): Unit \ Assert = {
+        let inspect = (size, c) -> Ok("size=${size},cubeSize=${CubeSolve.Model.Cube.size(c)}");
+
+        // Notation
+        let resNot = Args.onCube(3, "R" :: "U" :: "R'" :: "U'" :: Nil, inspect);
+        Assert.assertEq(expected = Ok("size=3,cubeSize=3"), resNot);
+
+        // 3x3 Orbit64 Token
+        let resTok3 = Args.onCube(3, "AAAAAAAAAAf_" :: Nil, inspect);
+        Assert.assertEq(expected = Ok("size=3,cubeSize=3"), resTok3);
+
+        // 4x4 Orbit64 Token (auto-detected size 4 without --size)
+        let resTok4 = Args.onCube(3, "AH0Hmo16YfPV7lTF3_VGkq_Ontg" :: Nil, inspect);
+        Assert.assertEq(expected = Ok("size=4,cubeSize=4"), resTok4);
+
+        // URL containing 5x5 token
+        let url = "https://cubesolve.org/#FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN";
+        let resUrl = Args.onCube(3, url :: Nil, inspect);
+        Assert.assertEq(expected = Ok("size=5,cubeSize=5"), resUrl);
+
+        // Empty input
+        Assert.assertErr(Args.onCube(3, Nil, inspect))
+    }
+
 }
