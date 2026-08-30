@@ -26,53 +26,90 @@ def main(): Unit \ IO =
 ///
 /// One invocation.
 ///
-def dispatch(args: List[String]): Unit \ IO = match args {
-    case "solve" :: rest    => report(Args.withSize(rest, Solving, solveCommand))
-    case "show" :: rest     => report(Args.withSize(rest, Turning, showCommand))
-    case "identify" :: rest => report(Args.withSize(rest, Corpus, identifyCommand))
-    case "pll" :: rest      =>
-        report(Args.withProfile(rest, (p, more) -> methodCommand(Method.pll, p, more)))
-    case "oll" :: rest      =>
-        report(Args.withProfile(rest, (p, more) -> methodCommand(Method.oll, p, more)))
-    case "scramble" :: rest =>
-        report(Args.withSize(rest, Solving, (n, _) -> Engine.scramble(n)))
-    case "patterns" :: rest =>
-        report(Args.withSize(rest, Corpus, (n, _) -> Ok(Corpus.listing(n))))
-    case "help" :: _        => println(Usage.text())
-    case Nil                => println(Usage.text())
-    case other :: _         =>
-        println("cubesolve: no such command '${other}'");
-        println(Usage.text())
-}
+def dispatch(args: List[String]): Unit \ IO =
+    Args.withJson(args, (isJson, cmdArgs) -> match cmdArgs {
+        case "solve" :: rest    =>
+            report(isJson, Args.withSize(rest, Solving, (size, more) ->
+                solveCommand(isJson, size, more)))
+        case "show" :: rest     =>
+            report(isJson, Args.withSize(rest, Turning, (size, more) ->
+                showCommand(isJson, size, more)))
+        case "identify" :: rest =>
+            report(isJson, Args.withSize(rest, Corpus, (size, more) ->
+                identifyCommand(isJson, size, more)))
+        case "pll" :: rest      =>
+            report(isJson, Args.withProfile(rest, (p, more) ->
+                methodCommand(isJson, c -> Method.pll(p, c), c -> Method.pllJson(p, c), more)))
+        case "oll" :: rest      =>
+            report(isJson, Args.withProfile(rest, (p, more) ->
+                methodCommand(isJson, c -> Method.oll(p, c), c -> Method.ollJson(p, c), more)))
+        case "scramble" :: rest =>
+            report(isJson, Args.withSize(rest, Solving, (n, _) ->
+                if (isJson) Engine.scrambleJson(n) else Engine.scramble(n)))
+        case "patterns" :: rest =>
+            report(isJson, Args.withSize(rest, Corpus, (n, _) ->
+                Ok(if (isJson) Corpus.patternsJson(n) else Corpus.listing(n))))
+        case "help" :: _        => println(Usage.text())
+        case Nil                => println(Usage.text())
+        case other :: _         =>
+            if (isJson)
+                report(true, Err("no such command '${other}'"))
+            else {
+                println("cubesolve: no such command '${other}'");
+                println(Usage.text())
+            }
+    })
 
 ///
-/// `solve [--size n] <scramble>`
+/// `solve [--size n] [--json] <scramble>`
 ///
-def solveCommand(size: Int32, rest: List[String]): Result[String, String] \ IO =
-    Args.onCube(size, rest, Engine.solveCube)
+def solveCommand(
+    isJson: Bool,
+    size: Int32,
+    rest: List[String]
+): Result[String, String] \ IO =
+    if (isJson)
+        Args.onCube(size, rest, Engine.solveCubeJson)
+    else
+        Args.onCube(size, rest, Engine.solveCube)
 
 ///
-/// `show [--size n] <scramble>`
+/// `show [--size n] [--json] <scramble>`
 ///
-def showCommand(size: Int32, rest: List[String]): Result[String, String] =
-    Args.onCube(size, rest, (_, c) -> Corpus.show(c))
+def showCommand(
+    isJson: Bool,
+    size: Int32,
+    rest: List[String]
+): Result[String, String] =
+    if (isJson)
+        Args.onCube(size, rest, (s, c) -> Corpus.showJson(s, c))
+    else
+        Args.onCube(size, rest, (_, c) -> Corpus.show(c))
 
 ///
 /// `pll` and `oll` differ only in which method they ask, so they share this.
 ///
 def methodCommand(
-    ask: (Profile.Profile, Cube.Cube) -> Result[String, String],
-    p: Profile.Profile,
+    isJson: Bool,
+    askText: Cube.Cube -> Result[String, String],
+    askJson: Cube.Cube -> Result[String, String],
     rest: List[String]
 ): Result[String, String] =
     Args.withSize(rest, Turning, (size, more) ->
-        Args.onCube(size, more, (_, c) -> ask(p, c)))
+        Args.onCube(size, more, (_, c) -> if (isJson) askJson(c) else askText(c)))
 
 ///
-/// `identify [--size n] <scramble>`
+/// `identify [--size n] [--json] <scramble>`
 ///
-def identifyCommand(size: Int32, rest: List[String]): Result[String, String] =
-    Args.onCube(size, rest, (n, c) -> Ok(Corpus.identify(n, c)))
+def identifyCommand(
+    isJson: Bool,
+    size: Int32,
+    rest: List[String]
+): Result[String, String] =
+    if (isJson)
+        Args.onCube(size, rest, (n, c) -> Ok(Corpus.identifyJson(n, c)))
+    else
+        Args.onCube(size, rest, (n, c) -> Ok(Corpus.identify(n, c)))
 
 ///
 /// Print what came back, or why nothing did.
@@ -80,9 +117,12 @@ def identifyCommand(size: Int32, rest: List[String]): Result[String, String] =
 /// A failure goes to standard error and leaves the exit status non-zero, so
 /// this composes with a shell rather than only with a reader.
 ///
-def report(outcome: Result[String, String]): Unit \ IO = match outcome {
+def report(isJson: Bool, outcome: Result[String, String]): Unit \ IO = match outcome {
     case Ok(text) => println(text)
     case Err(why) =>
-        Sys.Console.runWithIO(_ -> Sys.Console.eprintln("cubesolve: ${why}"));
+        if (isJson)
+            println(JsonOut.error(why))
+        else
+            Sys.Console.runWithIO(_ -> Sys.Console.eprintln("cubesolve: ${why}"));
         Sys.Exit.runWithIO(_ -> Sys.Exit.exit(1))
 }

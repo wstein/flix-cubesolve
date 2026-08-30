@@ -4,28 +4,12 @@ The demo command line for [`cubesolve`](https://github.com/wstein/flix-cubesolve
 solve, scramble, draw and identify NxNxN cubes. Kept as a separate package so
 the library itself never defines a top-level `main`.
 
-## QR and PNG rendering
+## Optional QR and PNG rendering
 
-QR raster generation and isometric cube PNGs belong to this executable example,
-not to the `cubesolve` library. They use ZXing and Java AWT, while the library
-remains a dependency-free model and solver package.
-
-`ExampleRender.Qr` encodes text as UTF-8 through ZXing's `QRCodeWriter` and
-`MatrixToImageWriter`; `ExampleRender.Icon` draws the optional cube-state logo
-and standalone isometric icon. The example's `flix.toml` is therefore the only
-manifest that declares ZXing Maven dependencies.
-
-Flix 0.75.3 resolves Maven dependencies for compilation but only embeds JARs
-already under `lib/` in a fatjar. Build a standalone graphics-enabled example
-with:
-
-```sh
-examples/cli-tool/scripts/build-fatjar.sh
-```
-
-The helper stages ZXing's runtime JARs under the example's ignored `lib/`,
-invokes `flix build-fatjar`, then removes those staging files. It requires a
-standard `flix` executable and Maven, as an external example normally does.
+QR raster generation and isometric cube PNGs are in the separate
+[`render-tool`](../render-tool/README.md) example. It owns the ZXing and Java
+AWT dependencies; this command-line package intentionally has none, so normal
+cube commands do not resolve external graphics JARs.
 
 This is what a consuming project's `flix.toml` and `src/` look like -- it
 depends on the published `cubesolve` package exactly the way any other
@@ -36,25 +20,34 @@ project with `./flixw examples run cli-tool -- <args>`:
 ```sh
 # Using the repository flixw wrapper:
 ./flixw examples run cli-tool -- solve "R U R' U'"
-./flixw examples run cli-tool -- solve "AAAAAAAAAAf_"
+./flixw examples run cli-tool -- solve --json "R U R' U'"
 ./flixw examples run cli-tool -- show "M2 E2 S2"
+./flixw examples run cli-tool -- show --json "M2 E2 S2"
 ./flixw examples run cli-tool -- show --size 4 "AH0Hmo16YfPV7lTF3_VGkq_Ontg"
 ./flixw examples run cli-tool -- show "https://cubesolve.org/#FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN"
-./flixw examples run cli-tool -- identify "AAAAAAAAAAf_"
-./flixw examples run cli-tool -- scramble
-./flixw examples run cli-tool -- patterns --size 2
+./flixw examples run cli-tool -- identify --json "AAAAAAAAAAf_"
+./flixw examples run cli-tool -- scramble --json
+./flixw examples run cli-tool -- patterns --json --size 2
 ./flixw examples run cli-tool -- help
 
 # Or directly with your own Flix install:
 cd examples/cli-tool
 flix run -- solve "R U R' U'"
-flix run -- show "AAAAAAAAAAf_"
+flix run -- show --json "AAAAAAAAAAf_"
 ```
 
 All commands accepting cube inputs autodetect the input format:
 - **Move notations**: Face turns (`R`, `U`), slice moves (`M`, `E`, `S`, `2D`), wide turns (`Rw`, `2-4Fw`), and reorientations (`x`, `y`, `z`).
 - **Orbit64 tokens**: State tokens (`[A-Za-z0-9_-]`) with automatic size detection (2x2: 8 chars, 3x3: 12 chars, 4x4: 27 chars, 5x5: 42 chars).
 - **URLs**: `https://cubesolve.org/#...` links containing tokens.
+
+`show` renders a face-letter net through the dependency-free
+`CubeSolve.Render.net` pretty-printer. Solver and method output is always
+standard move notation, ready to paste into another command or timer.
+
+The upcoming library parser will also accept a pasted rendered net as state
+input. This released example intentionally does not duplicate that parser;
+today, use its Orbit64 token form for state input.
 
 ```
 $ ./flixw examples run cli-tool -- solve "R U R' U'"

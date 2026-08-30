@@ -22,6 +22,19 @@ mod Engine {
             "${Move.showAll(ms)}${String.lineSeparator()}${List.length(ms)} moves")
 
     ///
+    /// A solution for `c` as structured JSON.
+    ///
+    pub def solveCubeJson(size: Int32, c: Cube.Cube): Result[String, String] \ IO =
+        forM (
+            tok <- CubeSolve.Model.Facelets.token(c);
+            ms <- movesFor(size, c)
+        ) yield {
+            let sol = Move.showAll(ms);
+            let moveStrs = ms |> List.map(Move.show);
+            JsonOut.solution(size, tok, sol, moveStrs)
+        }
+
+    ///
     /// A uniform random-state scramble, with the bounds it can promise.
     ///
     /// Scrambling is the library's own operation rather than a sample followed
@@ -37,6 +50,26 @@ mod Engine {
                 Standard.cachedTables() |> Result.flatMap(t ->
                     CubeSolve.Scramble.Standard.uniform(t, Standard.defaultBudget(), seed)))
                 |> Result.map(drawn -> describe(fst(drawn)))
+
+    ///
+    /// A uniform random-state scramble as structured JSON.
+    ///
+    pub def scrambleJson(size: Int32): Result[String, String] \ IO =
+        if (size != 3)
+            Err("scrambling is implemented for the 3x3x3 only")
+        else
+            let seed = Random.secureSeed();
+            Store.cached(() ->
+                Standard.cachedTables() |> Result.flatMap(t ->
+                    CubeSolve.Scramble.Standard.uniform(t, Standard.defaultBudget(), seed)))
+                |> Result.map(drawn -> {
+                    let s = fst(drawn);
+                    let text = CubeSolve.Scramble.Standard.show(s);
+                    let atMost = CubeSolve.Scramble.Standard.atMostMoves(s);
+                    let atLeast = CubeSolve.Scramble.Standard.atLeastMoves(s);
+                    let ms = CubeSolve.Scramble.Standard.moves(s) |> List.map(Move.show);
+                    JsonOut.scramble(size, text, atMost, atLeast, ms)
+                })
 
     ///
     /// A scramble and what is known about how hard it is.

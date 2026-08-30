@@ -24,6 +24,7 @@ mod Usage {
             :: "  help                             this"
             :: ""
             :: "<input> autodetects move notations, Orbit64 tokens, and URLs."
+            :: "Every command accepts an optional --json flag for JSON output."
             :: "Solves ${Args.written(CubeSolve.supportedSizes())}; "
                 + "draws ${Args.written(CubeSolve.turnableSizes())}."
             :: "Tables are cached after the first run."

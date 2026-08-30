@@ -14,16 +14,64 @@ mod Corpus {
     use CubeSolve.Render
 
     ///
-    /// The cube as a coloured net.
+    /// The cube as a portable face-letter net.
+    ///
+    /// This is deliberately the library renderer rather than the optional
+    /// ZXing/AWT graphics path: it is readable in a terminal, can be pasted
+    /// back to `show`, and does not depend on terminal colour support.
     ///
     pub def show(c: Cube.Cube): Result[String, String] =
-        Render.colouredNet(c)
+        Render.net(c)
+
+    ///
+    /// The cube as structured JSON.
+    ///
+    pub def showJson(size: Int32, c: Cube.Cube): Result[String, String] =
+        forM (
+            netStr <- Render.net(c);
+            fs <- CubeSolve.Model.Facelets.of(c);
+            tok <- CubeSolve.Model.Facelets.token(c)
+        ) yield JsonOut.show(size, tok, netStr, fs)
 
     ///
     /// Which published pattern this is, if it is one.
     ///
     pub def identify(size: Int32, c: Cube.Cube): String =
         if (size == 2) pocket(c) else standard(c)
+
+    ///
+    /// Which published pattern this is, as structured JSON.
+    ///
+    pub def identifyJson(size: Int32, c: Cube.Cube): String =
+        let tok = CubeSolve.Model.Facelets.token(c) |> Result.getWithDefault("");
+        if (size == 2)
+            match Patterns.Pocket.recognize(c) {
+                case None => JsonOut.identifyNotFound(size, tok)
+                case Some((p, held)) =>
+                    JsonOut.identifyFound(
+                        size,
+                        tok,
+                        Patterns.Pocket.name(p),
+                        Patterns.Pocket.notation(p),
+                        Patterns.Pocket.url(Patterns.Pocket.source(p)),
+                        "${held}",
+                        written(Patterns.Pocket.solutionFor(p, held))
+                    )
+            }
+        else
+            match Patterns.Standard.recognize(c) {
+                case None => JsonOut.identifyNotFound(size, tok)
+                case Some((p, held)) =>
+                    JsonOut.identifyFound(
+                        size,
+                        tok,
+                        Patterns.Standard.name(p),
+                        Patterns.Standard.notation(p),
+                        Patterns.Standard.url(Patterns.Standard.source(p)),
+                        "${held}",
+                        written(Patterns.Standard.solutionFor(p, held))
+                    )
+            }
 
     ///
     /// The corpus for a size, one pattern per line.
@@ -40,6 +88,22 @@ mod Corpus {
                     + "${Patterns.Standard.notation(p)}")
                 |> Vector.toList
                 |> lines
+
+    ///
+    /// The corpus for a size as structured JSON.
+    ///
+    pub def patternsJson(size: Int32): String =
+        if (size == 2) {
+            let items = Patterns.Pocket.all()
+                |> Vector.map(p -> (Patterns.Pocket.name(p), Patterns.Pocket.optimal(p)))
+                |> Vector.toList;
+            JsonOut.patterns(size, items)
+        } else {
+            let items = Patterns.Standard.all()
+                |> Vector.map(p -> (Patterns.Standard.name(p), Patterns.Standard.notation(p)))
+                |> Vector.toList;
+            JsonOut.patterns(size, items)
+        }
 
     ///
     /// What the 3x3x3 corpus says about this cube.

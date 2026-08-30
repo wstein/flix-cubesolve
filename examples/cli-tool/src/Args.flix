@@ -27,6 +27,17 @@ mod Args {
     }
 
     ///
+    /// Pull an optional `--json` flag off the argument list and pass the boolean to `k`.
+    ///
+    pub def withJson(
+        args: List[String],
+        k: (Bool, List[String]) -> a \ ef
+    ): a \ ef =
+        let isJson = List.exists(a -> a == "--json", args);
+        let rest = List.filter(a -> a != "--json", args);
+        k(isJson, rest)
+
+    ///
     /// Pull an optional `--size n` off the front and hand the rest on.
     ///
     /// `CubeSolve` is the authority on every capability here and is asked rather
@@ -120,7 +131,7 @@ mod Args {
             |> List.join(", ")
 
     ///
-    /// Read a scramble or token from the remaining arguments and hand the cube on.
+    /// Read move notation, a state token, or URL and hand the cube on.
     ///
     pub def onCube(
         size: Int32,
@@ -129,7 +140,7 @@ mod Args {
     ): Result[String, String] \ ef =
         let written = String.trim(List.join(" ", rest));
         if (String.isEmpty(written))
-            Err("give a scramble or token, for example: R U R' U' or AAAAAAAAAAf_")
+            Err("give move notation or a state token, for example: R U R' U' or AAAAAAAAAAf_")
         else
             parseCube(size, written)
                 |> Result.flatMap(c -> k(Cube.size(c), c))

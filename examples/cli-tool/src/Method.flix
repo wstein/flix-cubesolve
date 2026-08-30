@@ -24,10 +24,38 @@ mod Method {
         Pll.recognizeWith(p, c) |> Result.map(found -> describePll(p, found))
 
     ///
+    /// `pll` case recognition as structured JSON.
+    ///
+    pub def pllJson(p: Profile.Profile, c: Cube.Cube): Result[String, String] =
+        Pll.recognizeWith(p, c) |> Result.map(found ->
+            JsonOut.method(
+                "pll",
+                found#caseName,
+                setupTurn(found#setup),
+                found#algorithm,
+                "${p}",
+                found#source
+            ))
+
+    ///
     /// `oll <scramble>` -- which OLL case this is, and how to orient it.
     ///
     pub def oll(p: Profile.Profile, c: Cube.Cube): Result[String, String] =
         Oll.recognizeWith(p, c) |> Result.map(found -> describeOll(p, found))
+
+    ///
+    /// `oll` case recognition as structured JSON.
+    ///
+    pub def ollJson(p: Profile.Profile, c: Cube.Cube): Result[String, String] =
+        Oll.recognizeWith(p, c) |> Result.map(found ->
+            JsonOut.method(
+                "oll",
+                found#caseName,
+                setupTurn(found#setup),
+                found#algorithm,
+                "${p}",
+                found#source
+            ))
 
     ///
     /// A recognised case, written out.
