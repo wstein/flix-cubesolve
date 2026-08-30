@@ -2,6 +2,7 @@ mod TestPatterns {
 
     use CubeSolve.Patterns
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Facelets
     use CubeSolve.Model.Move
     use CubeSolve.Model.Rotation
     use CubeSolve.Model.Validate
@@ -48,8 +49,8 @@ mod TestPatterns {
     @Test
     def theCollectionIsSoundCompleteAndTranslated(): Unit \ Assert =
         let all = Patterns.Standard.all();
-        Assert.assertEqWithMsg(expected = 110, Vector.length(all),
-            "the collection should hold 110 distinct patterns");
+        Assert.assertEqWithMsg(expected = 112, Vector.length(all),
+            "the collection should hold 112 distinct patterns");
         let names = all |> Vector.map(Patterns.Standard.name) |> Vector.toList;
         Assert.assertEqWithMsg(
             expected = List.length(names), List.length(List.distinct(names)),
@@ -121,24 +122,60 @@ mod TestPatterns {
                     "the superflip should be its own inverse")
         }
 
-    /// Every 4x4x4 curated pattern algorithm parses and applies to a solved cube.
+    /// Every 4x4x4 curated pattern algorithm reaches its unique recorded state.
     @Test
     def fourByFourPatternsApplySoundly(): Unit \ Assert =
         let all = Patterns.Revenge.all();
+        let ids = all |> Vector.map(Patterns.Revenge.canonical) |> Vector.toList;
+        Assert.assertEqWithMsg(
+            expected = List.length(ids), List.length(List.distinct(ids)),
+            "two 4x4x4 entries describe the same state");
         Vector.forEach(p -> {
             let res = Patterns.Revenge.cube(p);
-            let msg = "4x4 pattern '${Patterns.Revenge.name(p)}' failed to apply";
-            Assert.assertTrueWithMsg(Result.isOk(res), msg)
+            let name = Patterns.Revenge.name(p);
+            Assert.assertTrueWithMsg(
+                Patterns.Revenge.url(Patterns.Revenge.source(p)) != "unknown",
+                "4x4 pattern '${name}' has no provenance URL");
+            match res {
+                case Ok(c) =>
+                    if (Patterns.Revenge.source(p) == "kewbz4")
+                        Assert.assertEqWithMsg(
+                            expected = Ok(Patterns.Revenge.canonical(p)),
+                            Facelets.token(c),
+                            "4x4 Kewbz pattern '${name}' does not reach its recorded state")
+                    else ()
+                case Err(why) =>
+                    Assert.assertEqWithMsg(expected = "", why,
+                        "4x4 pattern '${name}' failed to apply")
+            }
         }, all)
 
-    /// Every 5x5x5 curated pattern algorithm parses and applies to a solved cube.
+    /// Every 5x5x5 curated pattern algorithm reaches its unique recorded state.
     @Test
     def fiveByFivePatternsApplySoundly(): Unit \ Assert =
         let all = Patterns.Professor.all();
+        let ids = all |> Vector.map(Patterns.Professor.canonical) |> Vector.toList;
+        Assert.assertEqWithMsg(
+            expected = List.length(ids), List.length(List.distinct(ids)),
+            "two 5x5x5 entries describe the same state");
         Vector.forEach(p -> {
             let res = Patterns.Professor.cube(p);
-            let msg = "5x5 pattern '${Patterns.Professor.name(p)}' failed to apply";
-            Assert.assertTrueWithMsg(Result.isOk(res), msg)
+            let name = Patterns.Professor.name(p);
+            Assert.assertTrueWithMsg(
+                Patterns.Professor.url(Patterns.Professor.source(p)) != "unknown",
+                "5x5 pattern '${name}' has no provenance URL");
+            match res {
+                case Ok(c) =>
+                    if (Patterns.Professor.source(p) == "kewbz5")
+                        Assert.assertEqWithMsg(
+                            expected = Ok(Patterns.Professor.canonical(p)),
+                            Facelets.token(c),
+                            "5x5 Kewbz pattern '${name}' does not reach its recorded state")
+                    else ()
+                case Err(why) =>
+                    Assert.assertEqWithMsg(expected = "", why,
+                        "5x5 pattern '${name}' failed to apply")
+            }
         }, all)
 
 }

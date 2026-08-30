@@ -4,9 +4,7 @@
 /// One module per puzzle, because the corpora differ in more than their
 /// contents. `CubeSolve.Patterns.Standard` holds 110 3x3x3 patterns and
 /// `CubeSolve.Patterns.Pocket` 89 2x2x2 ones, each with its provenance,
-/// the algorithm as published, and a canonical identity. Source collections
-/// such as `CubeSolve.Patterns.Kewbz` retain every published variant instead
-/// of merging it into the canonical-name catalogues.
+/// the algorithm as published, and a canonical identity.
 ///
 /// **The two identities are computed under different equivalence relations, and
 /// substituting one for the other is wrong rather than approximate.** A 3x3x3's
@@ -23,6 +21,8 @@
 /// **This is reference data, not a solver.** Nothing in the solvers consults it,
 /// and recognising a scramble as a known pattern does not shorten the answer
 /// given for it. A caller who wants the published algorithm asks for it.
+/// A state appears once per size-specific catalogue; alternate source
+/// algorithms are provenance, not a reason to add a duplicate state record.
 ///
 mod CubeSolve.Patterns {
 

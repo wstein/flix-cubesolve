@@ -38,7 +38,10 @@ mod CubeSolve.Patterns.Professor {
     ///
     /// Every curated 5x5x5 pattern in the collection.
     ///
-    pub def all(): Vector[Pattern] = Vector#{
+    pub def all(): Vector[Pattern] =
+        Vector.append(curated(), kewbz())
+
+    def curated(): Vector[Pattern] = Vector#{
         Pattern(
             "Nested Squares",
             "FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN",
@@ -69,6 +72,77 @@ mod CubeSolve.Patterns.Professor {
             "AAAAAABQAAAAAAAgAAAAAAAAAAA",
             "speedsolving",
             "2R2 2L2 2U2 2D2 2F2 2B2"
+        )
+    }
+
+    def kewbz(): Vector[Pattern] =
+        Vector.append(kewbz1(), kewbz2())
+
+    def kewbz1(): Vector[Pattern] = Vector#{
+        Pattern(
+            "Kewbz Checkerboard",
+            "DktI-pArB2Jt1Vvz8NWYrqTZd5EkLFlm_WQfdTSDdu",
+            "kewbz5",
+            "Rw2 Lw2 Uw2 D2 Dw2 B2 Bw2 F2 Fw2"
+        ),
+        Pattern(
+            "Tri-Checkerboard",
+            "AAAAApDI7p3NmLKwwTrSByBrnOZqzGfRRyCMxGwx8z",
+            "kewbz5",
+            "F B2 R' D2 B R U D' R L' D' F' R2 D F2 B' "
+                + "Fw Bw2 Rw' Dw2 Bw Rw Uw Dw' Rw Lw' Dw' Fw' Rw2 Dw Fw2 Bw'"
+        ),
+        Pattern(
+            "Kewbz Superflip",
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACYTqPvFoq",
+            "kewbz5",
+            "(m' U)x4 (x y') (m' U)x4 (x y') (m' U)x4 (x y') "
+                + "(M' Uw)x4 (x y') (M' Uw)x4 (x y') (M' Uw)x4"
+        ),
+        Pattern(
+            "Square in a Cube",
+            "AUGtEEgNo9EmSZCUbOTgD0uCqBYMiYgE8OBCTp0QoA",
+            "kewbz5",
+            "U D' R L' F B' U D'"
+        ),
+        Pattern(
+            "Flipped Edges",
+            "AAAAAIhlX3EwhvbN0pEDLnD-YCzV2zS02eBCTp0QoA",
+            "kewbz5",
+            "F B2 R' D2 B R U D' R L' D' F' R2 D F2 B'"
+        )
+    }
+
+    def kewbz2(): Vector[Pattern] = Vector#{
+        Pattern(
+            "Flipped Edge Checkerboard",
+            "AAAAAn37SR2ZJugJ1xMvmAfiiCvhDHKfdQe7m2jYJu",
+            "kewbz5",
+            "F B2 R' D2 B R U D' R L' D' F' R2 D F2 B' Lw2 Rw2 Uw2 Dw2 Bw2 Fw2"
+        ),
+        Pattern(
+            "Dot in a Dot",
+            "AQmLk1OwiM9v1JveX4xoVjYb7uLkHbtL96BxZ-41oD",
+            "kewbz5",
+            "U D' R L' F B' U D' Uw Dw' Rw Lw' Fw Bw' Uw Dw'"
+        ),
+        Pattern(
+            "Dot in a Crosshair",
+            "AQmLlCGlUJitQ8R2wC36gPhiRlZbzSNQpfzEX3I0wx",
+            "kewbz5",
+            "U D' R L' F B' U D' Uw Dw' Rw Lw' Fw Bw' Uw Dw' Lw2 Rw2 Uw2 Dw2 Bw2 Fw2"
+        ),
+        Pattern(
+            "Alternate Checkerboard",
+            "AUGtEj2jjX2O6YHQcWcMeOJm0BUXusXvjAe7m2jYJu",
+            "kewbz5",
+            "U D' R L' F B' U D' Lw2 Rw2 Uw2 Dw2 Bw2 Fw2"
+        ),
+        Pattern(
+            "Double Checkerboard",
+            "AUGtEEgNo9EoiJGTjPCwGpyXwQnoL5vQ8n8VhfW49u",
+            "kewbz5",
+            "U D' R L' F B' U D' Lw2 Rw2 Uw2 Dw2 Bw2 Fw2 L2 R2 F2 B2 D2 U2"
         )
     }
 

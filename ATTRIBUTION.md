@@ -147,8 +147,8 @@ verified by replay, or taken from a source with explicit permissive licensing.
 
 ## Kewbz pattern variants
 
-`src/CubeSolve/Patterns/Kewbz.flix` records 36 algorithms from KewbzUK's
-published pattern guides, retrieved 2026-08-30:
+The existing size-specific pattern catalogues record twenty states from
+KewbzUK's published pattern guides, retrieved 2026-08-30:
 
 <https://kewbz.co.uk/blogs/solutions-guides/cool-3x3-rubiks-cube-patterns>
 <https://kewbz.co.uk/blogs/solutions-guides/4x4-patterns>
@@ -160,6 +160,12 @@ those variants are labelled by their stable page order, not by an inferred image
 title. The notation is copied as functional move data, normalized only from
 typographic to ASCII primes, and every resulting state token is independently
 derived by replaying it from solved.
+
+The guides also contain sixteen states already in the catalogue: fifteen 3x3x3
+patterns (including Checkerboard, Superflip, Cube in a Cube, and Tetris) and
+4x4x4 Rings. They are documented as Kewbz sources here but are intentionally
+not inserted a second time: one state has one pattern record, regardless of how
+many sites publish an algorithm for it.
 
 The associated notation guides informed acceptance of `Fw`/`Rw`, lower-case
 inner slices, and `3Fw` on a 5x5x5:

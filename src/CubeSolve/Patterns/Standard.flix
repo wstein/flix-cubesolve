@@ -539,6 +539,16 @@ mod CubeSolve.Patterns.Standard {
             "F2 L2 U2 L2 U' B2 R2 D B2 U' B R' U B' U' L U R2")
     }
 
+    /// Kewbz variants whose states are not already in the canonical collection.
+    def part8(): Vector[Pattern] = Vector#{
+        Pattern("4H", "AAAAAActGvgA", "kewbz3",
+            "(M2 U2 M2 U2 y)x2",
+            "B2 L2 B2 D U' R2 F2 R2 D U'"),
+        Pattern("4I", "AAAAAAAAAIAA", "kewbz3",
+            "(M2 U2 M2 U2 x)x2",
+            "B2 L2 R2 F2 D2 L2 R2 U2")
+    }
+
     ///
     /// Every pattern. The collection is split into parts only so that no
     /// one definition is enormous.
@@ -551,7 +561,8 @@ mod CubeSolve.Patterns.Standard {
             part4(),
             part5(),
             part6(),
-            part7()
+            part7(),
+            part8()
         })
 
 }
