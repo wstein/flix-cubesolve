@@ -29,9 +29,19 @@ jobs:
     name: Publish ${{ github.ref_name }}
     runs-on: ubuntu-latest
     # A wedged runner is not a build failure, but without a cap it looks like
-    # one for six hours: GitHub's default. This job takes about a minute, so
-    # anything near this number is a hung runner rather than slow work.
-    timeout-minutes: 15
+    # one for six hours: GitHub's default.
+    #
+    # 15 was set when this job took about a minute, on the reasoning that
+    # anything near the cap was a hung runner rather than slow work. That stopped
+    # being true when the library gained two whole-cube methods: their tests
+    # solve real cubes and build real tables, and the `Test` step below runs the
+    # whole suite. v0.4.0 was killed here at 15m00s with the suite still running
+    # and nothing published -- a green tree reported as a failed release.
+    #
+    # 45 is the cap for the work this job actually does now. The suite is four
+    # to five minutes locally and three times that on a shared runner, so this
+    # is still comfortably below "hung" while leaving room for a slow runner.
+    timeout-minutes: 45
 
     permissions:
       contents: write # create the release and upload the package to it
