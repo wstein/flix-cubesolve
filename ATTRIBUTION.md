@@ -98,13 +98,19 @@ published figures. See [`docs/design-review.md`](docs/design-review.md).
 
 Apache-2.0. See [LICENSE](LICENSE).
 
-## PLL algorithms
+## OLL and PLL algorithms
 
 `src/CubeSolve/Method/Pll.flix` records one algorithm and one optimal length for
-each of the 21 PLL cases, taken from the Speedsolving.com wiki's PLL page,
-retrieved 2026-08-30:
+each of the 21 PLL cases, and `src/CubeSolve/Method/Oll.flix` one algorithm for
+each of the 57 OLL cases, taken from the Speedsolving.com wiki, retrieved
+2026-08-30:
 
 <https://www.speedsolving.com/wiki/index.php?title=PLL>
+<https://www.speedsolving.com/wiki/index.php?title=OLL>
+
+The OLL page carries fifty cases inline and includes `Template:OCLL` for the
+seven corner-only ones. Case names are recorded with their aliases as the source
+gives them, because most cases go by several and cubers do not agree on one.
 
 Each algorithm is the first listed under its case's *Speedsolving Algorithms*
 heading, so it is a speed-oriented choice rather than a shortest one, and the

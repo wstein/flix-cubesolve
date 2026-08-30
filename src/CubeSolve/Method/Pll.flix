@@ -31,9 +31,9 @@
 mod CubeSolve.Method.Pll {
 
     use CubeSolve.Method.Pll.Case.Case
+    use CubeSolve.Method.LastLayer
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// One case: the name it is known by, an algorithm that solves it, and the
@@ -91,62 +91,22 @@ mod CubeSolve.Method.Pll {
     ///
     /// Why `c` is not a PLL case, or nothing if it is one.
     ///
-    /// Read off the decoded model state. Asking the search layer would be the
-    /// wrong question and asking the facelets would be a slower way to ask this
-    /// one.
+    /// A PLL case is a cube whose first two layers are solved and whose last
+    /// layer is oriented -- which is to say, one that OLL has just finished
+    /// with. `CubeSolve.Method.LastLayer` decides both halves, so the two steps
+    /// cannot come to disagree about where one ends and the other starts.
     ///
     pub def precondition(c: Cube.Cube): Option[String] =
-        if (Cube.size(c) != 3)
-            Some("PLL is a 3x3x3 step, and this is a "
-                + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}")
-        else
-            match Cube.orbits(c) {
-                case CornerCoord(cp, co) :: MidgeCoord(ep, eo) :: Nil =>
-                    firstFault(cp, co, ep, eo)
-                case _ => Some("this cube does not have the orbits a 3x3x3 has")
-            }
-
-    ///
-    /// The first way `c` falls short of being a PLL case.
-    ///
-    def firstFault(
-        cp: Vector[Int32],
-        co: Vector[Int32],
-        ep: Vector[Int32],
-        eo: Vector[Int32]
-    ): Option[String] =
-        if (not homeAndUntwisted(4, 8, cp, co))
-            Some("the first two layers are not solved: a bottom corner is out of "
-                + "place or twisted")
-        else if (not homeAndUntwisted(4, 12, ep, eo))
-            Some("the first two layers are not solved: a bottom or middle edge is "
-                + "out of place or flipped")
-        else if (not allZero(0, 4, co))
-            Some("the last layer is not oriented: a top corner is twisted, so this "
-                + "is an OLL case rather than a PLL one")
-        else if (not allZero(0, 4, eo))
-            Some("the last layer is not oriented: a top edge is flipped, so this is "
-                + "an OLL case rather than a PLL one")
-        else
-            None
-
-    ///
-    /// Whether every slot from `start` up to `stop` holds its own piece, unturned.
-    ///
-    def homeAndUntwisted(
-        start: Int32,
-        stop: Int32,
-        perm: Vector[Int32],
-        ori: Vector[Int32]
-    ): Bool =
-        Vector.range(start, stop) |> Vector.forAll(i ->
-            Vector.get(i, perm) == i and Vector.get(i, ori) == 0)
-
-    ///
-    /// Whether every orientation from `start` up to `stop` is zero.
-    ///
-    def allZero(start: Int32, stop: Int32, ori: Vector[Int32]): Bool =
-        Vector.range(start, stop) |> Vector.forAll(i -> Vector.get(i, ori) == 0)
+        match LastLayer.faultBelowTheTop(c) {
+            case Some(why) => Some(why)
+            case None      =>
+                if (LastLayer.topIsOriented(c))
+                    None
+                else
+                    Some("the last layer is not oriented: a top piece does not show "
+                        + "the top colour, so this is an OLL case rather than a PLL "
+                        + "one")
+        }
 
     ///
     /// The case `c` is, with the turns that make its algorithm fit.

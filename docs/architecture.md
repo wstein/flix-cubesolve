@@ -403,7 +403,19 @@ algorithm that was memorised for it. These are different products, and neither
 is a better version of the other — a method answer is longer than a searched one
 and is not offered as a solution to an arbitrary cube.
 
-`Method.Pll` is the first of them, and covers the last step of CFOP.
+`Method.Oll` and `Method.Pll` are the last two steps of CFOP, in that order.
+
+**The goal of one step is the precondition of the next**, and they share the
+predicates that say so. `Method.LastLayer` answers "are the first two layers
+solved" and "does the last layer show the top colour"; OLL finishes exactly when
+both hold, which is exactly when PLL may begin. Writing that twice would let the
+two drift, and a step disagreeing with its neighbour about where it ends would be
+hard to see. A test asserts the join directly: solving any OLL case leaves a cube
+PLL accepts.
+
+**OLL takes a setup turn only, where PLL takes two.** A `U` turn cannot change
+whether a piece shows the top colour, so once the layer is oriented it stays
+oriented however it is spun; where the pieces end up is PLL's business.
 
 **The precondition is decided from decoded model state.** A cube is a PLL case
 when the first two layers are solved and the last layer is oriented; that is a
