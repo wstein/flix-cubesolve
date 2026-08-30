@@ -124,6 +124,25 @@ mod CubeSolve.Render {
         }
 
     ///
+    /// Write a standalone high-resolution 3D isometric cube icon PNG to `path` (transparent, 512px).
+    ///
+    pub def iconWritePng(path: String, c: Cube.Cube): Result[String, Unit] \ IO =
+        iconWritePngWithOptions(path, c, 512, true)
+
+    ///
+    /// Write a standalone 3D isometric cube icon PNG with customizable dimensions and transparency.
+    ///
+    pub def iconWritePngWithOptions(
+        path: String,
+        c: Cube.Cube,
+        imgSize: Int32,
+        transparent: Bool
+    ): Result[String, Unit] \ IO =
+        Facelets.of(c) |> Result.flatMap(fs ->
+            Icon.writePng(path, Cube.size(c), fs, imgSize, transparent)
+        )
+
+    ///
     /// Generate a compact UTF-8 graphic QR code from text.
     ///
     pub def qrOf(text: String): String =

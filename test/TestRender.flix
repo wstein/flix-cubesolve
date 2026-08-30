@@ -410,5 +410,18 @@ mod TestRender {
         let path = "build/test_qr_url.png";
         Assert.assertEq(expected = Ok(()), Render.qrWritePngWithUrl(path, c, prefix, true))
 
+    ///
+    /// Standalone 3D isometric cube icon exports successfully for all sizes 2x2 through 5x5.
+    ///
+    @Test
+    def standaloneIconExportSucceedsForAllSizes(): Unit \ { Assert, IO } =
+        List.range(2, 6) |> List.forEach(n -> {
+            let c = made(n, "U R F");
+            let path = "build/test_icon_${n}x${n}.png";
+            Assert.assertEq(expected = Ok(()), Render.iconWritePng(path, c));
+            let darkPath = "build/test_icon_dark_${n}x${n}.png";
+            Assert.assertEq(expected = Ok(()), Render.iconWritePngWithOptions(darkPath, c, 256, false))
+        })
+
 }
 

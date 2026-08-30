@@ -82,9 +82,10 @@ mod CubeSolve.Render.Qr {
         try {
             let bytes = String.toList(token) |> List.map(Char.toBmpCodePoint);
             let len = List.length(bytes);
-            let s = versionParams(EcLevel.H, len);
+            let ec = if (len <= 58) EcLevel.H else if (len <= 74) EcLevel.Q else if (len <= 106) EcLevel.M else EcLevel.L;
+            let s = versionParams(ec, len);
             let codewords = encodeBytes(s, bytes);
-            let matrix = buildOptimalMatrix(s#ver, EcLevel.H, codewords);
+            let matrix = buildOptimalMatrix(s#ver, ec, codewords);
             let size = Vector.length(matrix);
             let scale = 14;
             let pad = 4;
@@ -175,8 +176,9 @@ mod CubeSolve.Render.Qr {
         let centerMod = (size / 2) + pad;
         let cx = Int32.toFloat64(centerMod * scale + (scale / 2));
         let cy = Int32.toFloat64(centerMod * scale + (scale / 2));
-        let s = Int32.toFloat64(scale) * 7.02;
-        let sCut = s + Int32.toFloat64(scale) * 0.60;
+        let totalSpan = Int32.toFloat64(size * scale);
+        let s = totalSpan * 0.2444;
+        let sCut = s + Int32.toFloat64(scale) * 0.55;
         let colWhite = new Color(255, 255, 255);
         let colDark = new Color(15, 23, 42);
 
@@ -340,10 +342,19 @@ mod CubeSolve.Render.Qr {
     ///
     pub def renderWith(ec: EcLevel, darkTheme: Bool, text: String): String =
         let bytes = String.toList(text) |> List.map(Char.toBmpCodePoint);
-        let s = versionParams(ec, List.length(bytes));
+        let len = List.length(bytes);
+        let effEc = effectiveEc(ec, len);
+        let s = versionParams(effEc, len);
         let codewords = encodeBytes(s, bytes);
-        let matrix = buildOptimalMatrix(s#ver, ec, codewords);
+        let matrix = buildOptimalMatrix(s#ver, effEc, codewords);
         drawMatrix(matrix, darkTheme)
+
+    def effectiveEc(ec: EcLevel, len: Int32): EcLevel = match ec {
+        case EcLevel.H if len > 58 => if (len <= 74) EcLevel.Q else if (len <= 106) EcLevel.M else EcLevel.L
+        case EcLevel.Q if len > 74 => if (len <= 106) EcLevel.M else EcLevel.L
+        case EcLevel.M if len > 106 => EcLevel.L
+        case _                      => ec
+    }
 
     ///
     /// Determine QR version (1-6) and block parameters for a given EC level and byte length.
