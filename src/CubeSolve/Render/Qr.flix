@@ -124,16 +124,22 @@ mod CubeSolve.Render.Qr {
     }
 
     ///
-    /// The RGB colour for a face index: 0:U, 1:R, 2:F, 3:D, 4:L, 5:B.
+    /// The RGB colour for a face index with directional 3D shading factor.
     ///
-    def faceColor(face: Int32): Color \ IO = match face {
-        case 0 => new Color(245, 245, 245)
-        case 1 => new Color(200, 40, 40)
-        case 2 => new Color(30, 160, 70)
-        case 3 => new Color(240, 210, 40)
-        case 4 => new Color(235, 130, 30)
-        case 5 => new Color(40, 90, 200)
-        case _ => new Color(120, 120, 120)
+    def faceColor(face: Int32, factor: Float64): Color \ IO = {
+        let (br, bg, bb) = match face {
+            case 0 => (248.0, 250.0, 252.0) // U - Crisp White
+            case 1 => (220.0, 38.0, 38.0)   // R - Red
+            case 2 => (22.0, 163.0, 74.0)   // F - Green
+            case 3 => (234.0, 179.0, 8.0)   // D - Yellow
+            case 4 => (234.0, 88.0, 12.0)   // L - Orange
+            case 5 => (37.0, 99.0, 235.0)   // B - Blue
+            case _ => (120.0, 120.0, 120.0)
+        };
+        let r = toInt(br * factor);
+        let g = toInt(bg * factor);
+        let b = toInt(bb * factor);
+        new Color(r, g, b)
     }
 
     ///
@@ -143,7 +149,7 @@ mod CubeSolve.Render.Qr {
         Float64.tryToInt32(x) |> Option.getWithDefault(0)
 
     ///
-    /// Draw the real 3D oblique cube state inside a rounded badge in the QR center.
+    /// Draw the real 3D isometric cube state inside an enlarged badge in the QR center (~20% area).
     ///
     def drawObliqueLogo(
         g: Graphics2D,
@@ -154,7 +160,7 @@ mod CubeSolve.Render.Qr {
     ): Unit \ IO = {
         let pad = 4;
         let centerMod = (size / 2) + pad;
-        let badgeRadiusMod = 3;
+        let badgeRadiusMod = 5;
         let cx = Int32.toFloat64(centerMod * scale + (scale / 2));
         let cy = Int32.toFloat64(centerMod * scale + (scale / 2));
         let badgeSize = Int32.toFloat64((badgeRadiusMod * 2 + 1) * scale);
@@ -164,47 +170,40 @@ mod CubeSolve.Render.Qr {
         let colWhite = new Color(255, 255, 255);
         let colDark = new Color(15, 23, 42);
         g.setColor(colWhite);
-        g.fillRoundRect(bx, by, bw, bw, scale, scale);
+        g.fillRoundRect(bx, by, bw, bw, scale * 2, scale * 2);
 
-        let lean = 0.8660254037844386;
-        let rise = 0.5;
-        let s = (badgeSize * 0.76) / (1.0 + lean);
-        let w = s * (1.0 + lean);
-        let h = s * (1.0 + rise);
-        let x0 = cx - (w / 2.0);
-        let y0 = cy - (h / 2.0) + (s * rise);
-
-        drawCubeBody(g, x0, y0, s, colDark);
-        drawTopFace(g, n, facelets, (x0, y0, s));
-        drawFrontFace(g, n, facelets, (x0, y0, s));
-        drawRightFace(g, n, facelets, (x0, y0, s))
+        let s = badgeSize * 0.44;
+        drawCubeBody(g, cx, cy, s, colDark);
+        drawTopFace(g, n, facelets, (cx, cy, s));
+        drawFrontFace(g, n, facelets, (cx, cy, s));
+        drawRightFace(g, n, facelets, (cx, cy, s))
     }
 
     ///
-    /// Fill the solid dark outline of the 3D oblique cube.
+    /// Fill the solid dark outline of the 3D isometric cube.
     ///
     def drawCubeBody(
         g: Graphics2D,
-        x0: Float64,
-        y0: Float64,
+        cx: Float64,
+        cy: Float64,
         s: Float64,
         colDark: Color
     ): Unit \ IO = {
-        let lean = 0.8660254037844386;
-        let rise = 0.5;
+        let lx = s * 0.8660254037844386;
+        let ly = s * 0.5;
         let poly = new Polygon();
-        poly.addPoint(toInt(x0 + s * lean), toInt(y0 - s * rise));
-        poly.addPoint(toInt(x0 + s + s * lean), toInt(y0 - s * rise));
-        poly.addPoint(toInt(x0 + s + s * lean), toInt(y0 + s - s * rise));
-        poly.addPoint(toInt(x0 + s), toInt(y0 + s));
-        poly.addPoint(toInt(x0), toInt(y0 + s));
-        poly.addPoint(toInt(x0), toInt(y0));
+        poly.addPoint(toInt(cx), toInt(cy - s));
+        poly.addPoint(toInt(cx + lx), toInt(cy - ly));
+        poly.addPoint(toInt(cx + lx), toInt(cy + ly));
+        poly.addPoint(toInt(cx), toInt(cy + s));
+        poly.addPoint(toInt(cx - lx), toInt(cy + ly));
+        poly.addPoint(toInt(cx - lx), toInt(cy - ly));
         g.setColor(colDark);
         g.fillPolygon(poly)
     }
 
     ///
-    /// Draw the top (U) face stickers in oblique projection.
+    /// Draw the top (U) face stickers in isometric projection (100% light).
     ///
     def drawTopFace(
         g: Graphics2D,
@@ -212,11 +211,11 @@ mod CubeSolve.Render.Qr {
         facelets: Vector[Int32],
         geom: (Float64, Float64, Float64)
     ): Unit \ IO = {
-        let (x0, y0, s) = geom;
-        let lean = 0.8660254037844386;
-        let rise = 0.5;
-        let step = s / Int32.toFloat64(n);
-        let gap = 0.08;
+        let (cx, cy, s) = geom;
+        let lx = s * 0.8660254037844386;
+        let stepX = lx / Int32.toFloat64(n);
+        let stepY = (s * 0.5) / Int32.toFloat64(n);
+        let gap = 0.09;
         List.range(0, n) |> List.forEach(r ->
             List.range(0, n) |> List.forEach(c -> {
                 let fIdx = Vector.get(r * n + c, facelets);
@@ -227,20 +226,20 @@ mod CubeSolve.Render.Qr {
                 let r1 = rf + 1.0 - gap;
                 let c0 = cf + gap;
                 let c1 = cf + 1.0 - gap;
-                let uX = (row, col) -> x0 + s * lean + col * step - row * step * lean;
-                let uY = row -> y0 - s * rise + row * step * rise;
-                poly.addPoint(toInt(uX(r0, c0)), toInt(uY(r0)));
-                poly.addPoint(toInt(uX(r0, c1)), toInt(uY(r0)));
-                poly.addPoint(toInt(uX(r1, c1)), toInt(uY(r1)));
-                poly.addPoint(toInt(uX(r1, c0)), toInt(uY(r1)));
-                g.setColor(faceColor(fIdx));
+                let uX = (row, col) -> cx - (col - row) * stepX;
+                let uY = (row, col) -> (cy - s) + (row + col) * stepY;
+                poly.addPoint(toInt(uX(r0, c0)), toInt(uY(r0, c0)));
+                poly.addPoint(toInt(uX(r0, c1)), toInt(uY(r0, c1)));
+                poly.addPoint(toInt(uX(r1, c1)), toInt(uY(r1, c1)));
+                poly.addPoint(toInt(uX(r1, c0)), toInt(uY(r1, c0)));
+                g.setColor(faceColor(fIdx, 1.0));
                 g.fillPolygon(poly)
             })
         )
     }
 
     ///
-    /// Draw the front (F) face stickers in orthogonal projection.
+    /// Draw the front-left (F) face stickers in isometric projection (90% light).
     ///
     def drawFrontFace(
         g: Graphics2D,
@@ -248,9 +247,13 @@ mod CubeSolve.Render.Qr {
         facelets: Vector[Int32],
         geom: (Float64, Float64, Float64)
     ): Unit \ IO = {
-        let (x0, y0, s) = geom;
-        let step = s / Int32.toFloat64(n);
-        let gap = 0.08;
+        let (cx, cy, s) = geom;
+        let lx = s * 0.8660254037844386;
+        let nf = Int32.toFloat64(n);
+        let stepX = lx / nf;
+        let stepY = (s * 0.5) / nf;
+        let stepZ = s / nf;
+        let gap = 0.09;
         List.range(0, n) |> List.forEach(r ->
             List.range(0, n) |> List.forEach(c -> {
                 let fIdx = Vector.get(2 * n * n + r * n + c, facelets);
@@ -261,20 +264,20 @@ mod CubeSolve.Render.Qr {
                 let r1 = rf + 1.0 - gap;
                 let c0 = cf + gap;
                 let c1 = cf + 1.0 - gap;
-                let fX = col -> x0 + col * step;
-                let fY = row -> y0 + row * step;
-                poly.addPoint(toInt(fX(c0)), toInt(fY(r0)));
-                poly.addPoint(toInt(fX(c1)), toInt(fY(r0)));
-                poly.addPoint(toInt(fX(c1)), toInt(fY(r1)));
-                poly.addPoint(toInt(fX(c0)), toInt(fY(r1)));
-                g.setColor(faceColor(fIdx));
+                let fX = col -> cx - (nf - col) * stepX;
+                let fY = (row, col) -> cy - (nf - col) * stepY + row * stepZ;
+                poly.addPoint(toInt(fX(c0)), toInt(fY(r0, c0)));
+                poly.addPoint(toInt(fX(c1)), toInt(fY(r0, c1)));
+                poly.addPoint(toInt(fX(c1)), toInt(fY(r1, c1)));
+                poly.addPoint(toInt(fX(c0)), toInt(fY(r1, c0)));
+                g.setColor(faceColor(fIdx, 0.90));
                 g.fillPolygon(poly)
             })
         )
     }
 
     ///
-    /// Draw the right (R) face stickers in oblique projection.
+    /// Draw the front-right (R) face stickers in isometric projection (78% light).
     ///
     def drawRightFace(
         g: Graphics2D,
@@ -282,11 +285,13 @@ mod CubeSolve.Render.Qr {
         facelets: Vector[Int32],
         geom: (Float64, Float64, Float64)
     ): Unit \ IO = {
-        let (x0, y0, s) = geom;
-        let lean = 0.8660254037844386;
-        let rise = 0.5;
-        let step = s / Int32.toFloat64(n);
-        let gap = 0.08;
+        let (cx, cy, s) = geom;
+        let lx = s * 0.8660254037844386;
+        let nf = Int32.toFloat64(n);
+        let stepX = lx / nf;
+        let stepY = (s * 0.5) / nf;
+        let stepZ = s / nf;
+        let gap = 0.09;
         List.range(0, n) |> List.forEach(r ->
             List.range(0, n) |> List.forEach(c -> {
                 let fIdx = Vector.get(n * n + r * n + c, facelets);
@@ -297,13 +302,13 @@ mod CubeSolve.Render.Qr {
                 let r1 = rf + 1.0 - gap;
                 let c0 = cf + gap;
                 let c1 = cf + 1.0 - gap;
-                let rX = col -> x0 + s + col * step * lean;
-                let rY = (row, col) -> y0 + row * step - col * step * rise;
+                let rX = col -> cx + col * stepX;
+                let rY = (row, col) -> cy - col * stepY + row * stepZ;
                 poly.addPoint(toInt(rX(c0)), toInt(rY(r0, c0)));
                 poly.addPoint(toInt(rX(c1)), toInt(rY(r0, c1)));
                 poly.addPoint(toInt(rX(c1)), toInt(rY(r1, c1)));
                 poly.addPoint(toInt(rX(c0)), toInt(rY(r1, c0)));
-                g.setColor(faceColor(fIdx));
+                g.setColor(faceColor(fIdx, 0.78));
                 g.fillPolygon(poly)
             })
         )
