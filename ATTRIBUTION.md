@@ -7,12 +7,17 @@ What in this repository came from somewhere else, under what terms.
 | component | source | licence |
 |---|---|---|
 | `flix-orbit64` v0.3.0 | [wstein/flix-orbit64](https://github.com/wstein/flix-orbit64) | Apache-2.0 |
+| `com.google.zxing:core` / `javase` 3.5.4 | [zxing/zxing](https://github.com/zxing/zxing) | Apache-2.0 |
 | Flix compiler 0.75.2 | [flix/flix](https://github.com/flix/flix) | Apache-2.0 |
 
 `flix-orbit64` supplies the orbit decomposition (`Orbit64.Orbit`), the ranking
 functions (`Orbit64.Rank`), the cube-legality validator
 (`Orbit64.Coord.faultOf`) and the facelet interchange (`Orbit64.Net`). It is a
 declared package dependency, resolved by the compiler; no source is vendored.
+
+ZXing provides standard QR code matrix generation (`com.google.zxing:core`) and
+image conversion (`com.google.zxing:javase`), used by `CubeSolve.Render.Qr` and
+`examples/cli-tool`.
 
 ## Reference implementations
 

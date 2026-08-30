@@ -20,7 +20,7 @@ Under construction. What works today:
 | | 2×2×2 | 3×3×3 | 4×4×4 | 5×5×5 |
 |---|---|---|---|---|
 | model, moves, notation | ✅ | ✅ | ✅ turning only | ✅ turning only |
-| slice, wide and rotation notation | rotations only | ✅ | — | — |
+| slice, wide and rotation notation | rotations only | ✅ | ✅ slice, wide, range | ✅ slice, wide, range |
 | reachability validation | ✅ | ✅ | — | — |
 | uniform random state | ✅ | ✅ | — | — |
 | exact distance oracle | ✅ | — | — | — |

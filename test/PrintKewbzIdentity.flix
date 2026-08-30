@@ -1,17 +1,26 @@
 mod PrintKewbzIdentity {
 
-    use CubeSolve.Model.Holding
+    use CubeSolve.Model.Move
+    use CubeSolve.Model.Sized
     use CubeSolve.Patterns.Kewbz
+    use CubeSolve.Solve.Standard
 
-    pub def main(): Unit \ IO =
-        Kewbz.all()
-        |> Vector.filter(p -> Kewbz.size(p) == 3)
-        |> Vector.forEach(p -> {
-            let res = Kewbz.cube(p) |> Result.toOption |> Option.flatMap(Holding.identityOf);
-            match res {
-                case Some(token) => println("${Kewbz.name(p)}: ${token}")
-                case None        => println("${Kewbz.name(p)}: ERROR")
-            }
-        })
+    pub def main(): Unit \ IO = match Standard.buildTables() {
+        case Err(why) => println(why)
+        case Ok(tables) =>
+            Kewbz.all()
+            |> Vector.filter(p ->
+                Kewbz.size(p) == 3 and (Kewbz.name(p) == "4H" or Kewbz.name(p) == "4I"))
+            |> Vector.forEach(p -> printGenerator(tables, p))
+    }
+
+    def printGenerator(tables: Standard.Tables, p: Kewbz.Pattern): Unit \ IO =
+        match Kewbz.cube(p)
+            |> Result.flatMap(Sized.standardOf)
+            |> Result.flatMap(Standard.solutionWith(tables, Standard.thoroughBudget())) {
+            case Ok(solution) =>
+                println("${Kewbz.name(p)}: ${Move.showAll(Move.inverseOf(solution))}")
+            case Err(why) => println("${Kewbz.name(p)}: ERROR ${why}")
+        }
 
 }

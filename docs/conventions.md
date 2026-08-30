@@ -27,10 +27,13 @@ tables.
 
 ## Written notation
 
-Beyond the eighteen face turns, the parser reads slice moves `M E S`,
-whole-cube rotations `x y z`, wide turns (`r` or `Rw`), **bracketed groups**,
-repeat counts and postfix inverses. `(M z)4` is four of `M z`; `(R U R' U')` is
-one, its brackets marking where a hand regrips.
+Beyond the eighteen face turns, the parser reads:
+- Slice moves: `M E S` (and lowercase `m e s`) on odd cubes, as well as numbered single-slice moves `2D`, `2R'`, `2U2`, `2L`, `2F`, `2B`.
+- Whole-cube rotations: `x y z` (and uppercase equivalents).
+- Wide turns: lowercase `u r f d l b`, WCA wide turns `Uw Rw Fw Dw Lw Bw`, and numbered multi-layer wide turns `2Rw`, `3Fw`.
+- Multi-layer slice ranges: `2-3Fw`, `2-4Rw`, which turn a continuous block of inner layers.
+- Bracketed groups and repeat markers: `(M z)4`, `(R U R' U')*3`, `(m' U)x4`.
+- Postfix modifiers: `'` (or typographic primes `’`), half turns `2`, and combinations `2'` or `'2`.
 
 Both spellings appear side by side in published algorithms, so brackets are
 parsed rather than stripped — removing them turns the first into the second and

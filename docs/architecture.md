@@ -600,20 +600,28 @@ not consult it.
 
 ## The pattern corpora
 
-199 published patterns — 110 for the 3x3x3, 89 for the 2x2x2 — with their
-provenance, the algorithm as published, a face-turn form, and a canonical
-identity. They live in `CubeSolve.Patterns.Standard` and
-`CubeSolve.Patterns.Pocket` as source, compiled into the library. They were
-under `test/` until they had consumers; a checked-in data file was considered and
-rejected, because it would add deployment paths, IO, decoding failures and cache
-invalidation to something small, immutable and versioned with the code. `Codec`
-and `Cache` serve generated binary tables and are the wrong tool for
-source-owned reference data.
+Published patterns across all supported puzzle sizes:
+- 110 patterns for the 3x3x3 in `CubeSolve.Patterns.Standard`
+- 89 patterns for the 2x2x2 in `CubeSolve.Patterns.Pocket`
+- Curated 4x4x4 patterns in `CubeSolve.Patterns.Revenge`
+- Curated 5x5x5 patterns in `CubeSolve.Patterns.Professor`
+- 36 multi-size variants from KewbzUK in `CubeSolve.Patterns.Kewbz`
+
+Each pattern records its provenance, the algorithm as published, a face-turn form where applicable, and a canonical identity. They are compiled into the library. They were under `test/` until they had consumers; a checked-in data file was considered and rejected, because it would add deployment paths, IO, decoding failures and cache invalidation to something small, immutable and versioned with the code. `Codec` and `Cache` serve generated binary tables and are the wrong tool for source-owned reference data.
 
 **One corpus, not two.** The tests consume these modules rather than keeping a
 copy, and compute identities with `Patterns.Standard.identify` and
 `Patterns.Pocket.identify` rather than reimplementing them, so what the tests
 check is what a consumer runs.
+
+## Rendering and graphics
+
+Rendering is layered to preserve library purity:
+- **Pure Terminal Net**: `CubeSolve.Render.net` and `CubeSolve.Render.colorNet` unfold 2x2x2 through 5x5x5 cubes into standard cross nets, with ANSI true-color escapes and ASCII fallback.
+- **State Token QR Codes**: `CubeSolve.Render.Qr` encodes Orbit64 state tokens or URLs (`https://cubesolve.org/#<token>`) into compact UTF-8 half-block terminal graphics (`█`, `▀`, `▄`, ` `) with ISO-standard error correction (`L`, `M`, `Q`, `H`).
+- **Decoupled Graphics**: Standalone 3D isometric cube icons (`CubeSolve.Render.Icon`) and PNG QR codes with embedded center cube logos are implemented using standard Java AWT / ImageIO and ZXing Core (`com.google.zxing:core:3.5.4`).
+
+The command line (`examples/cli-tool`) autodetects whether an input is a move sequence, an Orbit64 token (inferring the puzzle size from the token length), or a URL fragment.
 
 `CubeSolve.Model.Holding` owns identity up to holding — `identityOf`,
 `sameUpToHolding` and `ofToken` — and both corpora delegate to it rather than
