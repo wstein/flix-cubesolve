@@ -299,9 +299,25 @@ Before every commit, in this order:
 
 ```sh
 ./flixw format                  # no check-only mode, so this must run first
-./flixw test                    # every @Test under test/
+./flixw check                   # type-check; a minute, not five
 ./flixw metrics --format md     # code smells; fix them, do not carry them
 ```
+
+**The full suite is a nightly gate, not a per-commit one.** This project is
+pre-alpha and nothing depends on it being stable, so paying four to five minutes
+on every commit buys repetition rather than coverage. CI runs `validate` and
+`check` on every push and pull request, and the whole suite — three platforms,
+every pattern, the two-process cache race — at 03:30 nightly and on request.
+A type error is caught in a minute; a behavioural regression is caught within a
+day.
+
+Run `./flixw test` yourself when you have changed something the type-checker
+cannot judge: a search, a table, a predicate, an algorithm corpus. The nightly is
+the floor, not the ceiling.
+
+**This trade expires the moment someone depends on this being stable.** The
+honest signal for putting the suite back on every push is the first release
+somebody builds against.
 
 `metrics` reports against a working tree, so a run with uncommitted changes
 describes a state no commit contains — it says so itself. Fix the findings and

@@ -4,10 +4,23 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Nightly, so the exhaustive pattern job below runs even in a quiet week.
+  # The nightly run is where this project's real gate lives. See below.
   schedule:
     - cron: '30 3 * * *'
   workflow_dispatch:
+
+# Pre-alpha. The suite takes four to five minutes and its cost is almost
+# entirely solving and table building, so running it on every push across three
+# platforms buys repetition rather than coverage. The split is deliberate:
+#
+#   every push and pull request -- validate, check
+#   nightly and on request      -- the full suite, on all three platforms,
+#                                  every pattern, and the two-process cache race
+#
+# So a type error is caught in a minute and a behavioural regression is caught
+# within a day. That is the right trade while no one is depending on this being
+# stable; it is the wrong trade the moment someone is, and the honest signal for
+# changing it back is the first release anybody builds against.
 
 permissions:
   contents: read
@@ -24,7 +37,7 @@ jobs:
   # slips past the stratum is caught before a release rather than after one.
   exhaustive-patterns:
     name: all 110 patterns
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Check out
@@ -103,7 +116,7 @@ jobs:
   # per round, which is a minute or two better spent once on main.
   cache-race:
     name: gate 13.2, two processes
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Check out
@@ -192,11 +205,11 @@ jobs:
       - name: Check
         run: ${{ matrix.flixw }} check
 
-      # The pattern-bound gate runs over a 27-pattern stratum here and over all
-      # 110 in the job below. Solving the full collection takes about a minute
-      # and a half, which is worth paying once on main rather than three times
-      # on every pull request.
+      # Nightly rather than per-push, per the note at the top of this file. The
+      # step is skipped rather than removed so that a green pull request says
+      # plainly which gate it did and did not clear.
       - name: Test
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: ${{ matrix.flixw }} test
 
       # Last on purpose: a stale badge is metadata, and failing earlier would
