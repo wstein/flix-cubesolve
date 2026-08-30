@@ -4,7 +4,7 @@ description = "Demo command line for cubesolve: solve, scramble, draw and identi
 version     = "0.1.0"
 repository  = "github:wstein/flix-cubesolve"
 flix        = "0.75.3"
-license     = "Apache-2.0"
+license     = "AGPL-3.0-or-later"
 authors     = ["Werner Stein"]
 
 [dependencies]

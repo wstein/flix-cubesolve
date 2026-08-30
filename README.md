@@ -242,5 +242,5 @@ mode, so run `./flixw format` before you commit.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE), and [ATTRIBUTION.md](ATTRIBUTION.md) for the
+AGPL-3.0-or-later. See [LICENSE](LICENSE), and [ATTRIBUTION.md](ATTRIBUTION.md) for the
 provenance of anything not written here.

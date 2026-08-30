@@ -96,7 +96,15 @@ published figures. See [`docs/design-review.md`](docs/design-review.md).
 
 ## This repository
 
-Apache-2.0. See [LICENSE](LICENSE).
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
+
+This repository is licensed under the GNU Affero General Public License v3 (or
+later). Because components of the reference implementations by Shuang Chen
+(`cs0x7f`) carry GPL-3.0 notices (e.g. `Search.java` in `min2phase`, and the
+`LICENSE` file in `cube555`) and the official WCA scrambler suite
+[TNoodle](https://github.com/thewca/tnoodle) is licensed under GNU AGPLv3,
+licensing under `AGPL-3.0-or-later` provides 100% legal clarity and full
+reciprocal compatibility across the twisty puzzle ecosystem.
 
 ## OLL and PLL algorithms
 
