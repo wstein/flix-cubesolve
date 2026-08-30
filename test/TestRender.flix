@@ -56,11 +56,11 @@ mod TestRender {
                 :: "        │ U │ U │"
                 :: "        ├───┼───┤"
                 :: "        │ U │ U │"
-                :: "┌───┬───┼───┼───┼───┬───┬───┐"
+                :: "┌───┬───┼───┼───┼───┬───┬───┬───┐"
                 :: "│ L │ L │ F │ F │ R │ R │ B │ B │"
-                :: "├───┼───┼───┼───┼───┼───┼───┤"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┤"
                 :: "│ L │ L │ F │ F │ R │ R │ B │ B │"
-                :: "└───┴───┼───┼───┼───┴───┴───┘"
+                :: "└───┴───┼───┼───┼───┴───┴───┴───┘"
                 :: "        │ D │ D │"
                 :: "        ├───┼───┤"
                 :: "        │ D │ D │"
@@ -126,5 +126,116 @@ mod TestRender {
     ///
     def stripped(text: String): String =
         String.split(regex = Render.escape() + "\\[[0-9;]*m", text) |> List.join("")
+
+    ///
+    /// Rendered nets round-trip through `parse` identically for plain and coloured outputs.
+    ///
+    @Test
+    def renderedNetsRoundTripThroughParse(): Unit \ Assert =
+        let algs = "U U'" :: "U" :: "R U" :: "U R F" :: "R U R' U'" :: "F2 B2 L2 R2 U2 D2" :: Nil;
+        algs |> List.forEach(alg -> {
+            checkNetRoundTrip(3, alg);
+            checkNetRoundTrip(2, alg)
+        })
+
+    ///
+    /// Verify all 4 net formats round-trip through parse.
+    ///
+    def checkNetRoundTrip(size: Int32, alg: String): Unit \ Assert =
+        let c = made(size, alg);
+        Assert.assertEq(expected = Ok(c), Render.parse(drawn(Render.net, c)));
+        Assert.assertEq(expected = Ok(c), Render.parse(drawn(Render.colouredNet, c)));
+        Assert.assertEq(expected = Ok(c), Render.parse(drawn(Render.colorNet, c)));
+        Assert.assertEq(expected = Ok(c), Render.parse(drawn(Render.colouredColorNet, c)))
+
+    ///
+    /// ASCII format nets parse identically to UTF-8 format.
+    ///
+    @Test
+    def asciiNetsParseCorrectly(): Unit \ Assert =
+        let asciiNet = List.join(String.lineSeparator(),
+            "            +---+---+---+"
+                :: "            | U | U | U |"
+                :: "            +---+---+---+"
+                :: "            | U | U | U |"
+                :: "            +---+---+---+"
+                :: "            | U | U | U |"
+                :: "+---+---+---+---+---+---+---+---+---+---+---+---+"
+                :: "| L | L | L | F | F | F | R | R | R | B | B | B |"
+                :: "+---+---+---+---+---+---+---+---+---+---+---+---+"
+                :: "| L | L | L | F | F | F | R | R | R | B | B | B |"
+                :: "+---+---+---+---+---+---+---+---+---+---+---+---+"
+                :: "| L | L | L | F | F | F | R | R | R | B | B | B |"
+                :: "+---+---+---+---+---+---+---+---+---+---+---+---+"
+                :: "            | D | D | D |"
+                :: "            +---+---+---+"
+                :: "            | D | D | D |"
+                :: "            +---+---+---+"
+                :: "            | D | D | D |"
+                :: "            +---+---+---+" :: Nil);
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(asciiNet))
+
+    ///
+    /// Standard color codes (W, G, Y, O, R, B) parse identically to face letters.
+    ///
+    @Test
+    def colorCodesParseCorrectly(): Unit \ Assert =
+        let colorNet = List.join(String.lineSeparator(),
+            "            ┌───┬───┬───┐"
+                :: "            │ W │ W │ W │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ W │ W │ W │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ W │ W │ W │"
+                :: "┌───┬───┬───┼───┼───┼───┼───┬───┬───┬───┬───┬───┐"
+                :: "│ O │ O │ O │ G │ G │ G │ R │ R │ R │ B │ B │ B │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ O │ O │ O │ G │ G │ G │ R │ R │ R │ B │ B │ B │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ O │ O │ O │ G │ G │ G │ R │ R │ R │ B │ B │ B │"
+                :: "└───┴───┴───┼───┼───┼───┼───┴───┴───┴───┴───┴───┘"
+                :: "            │ Y │ Y │ Y │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ Y │ Y │ Y │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ Y │ Y │ Y │"
+                :: "            └───┴───┴───┘" :: Nil);
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(colorNet))
+
+    ///
+    /// Numeric face indices (0-5) parse identically to face letters.
+    ///
+    @Test
+    def numericIndicesParseCorrectly(): Unit \ Assert =
+        let numNet = List.join(String.lineSeparator(),
+            "            ┌───┬───┬───┐"
+                :: "            │ 0 │ 0 │ 0 │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ 0 │ 0 │ 0 │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ 0 │ 0 │ 0 │"
+                :: "┌───┬───┬───┼───┼───┼───┼───┬───┬───┬───┬───┬───┐"
+                :: "│ 4 │ 4 │ 4 │ 2 │ 2 │ 2 │ 1 │ 1 │ 1 │ 5 │ 5 │ 5 │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ 4 │ 4 │ 4 │ 2 │ 2 │ 2 │ 1 │ 1 │ 1 │ 5 │ 5 │ 5 │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ 4 │ 4 │ 4 │ 2 │ 2 │ 2 │ 1 │ 1 │ 1 │ 5 │ 5 │ 5 │"
+                :: "└───┴───┴───┼───┼───┼───┼───┴───┴───┴───┴───┴───┘"
+                :: "            │ 3 │ 3 │ 3 │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ 3 │ 3 │ 3 │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ 3 │ 3 │ 3 │"
+                :: "            └───┴───┴───┘" :: Nil);
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(numNet))
+
+    ///
+    /// Malformed nets are rejected.
+    ///
+    @Test
+    def malformedNetsAreRejected(): Unit \ Assert =
+        Assert.assertErr(Render.parse(""));
+        Assert.assertErr(Render.parse("invalid string with no net rows"));
+        Assert.assertErr(Render.parse("│ U │ U │\n│ U │ U │\n│ D │ D │"))
 
 }

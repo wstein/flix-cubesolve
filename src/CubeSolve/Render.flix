@@ -47,6 +47,18 @@ mod CubeSolve.Render {
         draw(c, i -> paint(i, " " + letterOf(i) + " "))
 
     ///
+    /// The net, as color code letters: `W R G Y O B`.
+    ///
+    pub def colorNet(c: Cube.Cube): Result[String, String] =
+        draw(c, i -> " " + colorLetterOf(i) + " ")
+
+    ///
+    /// The net in terminal color with color code letters (`W R G Y O B`).
+    ///
+    pub def colouredColorNet(c: Cube.Cube): Result[String, String] =
+        draw(c, i -> paint(i, " " + colorLetterOf(i) + " "))
+
+    ///
     /// The letter for a face index, in the order `U R F D L B`.
     ///
     pub def letterOf(face: Int32): String = match face {
@@ -60,6 +72,19 @@ mod CubeSolve.Render {
     }
 
     ///
+    /// The color code letter for a face index: White, Red, Green, Yellow, Orange, Blue.
+    ///
+    pub def colorLetterOf(face: Int32): String = match face {
+        case 0 => "W"
+        case 1 => "R"
+        case 2 => "G"
+        case 3 => "Y"
+        case 4 => "O"
+        case 5 => "B"
+        case _ => "?"
+    }
+
+    ///
     /// `s` on the background colour that face is usually stickered.
     ///
     /// The Western scheme: white up, green front, red right, and so around.
@@ -67,7 +92,7 @@ mod CubeSolve.Render {
     /// there is no orange among them, and orange against red is the one
     /// distinction a cube renderer cannot afford to lose.
     ///
-    def paint(face: Int32, s: String): String =
+    pub def paint(face: Int32, s: String): String =
         let (r, g, b) = match face {
             case 0 => (245, 245, 245)
             case 1 => (200, 40, 40)
@@ -133,5 +158,121 @@ mod CubeSolve.Render {
         List.range(0, n)
             |> List.map(col -> sticker(Vector.get(base + col, fs)) + "│")
             |> List.join("")
+
+    ///
+    /// Parse a pretty-printed net into a `Cube`.
+    ///
+    /// Accepts plain or coloured nets in UTF-8 or ASCII box formatting, and
+    /// recognizes face letters (`U R F D L B`), color codes (`W G Y O R B`),
+    /// full color names, and ANSI background color escapes.
+    ///
+    pub def parse(text: String): Result[String, Cube.Cube] =
+        let dataRows = String.lines(text)
+            |> List.map(cellsOfLine)
+            |> List.filter(row -> not List.isEmpty(row));
+        let totalRows = List.length(dataRows);
+        if (totalRows == 0 or Int32.modulo(totalRows, 3) != 0)
+            Err("invalid net: expected 3*N data rows, found ${totalRows}")
+        else {
+            let n = totalRows / 3;
+            if (n < 2 or n > 5)
+                Err("unsupported cube size ${n}")
+            else
+                forM (
+                    intRows <- dataRows |> Result.traverse(row ->
+                        row |> Result.traverse(faceOf) |> Result.map(List.toVector));
+                    fs <- buildFacelets(n, intRows);
+                    cube <- Facelets.toCube(n, fs)
+                ) yield cube
+        }
+
+    ///
+    /// The face index for a single-character face code, color code, or numeric
+    /// index (0-5), or an error.
+    ///
+    /// Accepts face letters (`U R F D L B`), color letters (`W G Y O R B`),
+    /// and face indices (`0 1 2 3 4 5`), case-insensitively, with any ANSI escapes stripped.
+    ///
+    pub def faceOf(token: String): Result[String, Int32] =
+        let stripped = String.split(regex = escape() + "\\[[0-9;]*m", token)
+            |> List.join("")
+            |> String.trim;
+        match stripped {
+            case "U"   => Ok(0)
+            case "u"   => Ok(0)
+            case "W"   => Ok(0)
+            case "w"   => Ok(0)
+            case "0"   => Ok(0)
+            case "R"   => Ok(1)
+            case "r"   => Ok(1)
+            case "1"   => Ok(1)
+            case "F"   => Ok(2)
+            case "f"   => Ok(2)
+            case "G"   => Ok(2)
+            case "g"   => Ok(2)
+            case "2"   => Ok(2)
+            case "D"   => Ok(3)
+            case "d"   => Ok(3)
+            case "Y"   => Ok(3)
+            case "y"   => Ok(3)
+            case "3"   => Ok(3)
+            case "L"   => Ok(4)
+            case "l"   => Ok(4)
+            case "O"   => Ok(4)
+            case "o"   => Ok(4)
+            case "4"   => Ok(4)
+            case "B"   => Ok(5)
+            case "b"   => Ok(5)
+            case "5"   => Ok(5)
+            case other => Err("unknown face or color code '${other}'")
+        }
+
+    ///
+    /// Extract cell contents from a line containing cell borders (`│` or `|`).
+    ///
+    def cellsOfLine(line: String): List[String] =
+        if (String.contains(substr = "│", line) or String.contains(substr = "|", line))
+            String.split(regex = "[│|]", line)
+                |> List.filter(s -> not String.isEmpty(String.trim(s)))
+        else
+            Nil
+
+    ///
+    /// Reassemble the parsed rows into the standard facelets vector `U, R, F, D, L, B`.
+    ///
+    def buildFacelets(n: Int32, rows: List[Vector[Int32]]): Result[String, Vector[Int32]] =
+        let vRows = List.toVector(rows);
+        let validU = List.range(0, n)
+            |> List.forAll(r -> Vector.length(Vector.get(r, vRows)) == n);
+        let validMid = List.range(0, n)
+            |> List.forAll(r -> Vector.length(Vector.get(n + r, vRows)) == 4 * n);
+        let validD = List.range(0, n)
+            |> List.forAll(r -> Vector.length(Vector.get(2 * n + r, vRows)) == n);
+        if (not (validU and validMid and validD))
+            Err("invalid row length in net for ${n}x${n}x${n} cube")
+        else region rc {
+            let arr = Array.repeat(rc, 6 * n * n, 0);
+            List.range(0, n) |> List.forEach(r -> {
+                let uRow = Vector.get(r, vRows);
+                List.range(0, n) |> List.forEach(c ->
+                    Array.put(Vector.get(c, uRow), 0 * n * n + r * n + c, arr))
+            });
+            List.range(0, n) |> List.forEach(r -> {
+                let midRow = Vector.get(n + r, vRows);
+                let off = r * n;
+                List.range(0, n) |> List.forEach(c -> {
+                    Array.put(Vector.get(c, midRow), 4 * n * n + off + c, arr);
+                    Array.put(Vector.get(n + c, midRow), 2 * n * n + off + c, arr);
+                    Array.put(Vector.get(2 * n + c, midRow), 1 * n * n + off + c, arr);
+                    Array.put(Vector.get(3 * n + c, midRow), 5 * n * n + off + c, arr)
+                })
+            });
+            List.range(0, n) |> List.forEach(r -> {
+                let dRow = Vector.get(2 * n + r, vRows);
+                List.range(0, n) |> List.forEach(c ->
+                    Array.put(Vector.get(c, dRow), 3 * n * n + r * n + c, arr))
+            });
+            Ok(Array.toVector(arr))
+        }
 
 }

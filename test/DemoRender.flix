@@ -8,10 +8,17 @@ mod DemoRender {
 
     pub def main(): Unit \ IO =
         match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation("U R F", c)) {
-            case Ok(c) => match Render.colouredNet(c) {
-                case Ok(net) => println(net)
-                case Err(e)  => println("Error rendering: ${e}")
-            }
+            case Ok(c) =>
+                println("==> Face letters (U R F D L B):");
+                match Render.colouredNet(c) {
+                    case Ok(net) => println(net)
+                    case Err(e)  => println("Error rendering: ${e}")
+                };
+                println("\n==> Color letters (W R G Y O B):");
+                match Render.colouredColorNet(c) {
+                    case Ok(net) => println(net)
+                    case Err(e)  => println("Error rendering: ${e}")
+                }
             case Err(e) => println("Error applying notation: ${e}")
         }
 
