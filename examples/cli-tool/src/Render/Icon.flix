@@ -1,7 +1,7 @@
 ///
 /// Standalone 3D isometric cube icon and image renderer.
 ///
-mod CubeSolve.Render.Icon {
+mod ExampleRender.Icon {
 
     import java.awt.Color
     import java.awt.Graphics2D
@@ -201,7 +201,12 @@ mod CubeSolve.Render.Icon {
                 let c0 = cf + gap;
                 let c1 = cf + 1.0 - gap;
                 let rX = col -> cx + col * stepX;
-                let rY = (row, col) -> (cy - s * 0.5) + col * stepY + row * stepZ;
+                // The right face shares the top diamond's lower point at
+                // `(cx, cy)` and rises towards its right point. The former
+                // expression started half a face too high, pulling the whole
+                // face apart from the top and producing the floating strips
+                // visible in PNG exports.
+                let rY = (row, col) -> cy - col * stepY + row * stepZ;
                 poly.addPoint(toInt(rX(c0)), toInt(rY(r0, c0)));
                 poly.addPoint(toInt(rX(c1)), toInt(rY(r0, c1)));
                 poly.addPoint(toInt(rX(c1)), toInt(rY(r1, c1)));

@@ -13,3 +13,7 @@ authors     = ["Werner Stein"]
 # This is the sibling package this example exists to prove works, not a
 # third-party unknown, so granting it is the deliberate choice here.
 "github:wstein/flix-cubesolve" = { version = "0.3.0", security = "unrestricted" }
+
+[mvn-dependencies]
+"com.google.zxing:core" = "3.5.4"
+"com.google.zxing:javase" = "3.5.4"

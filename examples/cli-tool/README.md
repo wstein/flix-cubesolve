@@ -4,6 +4,29 @@ The demo command line for [`cubesolve`](https://github.com/wstein/flix-cubesolve
 solve, scramble, draw and identify NxNxN cubes. Kept as a separate package so
 the library itself never defines a top-level `main`.
 
+## QR and PNG rendering
+
+QR raster generation and isometric cube PNGs belong to this executable example,
+not to the `cubesolve` library. They use ZXing and Java AWT, while the library
+remains a dependency-free model and solver package.
+
+`ExampleRender.Qr` encodes text as UTF-8 through ZXing's `QRCodeWriter` and
+`MatrixToImageWriter`; `ExampleRender.Icon` draws the optional cube-state logo
+and standalone isometric icon. The example's `flix.toml` is therefore the only
+manifest that declares ZXing Maven dependencies.
+
+Flix 0.75.3 resolves Maven dependencies for compilation but only embeds JARs
+already under `lib/` in a fatjar. Build a standalone graphics-enabled example
+with:
+
+```sh
+examples/cli-tool/scripts/build-fatjar.sh
+```
+
+The helper stages ZXing's runtime JARs under the example's ignored `lib/`,
+invokes `flix build-fatjar`, then removes those staging files. It requires a
+standard `flix` executable and Maven, as an external example normally does.
+
 This is what a consuming project's `flix.toml` and `src/` look like -- it
 depends on the published `cubesolve` package exactly the way any other
 project would. It carries no wrapper of its own and is not driven by this

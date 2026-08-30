@@ -1,10 +1,11 @@
 ///
 /// QR code generation and UTF-8 graphic rendering powered by ZXing Core.
 ///
-mod CubeSolve.Render.Qr {
+mod ExampleRender.Qr {
 
     import com.google.zxing.BarcodeFormat
     import com.google.zxing.EncodeHintType
+    import com.google.zxing.client.j2se.MatrixToImageWriter
     import com.google.zxing.common.BitMatrix
     import com.google.zxing.qrcode.QRCodeWriter
     import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -17,12 +18,12 @@ mod CubeSolve.Render.Qr {
     import java.lang.Integer
     import java.lang.Object
     import java.lang.Throwable
-    import java.util.HashMap
+    import java.util.Hashtable
     import java.util.Map
     import java.util.Objects
     import javax.imageio.ImageIO
 
-    use CubeSolve.Render.Icon
+    use ExampleRender.Icon
 
     ///
     /// QR Error Correction Level.
@@ -33,6 +34,38 @@ mod CubeSolve.Render.Qr {
         case Q
         case H
     }
+
+    ///
+    /// Generate a UTF-8 QR `BufferedImage` through ZXing's
+    /// `MatrixToImageWriter`.
+    ///
+    pub def generateQRCodeImage(
+        barcodeText: String,
+        width: Int32,
+        height: Int32
+    ): Result[String, BufferedImage] \ IO =
+        try {
+            let writer = new QRCodeWriter();
+            let hints = new Hashtable();
+            discard hints.put(EncodeHintType.CHARACTER_SET, unchecked_cast("UTF-8" as Object));
+            let matrix = writer.encode(
+                barcodeText,
+                BarcodeFormat.QR_CODE,
+                width,
+                height,
+                unchecked_cast(hints as Map[EncodeHintType, Object])
+            );
+            let img = MatrixToImageWriter.toBufferedImage(matrix);
+            Result.Ok(img)
+        } catch {
+            case _ex: Throwable => Result.Err("Failed to generate QR code image")
+        }
+
+    ///
+    /// Convert a BitMatrix into a standard BufferedImage via ZXing MatrixToImageWriter.
+    ///
+    pub def toBufferedImage(matrix: BitMatrix): BufferedImage \ IO =
+        MatrixToImageWriter.toBufferedImage(matrix)
 
     ///
     /// Generate a compact UTF-8 QR code string from `text` (default Level L, dark theme).
@@ -126,7 +159,7 @@ mod CubeSolve.Render.Qr {
             let _ = ImageIO.write(img, "png", file);
             Result.Ok(())
         } catch {
-            case _ex: Throwable => Result.Err("Failed to write PNG file")
+            case ex: Throwable => Result.Err("Failed to write PNG file: ${ex.getMessage()}")
         }
 
     ///
@@ -145,7 +178,7 @@ mod CubeSolve.Render.Qr {
     }
 
     def makeHints(ec: EcLevel): Map[EncodeHintType, Object] \ IO = {
-        let hints = new HashMap();
+        let hints = new Hashtable();
         let zxEc: Object = match ec {
             case EcLevel.L => unchecked_cast(ErrorCorrectionLevel.L as Object)
             case EcLevel.M => unchecked_cast(ErrorCorrectionLevel.M as Object)
