@@ -161,6 +161,17 @@ mod CubeSolve.Solve.TwoLayers {
         Packed.pack(cross, corners, middles)
 
     ///
+    /// The first-layer tables, which these already contain.
+    ///
+    /// The cross and corner projections are shared: the first layer is solved
+    /// with two of them and the two layers with all four, so building both sets
+    /// separately would construct the same 326,160 states twice.
+    ///
+    pub def firstLayerTables(t: Tables): CubeSolve.Solve.FirstLayer.Tables =
+        let Tables.Tables(cross, corners, _, _) = t;
+        CubeSolve.Solve.FirstLayer.Tables.Tables(cross, corners)
+
+    ///
     /// How many nodes a search expanded.
     ///
     /// Re-exported so a caller measuring the heuristic does not have to reach

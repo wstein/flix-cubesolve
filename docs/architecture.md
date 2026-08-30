@@ -536,8 +536,22 @@ rules make it safe to hand around:
 `CubeSolve.Model.Notation` stays strict and flat and knows nothing about any of
 this: it parses algorithms, `Plan` parses documents.
 
-F2L, which joins the cross to the last layer, is not implemented, so the method
-cannot yet answer a whole cube.
+`CubeSolve.Method.Beginner.solution` is the first orchestration: it runs the
+cross, the first layer and the middle edges in turn, threading each stage's
+result into the next, and returns them as a labelled `Plan`.
+
+**It answers three rungs of eight, and says which.** The last four are not
+implemented, so it returns an error naming the rung it stopped at rather than a
+plan that quietly does less than its name suggests — the difference between an
+unfinished method and a wrong one. It also checks from the ladder that it really
+got where it claims, rather than from any solver's own coordinate.
+
+**The tables are built once and shared.** The two-layer tables already contain
+the cross and corner projections the first-layer search uses, so building both
+sets would construct the same 326,160 states twice.
+
+F2L, which joins the cross to the last layer for CFOP, is a different route and
+is not implemented.
 
 **The goal of one step is the precondition of the next**, and they share the
 predicates that say so. `Method.LastLayer` answers "are the first two layers

@@ -21,8 +21,14 @@ mod CubeSolve.Method.Beginner {
 
     use CubeSolve.Method.Beginner.Stage.{Nothing, Cross, FirstLayer, TwoLayers,
         TopCross, TopEdgesPlaced, TopCornersPlaced, Solved}
+    use CubeSolve.Method
     use CubeSolve.Method.LastLayer
+    use CubeSolve.Method.Plan
+    use CubeSolve.Method.Profile
     use CubeSolve.Model.Cube
+    use CubeSolve.Solve.Cross
+    use CubeSolve.Solve.FirstLayer
+    use CubeSolve.Solve.TwoLayers
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
@@ -161,6 +167,108 @@ mod CubeSolve.Method.Beginner {
     ///
     def home(start: Int32, stop: Int32, perm: Vector[Int32]): Bool =
         Vector.range(start, stop) |> Vector.forAll(i -> Vector.get(i, perm) == i)
+
+    ///
+    /// Everything the method needs to answer with.
+    ///
+    /// Built once and handed to `solution`, because the tables behind these
+    /// take about eighty seconds to construct and a caller solving more than one
+    /// cube should pay that once.
+    ///
+    pub enum Tables with Eq {
+        case Tables(TwoLayers.Tables)
+    }
+
+    ///
+    /// Build what the method needs.
+    ///
+    /// One set, not two. The two-layer tables already contain the cross and
+    /// corner projections the first-layer search uses, so building both
+    /// separately would construct the same 326,160 states twice and cost
+    /// another twenty seconds to learn nothing.
+    ///
+    pub def build(): Result[String, Tables] =
+        TwoLayers.build() |> Result.map(Tables.Tables)
+
+    ///
+    /// Solve `c` the way a person would, in named steps.
+    ///
+    /// **Three stages so far, not eight.** The cross, the first layer and the
+    /// middle edges are searched; the last layer's four rungs are not
+    /// implemented, so a cube that needs them comes back as an error naming the
+    /// rung it stopped at rather than as a plan that quietly stops early. The
+    /// ladder above lists eight and this answers three, and saying so is the
+    /// difference between an unfinished method and a wrong one.
+    ///
+    /// **Nothing here is optimal.** Each step is short for its own goal, and
+    /// three short steps are not a short solution; `CubeSolve.Solve.Standard`
+    /// answers a whole cube in about the moves this spends on two layers.
+    ///
+    pub def solution(t: Tables, c: Cube.Cube): Result[String, Plan.Plan] =
+        let Tables.Tables(two) = t;
+        let first = TwoLayers.firstLayerTables(two);
+        forM (
+            crossStep <- stage("Cross", c, Cross.solution(crossTableOf(first), c));
+            afterCross <- Cube.applyAll(crossStep#moves, c);
+            layerStep <- stage("First layer", afterCross,
+                FirstLayer.solution(first, afterCross));
+            afterLayer <- Cube.applyAll(layerStep#moves, afterCross);
+            middleStep <- stage("Middle edges", afterLayer,
+                TwoLayers.solution(two, afterLayer));
+            afterMiddles <- Cube.applyAll(middleStep#moves, afterLayer);
+            _ <- reachedTwoLayers(afterMiddles);
+            plan <- asPlan(crossStep :: layerStep :: middleStep :: Nil)
+        ) yield plan
+
+    ///
+    /// The cross table, which the first-layer tables already hold.
+    ///
+    def crossTableOf(t: FirstLayer.Tables): CubeSolve.Table.TableView =
+        let FirstLayer.Tables.Tables(cross, _) = t;
+        cross
+
+    ///
+    /// One step: what it is called, and the moves it makes.
+    ///
+    type alias Step = { name = String, moves = List[CubeSolve.Model.Move.Move] }
+
+    ///
+    /// A step, or the failure of the search behind it, named for the step.
+    ///
+    /// A search that cannot finish says so with the stage in the message. "No
+    /// first two layers within twenty moves" is a fact about a search; "Middle
+    /// edges: ..." is what a caller can act on.
+    ///
+    def stage(
+        name: String,
+        _before: Cube.Cube,
+        found: Result[String, List[CubeSolve.Model.Move.Move]]
+    ): Result[String, Step] =
+        found
+            |> Result.map(ms -> { name = name, moves = ms })
+            |> Result.mapErr(why -> "${name}: ${why}")
+
+    ///
+    /// That the method really got where it says it did.
+    ///
+    /// Read from the ladder rather than from any solver's own coordinate, so a
+    /// step that satisfied its own encoders and not the cube is caught here.
+    ///
+    def reachedTwoLayers(c: Cube.Cube): Result[String, Unit] =
+        if (isComplete(TwoLayers, c))
+            Ok(())
+        else
+            Err("the three steps ran but the cube is only at ${reached(c)}: this "
+                + "is a fault in the method, not in the cube")
+
+    ///
+    /// The steps as a plan, labelled.
+    ///
+    def asPlan(steps: List[Step]): Result[String, Plan.Plan] =
+        steps
+            |> Result.traverse(s ->
+                Plan.step(3, s#name, CubeSolve.Model.Move.showAll(s#moves)))
+            |> Result.map(Plan.of)
 
     ///
     /// What is left to do at each stage, in words.
