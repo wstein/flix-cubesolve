@@ -429,7 +429,19 @@ reports a `U` turn to make before and one after. It finds them by trying all
 after it has been applied to the cube in hand and seen to solve it. That costs
 less than a case index and cannot be subtly wrong.
 
-**One algorithm per case, not claimed to be fastest.** The source lists many for
+**Several algorithms per case, and a profile picks.** `Method.Profile` offers
+three stated rules: `default` takes the source's first, `shortest` the fewest
+parsed layer turns, and `no-rotations` the first free of whole-cube rotations.
+The metric is called *fewest parsed layer turns* rather than fastest or even HTM,
+because rotations are deliberately not counted and how long a person takes is not
+a property of the sequence.
+
+A rule that cannot be applied says so. `no-rotations` falls back to the source's
+first where no rotation-free variant is recorded, and reports that in the
+selection rather than quietly substituting -- a caller who asked for
+rotation-free moves and silently got others would have no way to tell.
+
+**No algorithm is claimed to be fastest.** The source lists many for
 each and says plainly that a longer algorithm can be quicker for a given person,
 so "fastest" is not a fact this module can hold. What it records is one
 published, replay-checked choice, alongside the optimal length the same source

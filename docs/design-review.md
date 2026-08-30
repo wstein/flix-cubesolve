@@ -505,6 +505,50 @@ and calling it the latter overstated it.
 you know it can fail. Falsifying this one cost five minutes and corrected a claim
 that had already been committed.
 
+## Eight published algorithms that do not do what they are filed under
+
+The method corpora record every algorithm the source lists for each case -- 324
+for the 21 PLL cases, 129 for the 57 OLL ones. Before any of them shipped, each
+was parsed and replayed against the state its own case describes. **Eight
+failed and were left out.**
+
+One is a plain transcription slip: Y-PLL's
+`R R U' R R FR' B' D' R D F' R' B R` has `FR'` where it means `F R'`, and the
+parser says so. The other seven parse and simply do not solve the case they are
+filed under:
+
+- F-PLL, `y2 R U' R' U R U F R U R' U' x' D' R2 D R D'`
+- F-PLL, `y2 R U' R' U R U F R U R' U' x U' R2 U R U'`
+- G-PLL c, `B2 L2 U' B2 D B2 D' R2 U M2 F2 (x2)`
+- J-PLL a, `(y2) (M' D2 M') R U R' F' R U R' U' R' F R2 U' R' (M D2 M)`
+- H-PLL, `M2' U2 M2' U' M2' U' M2'`
+- OLL Bottlecap, `(U) R' U' R' F R F' R U2' R' U2 R`
+
+The check that found them is worth more than the exclusions. A corpus of
+published algorithms is data from outside, and treating it as correct because it
+is published is how a wrong one reaches a user who then blames their own hands.
+Each recorded algorithm is now replayed against its case in the test suite, so a
+future addition that does not work cannot ship quietly.
+
+## A finishing turn is not always a `U` turn
+
+Recognition reports the turn to make after the algorithm. That was written as a
+count of `U` quarter turns, which is what every reference means by AUF, and it
+was wrong for a small number of cases.
+
+Y-PLL's shortest recorded algorithm is
+`R2 U' R' U R U' x D' R' U R' U' R' D R`. It contains an `x` and no `x'`, so it
+ends with the cube on its side. A `U` written after that turns whatever face is
+now uppermost, which is not the layer the AUF is about -- and no pair of plain
+`U` turns solves those cases at all, which is how it surfaced: the profile tests
+failed on exactly one case out of 21, under exactly one profile.
+
+The turn is now named for the frame the algorithm leaves, so it may come out as
+`F2` or `L'`. `Solution#finish` is therefore written rather than counted. The
+lesson is the one this project keeps relearning: a rotation in a sequence
+changes what every later move name means, and anything appended to an algorithm
+has to be expressed in the frame that algorithm ends in.
+
 ## Undisputed, and worth keeping
 
 - Appendix B ("claims not to repeat") is unusually disciplined and should be

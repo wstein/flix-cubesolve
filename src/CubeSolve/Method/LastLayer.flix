@@ -16,6 +16,10 @@
 mod CubeSolve.Method.LastLayer {
 
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Move
+    use CubeSolve.Model.Move.Face.U
+    use CubeSolve.Model.Move.Move.Turn
+    use CubeSolve.Model.Rotation
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
@@ -59,6 +63,22 @@ mod CubeSolve.Method.LastLayer {
                 unturned(0, lastLayerSlots(), co) and unturned(0, lastLayerSlots(), eo)
             case _ => false
         }
+
+    ///
+    /// `k` quarter turns of the layer that started on top, written for a cube
+    /// now held at `orientation`.
+    ///
+    /// Most published algorithms put the cube back the way they found it and
+    /// this comes out as a plain `U` turn. Some do not -- an algorithm with an
+    /// `x` and no `x'` ends with the cube on its side -- and then the layer the
+    /// turn is about is no longer uppermost, so the turn is named for the face
+    /// it is actually on. Writing `U` there would turn the wrong face.
+    ///
+    pub def topTurnWritten(k: Int32, orientation: Rotation.Rotation): String =
+        if (Int32.modulo(k, 4) == 0)
+            ""
+        else
+            Move.show(Rotation.reframe(Turn(U, k), Rotation.inverse(orientation)))
 
     ///
     /// Whether every slot from `start` up to `stop` holds its own piece the
