@@ -108,3 +108,72 @@ jobs:
             --generate-notes \
             artifact/flix-cubesolve.fpkg \
             artifact/flix.toml
+
+  # The library is qualified before the tag; this is the half that cannot be.
+  #
+  # `examples/cli-tool` is a separate package that resolves `cubesolve` through
+  # release assets rather than through the working tree, which is what makes it
+  # an honest consumer -- it sees only the public surface, under Flix's
+  # dependency security context, exactly as anyone else's project would. The
+  # price is that a source change cannot compile it until the version it pins
+  # exists, so this runs after the publish above and not before.
+  #
+  # It has already earned its place: qualifying 0.3.0 by hand caught a call left
+  # at the old arity, an assertion on output text that had been replaced, and an
+  # assertion on refusal wording that moved when OLL and PLL began sharing it.
+  # None of those are visible to any gate that builds the library alone.
+  #
+  # **A failure here means the release is already published and wrong.** There is
+  # no undoing it -- a version anyone may have resolved must not change under
+  # them -- so the fix is a corrective patch release, not a retag.
+  qualify-example:
+    name: Qualify the example against ${{ github.ref_name }}
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The pin has to name the version just published, or this job would
+      # cheerfully qualify the previous release and report success.
+      - name: The example pins the version being released
+        run: |
+          set -euo pipefail
+          released=${GITHUB_REF_NAME#v}
+          pinned=$(sed -nE 's/.*flix-cubesolve"[^"]*version[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' \
+            examples/cli-tool/flix.toml)
+          if [ "$pinned" != "$released" ]; then
+            echo "::error file=examples/cli-tool/flix.toml::the example pins" \
+                 "${pinned}, but ${GITHUB_REF_NAME} publishes ${released}"
+            exit 1
+          fi
+          echo "ok  the example pins ${pinned}"
+
+      # Resolution is a real check, not setup: a release whose assets are
+      # missing or malformed fails here rather than on a user's machine.
+      - name: Resolve and test the example
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf examples/cli-tool/lib
+          ./flixw examples test cli-tool 2>&1 | tee /tmp/example.log
+          if ! grep -qE "^Passed: [0-9]+" /tmp/example.log; then
+            echo "::error::the example reported no test results -- it ran nothing"
+            exit 1
+          fi
+
+      - name: Say what a failure here means
+        if: failure()
+        run: |
+          echo "::error::${GITHUB_REF_NAME} is published and the example does not" \
+               "build against it. A published version must not change under" \
+               "anyone who has resolved it, so fix forward with a corrective" \
+               "patch release rather than retagging."

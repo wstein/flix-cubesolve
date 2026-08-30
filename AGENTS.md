@@ -237,6 +237,50 @@ nothing. The same applies to the gate as a whole: it was run with the defect it
 exists for put back, and passed twenty-five rounds. `docs/design-review.md` says
 why, and it is the better lesson of the two.
 
+## Releasing
+
+A tag publishes. `.github/workflows/release.yaml` builds the package from the
+commit the tag names and attaches it to a GitHub release, and `github:`
+dependencies resolve through those assets — so a tag without a release is a
+version nobody can depend on.
+
+**Three versions move together**, in the release commit:
+
+- `flix.toml` — `version`
+- `src/CubeSolve.flix` — the string `generator()` returns
+- `examples/cli-tool/flix.toml` — the pin the example resolves through
+
+The generator matters more than a version bump usually does: since `04e59c5` the
+cache *compares* it rather than merely recording it, so bumping invalidates every
+table an older build left behind. That is intended at a release boundary and
+costs one rebuild. Test fixtures pin the string too, and move with it.
+
+Then, in order:
+
+```sh
+./flixw format
+./flixw validate                     # wrapper, lock and flix.toml agree
+./flixw build                        # redundancy checks `check` does not run
+CUBESOLVE_EXHAUSTIVE=1 ./flixw test
+./flixw metrics --format md
+./scripts/qualify-cache-race.sh      # Gate 13.2
+git commit                           # the version bump
+git push origin main
+git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z
+```
+
+**The example cannot be qualified before the tag**, because it resolves through
+release assets rather than the working tree. That is the point of it — it sees
+only the public surface, under Flix's dependency security context, exactly as
+any other project would — and the cost is that a source change cannot compile it
+until the version it pins exists. So `release.yaml` qualifies it *after*
+publishing, in the `qualify-example` job, and the release is not complete until
+that job is green.
+
+**A failed post-publish qualification needs a corrective patch release.** A
+version anyone may already have resolved must not change under them, so never
+retag: fix forward with `vX.Y.Z+1`.
+
 ## Commits
 
 Conventional commits, single-purpose, with the type and scope naming the primary
