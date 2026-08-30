@@ -1,0 +1,12 @@
+[package]
+name        = "cubesolve-render-tool"
+description = "Optional ZXing and Java AWT rendering helpers for cubesolve examples"
+version     = "0.1.0"
+repository  = "github:wstein/flix-cubesolve"
+flix        = "0.75.3"
+license     = "AGPL-3.0-or-later"
+authors     = ["Werner Stein"]
+
+[mvn-dependencies]
+"com.google.zxing:core" = "3.5.4"
+"com.google.zxing:javase" = "3.5.4"
