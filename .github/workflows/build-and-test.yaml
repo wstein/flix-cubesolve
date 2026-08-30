@@ -98,7 +98,10 @@ jobs:
               echo "::error::${name} failed"
               exit 1
             fi
-            if ! grep -qE "^Passed: [0-9]+" /tmp/example.log; then
+            # The compiler colours its summary, so "Passed:" is followed by an
+            # escape sequence rather than by the digit. Strip escapes before
+            # matching: this guard once rejected a run of 21 passing tests.
+            if ! sed $'s/\033\[[0-9;]*m//g' /tmp/example.log | grep -qE "^Passed: [0-9]+"; then
               echo "::error::${name} reported no test results -- it ran nothing"
               exit 1
             fi

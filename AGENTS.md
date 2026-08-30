@@ -300,16 +300,27 @@ publication has begun. Burning a version number on a CI timeout is worse than
 moving a tag nobody could have seen, and shipping a second tag for the same
 source is worse than both.
 
-**`qualify-example` ran end to end for the first time on `v0.4.0`, and it
-caught a real defect.** The example gained `--method` in the same release that
+**`qualify-example` ran end to end for the first time on `v0.4.0`, and it both
+caught a real defect and produced a false one.** The example gained `--method` in the same release that
 added the methods it calls, so that code could not be compiled until `v0.4.0`
 published — and it did not compile: `solve` is a Flix keyword, and
 `Methods.solve` was four parse errors. The library was green throughout; only
 the consumer was broken, which is exactly the class of defect this job exists
 for. `v0.4.1` is the corrective release.
 
-The lesson is not "watch the job" but **what it costs to add a public method and
-its first consumer in one release.** Anything under `examples/` that calls a
+Then it failed `v0.4.1`, whose example compiled and whose 21 tests passed. The
+"no test count means it ran nothing" guard greps `^Passed: [0-9]+`, and the
+compiler colours that line, so the digit sits behind an escape sequence. The
+guard had only ever been watched failing on *empty* output — the direction it
+was designed for — so nobody had seen it reject a success. It now strips escapes
+before matching, and was checked in both directions.
+
+That is the general lesson about guards: **one that has only been exercised in
+the failing direction is half-tested.** A gate that cannot pass is as useless as
+one that cannot fail, and costs more to discover.
+
+The other lesson is **what it costs to add a public method and its first
+consumer in one release.** Anything under `examples/` that calls a
 brand-new API is unverifiable until the tag exists, so it will be qualified for
 the first time in public. Either accept that a patch release may follow, or add
 the API in one release and its consumer in the next.

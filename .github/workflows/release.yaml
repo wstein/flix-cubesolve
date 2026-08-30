@@ -175,7 +175,11 @@ jobs:
           set -euo pipefail
           rm -rf examples/cli-tool/lib
           ./flixw examples test cli-tool 2>&1 | tee /tmp/example.log
-          if ! grep -qE "^Passed: [0-9]+" /tmp/example.log; then
+          # The compiler colours its summary, so "Passed:" is followed by an
+          # escape sequence rather than by the digit. Strip escapes before
+          # matching: this guard once rejected a run of 21 passing tests, and
+          # failed the release that those tests had just qualified.
+          if ! sed $'s/\033\[[0-9;]*m//g' /tmp/example.log | grep -qE "^Passed: [0-9]+"; then
             echo "::error::the example reported no test results -- it ran nothing"
             exit 1
           fi
