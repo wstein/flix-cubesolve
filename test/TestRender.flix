@@ -230,6 +230,77 @@ mod TestRender {
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(numNet))
 
     ///
+    /// Plain spaced nets without borders parse correctly.
+    ///
+    @Test
+    def plainSpacedNetsParseCorrectly(): Unit \ Assert =
+        let plainNet = List.join(String.lineSeparator(),
+            "      U U U"
+                :: "      U U U"
+                :: "      U U U"
+                :: "L L L F F F R R R B B B"
+                :: "L L L F F F R R R B B B"
+                :: "L L L F F F R R R B B B"
+                :: "      D D D"
+                :: "      D D D"
+                :: "      D D D" :: Nil);
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(plainNet))
+
+    ///
+    /// Compact unspaced nets parse correctly.
+    ///
+    @Test
+    def compactNetsParseCorrectly(): Unit \ Assert =
+        let compactNet = List.join(String.lineSeparator(),
+            "    UUU"
+                :: "    UUU"
+                :: "    UUU"
+                :: "LLLFFFRRRBBB"
+                :: "LLLFFFRRRBBB"
+                :: "LLLFFFRRRBBB"
+                :: "    DDD"
+                :: "    DDD"
+                :: "    DDD" :: Nil);
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(compactNet))
+
+    ///
+    /// Nets embedded in doc comments with markdown fences parse correctly.
+    ///
+    @Test
+    def docCommentNetsParseCorrectly(): Unit \ Assert =
+        let docNet = List.join(String.lineSeparator(),
+            "/// ```"
+                :: "///             ┌───┬───┬───┐"
+                :: "///             │ U │ U │ U │"
+                :: "///             ├───┼───┼───┤"
+                :: "///             │ U │ U │ U │"
+                :: "///             ├───┼───┼───┤"
+                :: "///             │ U │ U │ U │"
+                :: "/// ┌───┬───┬───┼───┼───┼───┼───┬───┬───┬───┬───┬───┐"
+                :: "/// │ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "/// ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "/// │ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "/// ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "/// │ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "/// └───┴───┴───┼───┼───┼───┼───┴───┴───┴───┴───┴───┘"
+                :: "///             │ D │ D │ D │"
+                :: "///             ├───┼───┼───┤"
+                :: "///             │ D │ D │ D │"
+                :: "///             ├───┼───┼───┤"
+                :: "///             │ D │ D │ D │"
+                :: "///             └───┴───┴───┘"
+                :: "/// ```" :: Nil);
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(docNet))
+
+    ///
+    /// Flattened 54-character string in face order (U, R, F, D, L, B) parses correctly.
+    ///
+    @Test
+    def flatFaceletStringsParseCorrectly(): Unit \ Assert =
+        let flat = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
+        Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(flat))
+
+    ///
     /// Malformed nets are rejected.
     ///
     @Test

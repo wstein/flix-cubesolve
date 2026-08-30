@@ -162,29 +162,60 @@ mod CubeSolve.Render {
     ///
     /// Parse a pretty-printed net into a `Cube`.
     ///
-    /// Accepts plain or coloured nets in UTF-8 or ASCII box formatting, and
-    /// recognizes face letters (`U R F D L B`), color codes (`W G Y O R B`),
-    /// full color names, and ANSI background color escapes.
+    /// Tolerates UTF-8 box characters, ASCII borders (`+`, `-`, `|`), plain
+    /// spaced nets, compact unspaced nets, doc comments (`///`), markdown blocks,
+    /// face codes (`U R F D L B`), color codes (`W G Y O R B`), and numeric
+    /// face indices (`0 1 2 3 4 5`).
     ///
     pub def parse(text: String): Result[String, Cube.Cube] =
         let dataRows = String.lines(text)
             |> List.map(cellsOfLine)
             |> List.filter(row -> not List.isEmpty(row));
         let totalRows = List.length(dataRows);
-        if (totalRows == 0 or Int32.modulo(totalRows, 3) != 0)
-            Err("invalid net: expected 3*N data rows, found ${totalRows}")
-        else {
+        let isNet = totalRows > 0
+            and Int32.modulo(totalRows, 3) == 0
+            and totalRows / 3 >= 2
+            and totalRows / 3 <= 5;
+        if (isNet) {
             let n = totalRows / 3;
-            if (n < 2 or n > 5)
-                Err("unsupported cube size ${n}")
-            else
+            let netResult = forM (
+                intRows <- dataRows |> Result.traverse(row ->
+                    row |> Result.traverse(faceOf) |> Result.map(List.toVector));
+                fs <- buildFacelets(n, intRows);
+                cube <- Facelets.toCube(n, fs)
+            ) yield cube;
+            match netResult {
+                case Ok(cube) => Ok(cube)
+                case Err(_)   => parseFallback(dataRows)
+            }
+        } else
+            parseFallback(dataRows)
+
+    ///
+    /// Parse fallback from flattened facelet tokens in standard order `U, R, F, D, L, B`.
+    ///
+    def parseFallback(dataRows: List[List[String]]): Result[String, Cube.Cube] =
+        let tokens = List.flatten(dataRows);
+        let total = List.length(tokens);
+        match sizeOfCount(total) {
+            case Some(n) =>
                 forM (
-                    intRows <- dataRows |> Result.traverse(row ->
-                        row |> Result.traverse(faceOf) |> Result.map(List.toVector));
-                    fs <- buildFacelets(n, intRows);
-                    cube <- Facelets.toCube(n, fs)
+                    ints <- tokens |> Result.traverse(faceOf);
+                    cube <- Facelets.toCube(n, List.toVector(ints))
                 ) yield cube
+            case None    => Err("invalid net: unrecognized row structure or token count (${total})")
         }
+
+    ///
+    /// The cube size corresponding to a total facelet count, if any.
+    ///
+    def sizeOfCount(count: Int32): Option[Int32] = match count {
+        case 24  => Some(2)
+        case 54  => Some(3)
+        case 96  => Some(4)
+        case 150 => Some(5)
+        case _   => None
+    }
 
     ///
     /// The face index for a single-character face code, color code, or numeric
@@ -228,14 +259,60 @@ mod CubeSolve.Render {
         }
 
     ///
-    /// Extract cell contents from a line containing cell borders (`│` or `|`).
+    /// Extract cell contents from a line containing cell borders or plain text.
     ///
     def cellsOfLine(line: String): List[String] =
-        if (String.contains(substr = "│", line) or String.contains(substr = "|", line))
-            String.split(regex = "[│|]", line)
-                |> List.filter(s -> not String.isEmpty(String.trim(s)))
-        else
+        let trimmed = line
+            |> String.trim
+            |> String.replace(src = "///", dst = "")
+            |> String.replace(src = "```", dst = "")
+            |> String.trim;
+        if (String.isEmpty(trimmed) or isBorderOnly(trimmed))
             Nil
+        else if (String.contains(substr = "│", trimmed) or String.contains(substr = "|", trimmed))
+            String.split(regex = "[│|]", trimmed)
+                |> List.flatMap(extractTokens)
+        else
+            extractTokens(trimmed)
+
+    ///
+    /// Whether `s` is composed purely of box border characters and whitespace.
+    ///
+    def isBorderOnly(s: String): Bool =
+        let stripped = s
+            |> String.replace(src = "┌", dst = "")
+            |> String.replace(src = "┬", dst = "")
+            |> String.replace(src = "┐", dst = "")
+            |> String.replace(src = "├", dst = "")
+            |> String.replace(src = "┼", dst = "")
+            |> String.replace(src = "┤", dst = "")
+            |> String.replace(src = "└", dst = "")
+            |> String.replace(src = "┴", dst = "")
+            |> String.replace(src = "┘", dst = "")
+            |> String.replace(src = "─", dst = "")
+            |> String.replace(src = "+", dst = "")
+            |> String.replace(src = "-", dst = "")
+            |> String.replace(src = "=", dst = "")
+            |> String.trim;
+        String.isEmpty(stripped)
+
+    ///
+    /// Extract recognized sticker tokens from a string fragment.
+    ///
+    def extractTokens(segment: String): List[String] =
+        let clean = String.split(regex = escape() + "\\[[0-9;]*m", segment)
+            |> List.join("")
+            |> String.trim;
+        if (String.isEmpty(clean))
+            Nil
+        else
+            String.words(clean)
+                |> List.flatMap(word ->
+                    if (String.length(word) == 1)
+                        word :: Nil
+                    else
+                        String.toList(word) |> List.map(Char.toString))
+                |> List.filter(t -> Result.isOk(faceOf(t)))
 
     ///
     /// Reassemble the parsed rows into the standard facelets vector `U, R, F, D, L, B`.
