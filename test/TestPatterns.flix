@@ -122,7 +122,7 @@ mod TestPatterns {
                     "the superflip should be its own inverse")
         }
 
-    /// Every 4x4x4 curated pattern algorithm reaches its unique recorded state.
+    /// The 4x4x4 catalogue has one record per token; Kewbz rows replay to their derived tokens.
     @Test
     def fourByFourPatternsApplySoundly(): Unit \ Assert =
         let all = Patterns.Revenge.all();
@@ -150,7 +150,7 @@ mod TestPatterns {
             }
         }, all)
 
-    /// Every 5x5x5 curated pattern algorithm reaches its unique recorded state.
+    /// The 5x5x5 catalogue has one record per token; Kewbz rows replay to their derived tokens.
     @Test
     def fiveByFivePatternsApplySoundly(): Unit \ Assert =
         let all = Patterns.Professor.all();
