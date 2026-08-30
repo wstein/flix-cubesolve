@@ -2,7 +2,7 @@
 name        = "cubesolve"
 description = "A solving and scrambling engine for NxNxN twisty cubes, 2x2x2 through 5x5x5"
 repository  = "github:wstein/flix-cubesolve"
-version     = "0.3.0"
+version     = "0.4.0"
 # Exactly x.y.z, three integers: "0.75" or a -suffix is rejected. The compiler checks
 # the shape and ignores the value; flixw enforces it as the floor the lock satisfies.
 flix        = "0.75.3"
