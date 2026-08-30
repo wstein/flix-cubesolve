@@ -27,6 +27,33 @@ mod JsonOut {
         });
         "${obj}"
 
+    ///
+    /// A step method's answer: the ordered steps, and the whole sequence.
+    ///
+    /// The steps are the point of a method answer, so they are an array of
+    /// objects rather than one string a caller would have to parse back. The
+    /// flattened `sequence` is there too, because that is what gets replayed.
+    ///
+    pub def plan(
+        size: Int32,
+        token: String,
+        method: String,
+        sequence: String,
+        layerTurns: Int32,
+        steps: List[(String, String)]
+    ): String =
+        let stepObjs = steps |> List.map(match (label, moves) ->
+            JObject(Map#{"step" => str(label), "moves" => str(moves)}));
+        let obj = JObject(Map#{
+            "size" => num(size),
+            "state" => str(token),
+            "method" => str(method),
+            "steps" => JArray(List.toVector(stepObjs)),
+            "sequence" => str(sequence),
+            "layerTurns" => num(layerTurns)
+        });
+        "${obj}"
+
     /// Solve response JSON with method and pattern provenance
     pub def solution(
         size: Int32,

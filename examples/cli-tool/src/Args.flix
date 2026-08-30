@@ -70,6 +70,30 @@ mod Args {
         }
 
     ///
+    /// Pull an optional `--method name` from arguments and hand the rest on.
+    ///
+    /// An unknown name is refused by listing the methods rather than falling
+    /// back to the default, for the reason `--budget` gives: somebody who asked
+    /// for `cfop` and silently got a searched answer would be misled about what
+    /// they were reading.
+    ///
+    pub def withMethod(
+        args: List[String],
+        k: (Methods.Method, List[String]) -> Result[String, String] \ ef
+    ): Result[String, String] \ ef =
+        match extractOption("--method", args) {
+            case Ok((Some(name), remaining)) =>
+                match Methods.ofName(name) {
+                    case Some(m) => k(m, remaining)
+                    case None    => Err("'${name}' is not a method: there is ${Methods.names()}")
+                }
+            case Ok((None, remaining)) =>
+                k(Methods.standard(), remaining)
+            case Err(msg) =>
+                Err(msg)
+        }
+
+    ///
     /// Pull an optional `--size n` from arguments and hand the rest on.
     ///
     pub def withSize(

@@ -29,9 +29,10 @@ def main(): Unit \ IO =
 def dispatch(args: List[String]): Unit \ IO =
     Args.withJson(args, (isJson, cmdArgs) -> match cmdArgs {
         case "solve" :: rest    =>
-            report(isJson, Args.withBudget(rest, (b, afterBudget) ->
-                Args.withSize(afterBudget, Solving, (size, more) ->
-                    solveCommand(isJson, b, size, more))))
+            report(isJson, Args.withMethod(rest, (m, afterMethod) ->
+                Args.withBudget(afterMethod, (b, afterBudget) ->
+                    Args.withSize(afterBudget, Solving, (size, more) ->
+                        solveCommand(isJson, m, b, size, more)))))
         case "show" :: rest     =>
             report(isJson, Args.withSize(rest, Turning, (size, more) ->
                 showCommand(isJson, size, more)))
@@ -62,18 +63,29 @@ def dispatch(args: List[String]): Unit \ IO =
     })
 
 ///
-/// `solve [--size n] [--budget name] [--json] <scramble>`
+/// `solve [--method name] [--size n] [--budget name] [--json] <scramble>`
+///
+/// The searching solver is the default and the only one that answers a cube of
+/// any size. `cfop` and `beginner` answer in named steps, 3x3x3 only. Both
+/// honour `--json`, which gives the steps as data rather than as the rendered
+/// document.
 ///
 def solveCommand(
     isJson: Bool,
+    m: Methods.Method,
     b: Budgets.Budget,
     size: Int32,
     rest: List[String]
 ): Result[String, String] \ IO =
-    if (isJson)
-        Args.onCube(size, rest, (n, c) -> Engine.solveCubeJson(b, n, c))
+    if (Methods.searches(m))
+        if (isJson)
+            Args.onCube(size, rest, (n, c) -> Engine.solveCubeJson(b, n, c))
+        else
+            Args.onCube(size, rest, (n, c) -> Engine.solveCube(b, n, c))
+    else if (isJson)
+        Args.onCube(size, rest, (n, c) -> Methods.solveJson(m, n, c))
     else
-        Args.onCube(size, rest, (n, c) -> Engine.solveCube(b, n, c))
+        Args.onCube(size, rest, (n, c) -> Methods.solve(m, n, c))
 
 ///
 /// `show [--size n] [--json] <scramble>`

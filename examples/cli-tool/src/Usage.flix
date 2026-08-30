@@ -14,7 +14,7 @@ mod Usage {
     pub def text(): String = List.join(String.lineSeparator(),
         "cubesolve -- solve, scramble and draw n x n x n cubes"
             :: ""
-            :: "  solve    [--size n] [--budget b] <scramble>   a solution, and its move count"
+            :: "  solve    [--method m] [--size n] [--budget b] <scramble>   a solution"
             :: "  show     [--size n] [--json] <input>      the cube as a coloured net"
             :: "  identify [--size n] [--json] <input>      which published pattern it is"
             :: "  scramble [--size n] [--json]              a uniform random-state scramble"
@@ -29,6 +29,9 @@ mod Usage {
                 + "draws ${Args.written(CubeSolve.turnableSizes())}."
             :: "Tables are cached after the first run."
             :: "solve takes --budget: ${Budgets.names()} (probes, not seconds)."
+            :: "solve takes --method: ${Methods.names()}. kociemba searches and"
+            :: "  answers any size; cfop and beginner answer 3x3x3 in named steps,"
+            :: "  are much longer, and ignore --budget."
             :: "oll and pll take --profile: ${Args.profileNames()}."
             :: Nil)
 
