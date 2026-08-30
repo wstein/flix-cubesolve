@@ -78,7 +78,10 @@ mod CubeSolve.Method.Pll {
     /// What a recognised cube turned out to be.
     ///
     /// `setup` is quarter turns of `U` before the algorithm, zero to three.
-    /// `finish` is the turn after it, **written** rather than counted, because
+    ///
+    /// **`finish` is a move sequence, not an AUF count.** It changed from
+    /// `Int32` to `String` in 0.3.0, deliberately: it is the turn after the
+    /// algorithm, **written** rather than counted, because
     /// it is not always a `U` turn: an algorithm that leaves the cube rotated
     /// finishes with whatever face the original top layer is now showing on.
     /// `sequence` is the whole thing to execute. `ops` is the parsed sequence --

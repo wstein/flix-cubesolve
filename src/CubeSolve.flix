@@ -81,7 +81,7 @@ mod CubeSolve {
     /// does not capture that, so a table from another build is rebuilt rather
     /// than trusted. See `CubeSolve.Table.Codec.expect`.
     ///
-    pub def generator(): String = "cubesolve 0.2.0"
+    pub def generator(): String = "cubesolve 0.3.0"
 
     ///
     /// Whether this engine solves an `n x n x n`.

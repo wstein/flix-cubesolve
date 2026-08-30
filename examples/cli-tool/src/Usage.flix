@@ -19,12 +19,14 @@ mod Usage {
             :: "  identify [--size n] <scramble>   which published pattern it is"
             :: "  scramble                         a uniform random-state scramble"
             :: "  patterns [--size n]              the published corpus"
-            :: "  pll                <scramble>    the last-layer case and its algorithm"
+            :: "  oll                <scramble>    the last-layer orientation case"
+            :: "  pll                <scramble>    the last-layer permutation case"
             :: "  help                             this"
             :: ""
             :: "Solves ${Args.written(CubeSolve.supportedSizes())}; "
                 + "draws ${Args.written(CubeSolve.turnableSizes())}."
             :: "Tables are cached after the first run."
+            :: "oll and pll take --profile: ${Args.profileNames()}."
             :: Nil)
 
 }

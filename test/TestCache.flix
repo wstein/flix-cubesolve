@@ -9,7 +9,7 @@ mod TestCache {
         Codec.header({
             table = "pocket.distances",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.2.0"
+            generator = "cubesolve 0.3.0"
         })
 
     def table(seed: Int32): Result[String, Table.TableView] =
@@ -82,7 +82,7 @@ mod TestCache {
         let foreign = Codec.header({
             table = "pocket.distances",
             convention = "some-other-numbering@1",
-            generator = "cubesolve 0.2.0"
+            generator = "cubesolve 0.3.0"
         });
         let builds = Ref.fresh(rc, 0);
         let build = () -> { Ref.put(Ref.get(builds) + 1, builds); table(0) };

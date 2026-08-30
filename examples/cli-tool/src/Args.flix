@@ -8,6 +8,7 @@
 mod Args {
 
     use Args.Needs.{Turning, Solving, Corpus}
+    use CubeSolve.Method.Profile
     use CubeSolve.Model.Cube
 
     ///
@@ -85,6 +86,36 @@ mod Args {
     pub def written(sizes: Vector[Int32]): String =
         sizes
             |> Vector.map(n -> "${n}x${n}x${n}")
+            |> Vector.toList
+            |> List.join(", ")
+
+    ///
+    /// Pull an optional `--profile <name>` off the front and hand the rest on.
+    ///
+    /// Defaults to `default`, which is the algorithm the source lists first. An
+    /// unknown name is refused with the ones that exist, rather than quietly
+    /// falling back -- a caller who misspells a profile should be told, not
+    /// given something else.
+    ///
+    pub def withProfile(
+        args: List[String],
+        k: (Profile.Profile, List[String]) -> Result[String, String] \ ef
+    ): Result[String, String] \ ef = match args {
+        case "--profile" :: name :: rest =>
+            match Profile.ofName(name) {
+                case Some(p) => k(p, rest)
+                case None    =>
+                    Err("'${name}' is not a profile: there is ${profileNames()}")
+            }
+        case rest => k(Profile.Profile.SourceFirst, rest)
+    }
+
+    ///
+    /// The profiles there are, written out.
+    ///
+    pub def profileNames(): String =
+        Profile.all()
+            |> Vector.map(Profile.nameOf)
             |> Vector.toList
             |> List.join(", ")
 
