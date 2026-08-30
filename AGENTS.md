@@ -133,6 +133,10 @@ The mistakes that show up most often:
 - handlers are `run { ... } with handler E { ... }`; chain them rather than
   nesting `run`
 - annotations are uppercase: `@Test`, `@Lazy`, `@Parallel`, `@MustUse`
+- **`solve`, `run`, `from`, `choose` and `case` are keywords**, and a definition
+  named for one is a parse error rather than a name clash. `solve` is the easy
+  one to hit in this project: it shipped as `Methods.solve` in `v0.4.0` and
+  broke the example. Name it `answer`, `solution`, or anything else
 - Java types need a top-level `import`, and all Java interop carries `IO`
 
 Prefer effects and handlers to callbacks or hand-written CPS, and standard
@@ -281,14 +285,34 @@ that job is green.
 version anyone may already have resolved must not change under them, so never
 retag: fix forward with `vX.Y.Z+1`.
 
-**`v0.4.0` is `qualify-example`'s first end-to-end run — watch it.** The job was
-added after `v0.3.0` had already published, so it has never run against a real
-release. Its two guards were exercised on their own: the version-pin check was
-run against `examples/cli-tool/flix.toml`, and the "no test count means it ran
-nothing" guard is the one from `build-and-test.yaml`, which was watched failing
-correctly while `./flixw examples` was broken. The wiring between them was not.
-So on the next release, read that job's log rather than only its colour, and
-confirm it reports a test count from the version just published.
+**The one exception is a tag that never published.** A run can die before the
+release exists -- `v0.4.0` was killed by a job timeout with the suite still
+running -- and there is then nothing anyone could have resolved. Such a tag may
+be moved, but only to repair the qualification itself, and only after checking:
+
+```sh
+gh release view vX.Y.Z          # must be "release not found"
+gh release view vX.Y.Z --json assets
+```
+
+If the release exists at all, even with no assets, the exception does not apply:
+publication has begun. Burning a version number on a CI timeout is worse than
+moving a tag nobody could have seen, and shipping a second tag for the same
+source is worse than both.
+
+**`qualify-example` ran end to end for the first time on `v0.4.0`, and it
+caught a real defect.** The example gained `--method` in the same release that
+added the methods it calls, so that code could not be compiled until `v0.4.0`
+published — and it did not compile: `solve` is a Flix keyword, and
+`Methods.solve` was four parse errors. The library was green throughout; only
+the consumer was broken, which is exactly the class of defect this job exists
+for. `v0.4.1` is the corrective release.
+
+The lesson is not "watch the job" but **what it costs to add a public method and
+its first consumer in one release.** Anything under `examples/` that calls a
+brand-new API is unverifiable until the tag exists, so it will be qualified for
+the first time in public. Either accept that a patch release may follow, or add
+the API in one release and its consumer in the next.
 
 ## Commits
 
