@@ -88,6 +88,31 @@ jobs:
             echo "::error::no project pages found in build/doc -- the flix doc source-link format may have changed"
             exit 1
           fi
+
+          # A module holding only submodules -- CubeSolve.Solve, which is just
+          # where Standard, Pocket and the rest live -- has no definitions, so
+          # no Source link, so the match above misses it. Its page is still this
+          # project's, and every page under it links up to it.
+          #
+          # The ancestors are derived from the matched names by stripping dot
+          # segments, not from a root namespace spelled out here, so a copy of
+          # this template that renames its modules keeps working.
+          ancestors=$(
+            printf '%s\n' "$pages" | sed 's/\.html$//' | while IFS= read -r m; do
+              while [ "${m%.*}" != "$m" ]; do
+                m="${m%.*}"
+                printf '%s.html\n' "$m"
+              done
+            done | sort -u
+          )
+          while IFS= read -r a; do
+            [ -n "$a" ] || continue
+            [ -f "build/doc/$a" ] || continue
+            printf '%s\n' "$pages" | grep -qxF "$a" || pages="$pages
+          $a"
+          done <<<"$ancestors"
+          pages=$(printf '%s\n' "$pages" | sed 's/^ *//' | sort -u)
+
           echo "publishing: $(echo "$pages" | tr '\n' ' ')"
 
           rm -rf site && mkdir site
@@ -115,6 +140,36 @@ jobs:
             echo "::error::a published page still contains a build-machine path"
             exit 1
           fi
+
+          # `flix doc` writes href='Eq.html' for every trait in a `with` clause
+          # and then never generates Eq.html -- not here, and not in the full
+          # standard library output either. The links are dangling in the
+          # generator's own output, so narrowing to this project's pages did not
+          # cause it and republishing the library would not fix it.
+          #
+          # They are pointed at the canonical documentation instead. That is the
+          # one place this site stops matching the pinned compiler exactly, and
+          # it is the better of the two: api.flix.dev serves whatever version is
+          # current, which for a trait like Eq is a far smaller discrepancy than
+          # a 404.
+          #
+          # Only targets that were not published are redirected. A trait this
+          # project defines itself has a page here, and sending readers to
+          # api.flix.dev to read about it -- where it does not exist -- would
+          # replace a working link with a 404 on somebody else's site.
+          traits=$(
+            grep -ohE "href='[A-Za-z][A-Za-z0-9_]*\.html' title='trait " site/*.html |
+              sed -E "s|^href='||; s|\.html' title='trait $||" | sort -u
+          )
+          while IFS= read -r t; do
+            [ -n "$t" ] || continue
+            [ -f "site/$t.html" ] && continue
+            echo "trait $t is not published here; linking to api.flix.dev"
+            for f in site/*.html; do
+              sed "s|href='$t.html' title='trait |href='https://api.flix.dev/$t.html' title='trait |g" \
+                "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+            done
+          done <<<"$traits"
 
           # The landing page is generated rather than committed, so it lists
           # whatever modules the project actually has instead of a name that
