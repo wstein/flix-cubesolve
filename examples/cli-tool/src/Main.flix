@@ -47,8 +47,8 @@ def dispatch(args: List[String]): Unit \ IO =
             report(isJson, Args.withSize(rest, Solving, (n, _) ->
                 if (isJson) Engine.scrambleJson(n) else Engine.scramble(n)))
         case "patterns" :: rest =>
-            report(isJson, Args.withSize(rest, Corpus, (n, _) ->
-                Ok(if (isJson) Corpus.patternsJson(n) else Corpus.listing(n))))
+            report(isJson, Args.withSize(rest, Corpus, (n, more) ->
+                if (isJson) Ok(Corpus.patternsJson(n)) else Corpus.queryOrList(n, List.join(" ", more))))
         case "help" :: _        => println(Usage.text())
         case Nil                => println(Usage.text())
         case other :: _         =>

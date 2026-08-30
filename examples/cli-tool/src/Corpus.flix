@@ -33,10 +33,15 @@ mod Corpus {
         ) yield JsonOut.show(size, tok, netStr, fs)
 
     ///
-    /// Which published pattern this is, if it is one.
+    /// Which published pattern this is, if it is one, including colored net and Orbit64 token.
     ///
-    pub def identify(size: Int32, c: Cube.Cube): String =
-        if (size == 2) pocket(c) else standard(c)
+    pub def identify(size: Int32, c: Cube.Cube): String = {
+        let netStr = RenderNet.colouredNet(c) |> Result.getWithDefault("");
+        let tok = CubeSolve.Model.Facelets.token(c) |> Result.getWithDefault("");
+        let details = if (size == 2) pocket(c) else standard(c);
+        let tokLine = if (String.length(tok) > 0) "${String.lineSeparator()}orbit64: ${tok}" else "";
+        "${netStr}${String.lineSeparator()}${details}${tokLine}"
+    }
 
     ///
     /// Which published pattern this is, as structured JSON.
@@ -73,21 +78,91 @@ mod Corpus {
             }
 
     ///
-    /// The corpus for a size, one pattern per line: name, orbit64 token, notation.
+    /// The corpus for a size, showing each pattern with its miniature colored net, name, token, and notation.
     ///
     pub def listing(size: Int32): String =
         if (size == 2)
             Patterns.Pocket.all()
-                |> Vector.map(p -> "${Patterns.Pocket.name(p)}\t"
-                    + "${Patterns.Pocket.canonical(p)}\t${Patterns.Pocket.optimal(p)}")
+                |> Vector.map(p -> {
+                    let name = Patterns.Pocket.name(p);
+                    let notat = Patterns.Pocket.optimal(p);
+                    let tok = Patterns.Pocket.canonical(p);
+                    let mini = Cube.solved(2)
+                        |> Result.flatMap(c0 -> Cube.applyNotation(notat, c0))
+                        |> Result.flatMap(RenderNet.miniColouredNet)
+                        |> Result.getWithDefault("");
+                    "${name}${String.lineSeparator()}${mini}${String.lineSeparator()}orbit64: ${tok}\t${notat}"
+                })
                 |> Vector.toList
-                |> lines
+                |> List.join(String.lineSeparator() + String.lineSeparator())
         else
             Patterns.Standard.all()
-                |> Vector.map(p -> "${Patterns.Standard.name(p)}\t"
-                    + "${Patterns.Standard.canonical(p)}\t${Patterns.Standard.notation(p)}")
+                |> Vector.map(p -> {
+                    let name = Patterns.Standard.name(p);
+                    let notat = Patterns.Standard.notation(p);
+                    let tok = Patterns.Standard.canonical(p);
+                    let mini = Cube.solved(3)
+                        |> Result.flatMap(c0 -> Cube.applyNotation(notat, c0))
+                        |> Result.flatMap(RenderNet.miniColouredNet)
+                        |> Result.getWithDefault("");
+                    "${name}${String.lineSeparator()}${mini}${String.lineSeparator()}orbit64: ${tok}\t${notat}"
+                })
                 |> Vector.toList
-                |> lines
+                |> List.join(String.lineSeparator() + String.lineSeparator())
+
+    ///
+    /// Query a specific pattern by name or token (with colored net) or list all patterns.
+    ///
+    pub def queryOrList(size: Int32, searchTerm: String): Result[String, String] =
+        let trimmed = String.trim(searchTerm);
+        if (String.isEmpty(trimmed))
+            Ok(listing(size))
+        else
+            queryPattern(size, trimmed)
+
+    def queryPattern(size: Int32, q: String): Result[String, String] =
+        let lowerQ = String.toLowerCase(q);
+        if (size == 2) {
+            let matches = Patterns.Pocket.all()
+                |> Vector.filter(p ->
+                    String.toLowerCase(Patterns.Pocket.name(p)) == lowerQ
+                    or String.contains(substr = lowerQ, String.toLowerCase(Patterns.Pocket.name(p)))
+                    or Patterns.Pocket.canonical(p) == q);
+            if (Vector.isEmpty(matches))
+                Err("pattern '${q}' not found in 2x2x2 corpus")
+            else {
+                let p = Vector.get(0, matches);
+                let name = Patterns.Pocket.name(p);
+                let notat = Patterns.Pocket.optimal(p);
+                let url = Patterns.Pocket.url(Patterns.Pocket.source(p));
+                let tok = Patterns.Pocket.canonical(p);
+                forM (
+                    c0 <- Cube.solved(2);
+                    c <- Cube.applyNotation(notat, c0);
+                    netStr <- RenderNet.colouredNet(c)
+                ) yield "${netStr}${String.lineSeparator()}${name}${String.lineSeparator()}${notat}${String.lineSeparator()}${url}${String.lineSeparator()}orbit64: ${tok}"
+            }
+        } else {
+            let matches = Patterns.Standard.all()
+                |> Vector.filter(p ->
+                    String.toLowerCase(Patterns.Standard.name(p)) == lowerQ
+                    or String.contains(substr = lowerQ, String.toLowerCase(Patterns.Standard.name(p)))
+                    or Patterns.Standard.canonical(p) == q);
+            if (Vector.isEmpty(matches))
+                Err("pattern '${q}' not found in 3x3x3 corpus")
+            else {
+                let p = Vector.get(0, matches);
+                let name = Patterns.Standard.name(p);
+                let notat = Patterns.Standard.notation(p);
+                let url = Patterns.Standard.url(Patterns.Standard.source(p));
+                let tok = Patterns.Standard.canonical(p);
+                forM (
+                    c0 <- Cube.solved(3);
+                    c <- Cube.applyNotation(notat, c0);
+                    netStr <- RenderNet.colouredNet(c)
+                ) yield "${netStr}${String.lineSeparator()}${name}${String.lineSeparator()}${notat}${String.lineSeparator()}${url}${String.lineSeparator()}orbit64: ${tok}"
+            }
+        }
 
     ///
     /// The corpus for a size as structured JSON.

@@ -16,10 +16,11 @@ mod Engine {
     use CubeSolve.Table
 
     ///
-    /// A solution for `c`, with move count, metric, method provenance, and pattern DB recognition.
+    /// A solution for `c`, with colored net, move count, metric, method, and pattern DB recognition.
     ///
     pub def solveCube(size: Int32, c: Cube.Cube): Result[String, String] \ IO =
         forM (
+            netStr <- RenderNet.colouredNet(c);
             tok <- CubeSolve.Model.Facelets.token(c);
             ms <- movesFor(size, c)
         ) yield {
@@ -30,7 +31,8 @@ mod Engine {
                 case Some((name, url)) => "pattern: ${name} (${url})"
                 case None              => "pattern: none (search)"
             };
-            "${sol}${String.lineSeparator()}"
+            "${netStr}${String.lineSeparator()}"
+                + "${sol}${String.lineSeparator()}"
                 + "${len} moves (HTM)${String.lineSeparator()}"
                 + "method:  ${meth}${String.lineSeparator()}"
                 + "${patLine}${String.lineSeparator()}"

@@ -83,4 +83,40 @@ mod RenderNet {
             |> List.map(col -> sticker(Vector.get(base + col, fs)) + "│")
             |> List.join("")
 
+    /// Miniature (1 char per sticker) colored net.
+    pub def miniColouredNet(c: Cube.Cube): Result[String, String] =
+        drawMini(c, i -> paint(i, letterOf(i)))
+
+    /// Miniature (1 char per sticker) plain net.
+    pub def miniNet(c: Cube.Cube): Result[String, String] =
+        drawMini(c, i -> letterOf(i))
+
+    def drawMini(c: Cube.Cube, sticker: Int32 -> String): Result[String, String] =
+        let n = Cube.size(c);
+        let uIndent = String.repeat(n, " ");
+        Facelets.of(c) |> Result.map(fs -> {
+            let uRows = List.range(0, n) |> List.map(row ->
+                uIndent + rowOfMini(n, sticker, fs, 0, row));
+            let midRows = List.range(0, n) |> List.map(row ->
+                (4 :: 2 :: 1 :: 5 :: Nil)
+                    |> List.map(f -> rowOfMini(n, sticker, fs, f, row))
+                    |> List.join(""));
+            let dRows = List.range(0, n) |> List.map(row ->
+                uIndent + rowOfMini(n, sticker, fs, 3, row));
+            List.append(uRows, List.append(midRows, dRows))
+                |> List.join(String.lineSeparator())
+        })
+
+    def rowOfMini(
+        n: Int32,
+        sticker: Int32 -> String,
+        fs: Vector[Int32],
+        face: Int32,
+        row: Int32
+    ): String =
+        let base = face * n * n + row * n;
+        List.range(0, n)
+            |> List.map(col -> sticker(Vector.get(base + col, fs)))
+            |> List.join("")
+
 }
