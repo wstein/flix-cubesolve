@@ -146,6 +146,21 @@ mod CubeSolve.Table.Cross {
         List.toVector(places)
 
     ///
+    /// Just the first tracked piece's slot and flip, without unranking the rest.
+    ///
+    /// The first placement digit indexes the slots still free, and at that point
+    /// none have been taken -- so the digit *is* the slot, and no list is needed
+    /// to look it up. The flip is bit zero.
+    ///
+    /// This exists because a heuristic reads it on every node, and `unrank`
+    /// allocates four lists to answer a question about one piece.
+    ///
+    pub def firstPiece(index: Int32): (Int32, Int32) =
+        let placed = index / 16;
+        let slot = ((placed / 9) / 10) / 11;
+        (slot, Int32.bitwiseAnd(index, 1))
+
+    ///
     /// The coordinate `index` becomes after move `m`.
     ///
     /// Slot-indexed throughout: `edgePermutation(f)[i]` is the slot the piece

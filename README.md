@@ -4,7 +4,7 @@
 [![Flix](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fwstein%2Fflix-cubesolve%2Fmain%2F.flixw%2Flock.toml&query=%24.compiler.version&label=flix&color=blue)](.flixw/lock.toml)
 [![flixw](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fwstein%2Fflix-cubesolve%2Fmain%2F.flixw%2Flock.toml&query=%24.wrapperVersion&label=flixw&color=blue)](https://github.com/wstein/flixw)
 [![Java](https://img.shields.io/badge/java-21%2B-blue)](https://adoptium.net/temurin/releases/?version=21)
-[![License](https://img.shields.io/github/license/wstein/flix-cubesolve?color=blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)](LICENSE)
 
 A solving and scrambling engine for n×n×n twisty cubes in [Flix](https://flix.dev),
 2×2×2 through 5×5×5.

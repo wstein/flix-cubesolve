@@ -433,6 +433,53 @@ case on a named six-seed stratum, because each search costs seconds.
 The search is bounded at 16 moves and **reports failure rather than guessing**
 if a state needs more.
 
+### The first two layers, and what the measurement decided
+
+`Solve.TwoLayers` finishes the four middle edges. It combines **four** exact
+projections by taking whichever says most: the cross, the bottom corners, the
+middle edges, and — added on evidence — the bottom corners paired with one
+designated middle edge.
+
+The pair table was not planned. With the three separate projections the search
+ran, but at a cost that made it useless for teaching, because once the first
+layer is solved the cross and corner projections both read zero while the true
+distance does not: the layer has to be disturbed and put back, and nothing was
+measuring that.
+
+Eight handoff states — a random scramble solved down to its first layer, then
+handed over — before and after:
+
+| depth | before | after | gain |
+|---|---|---|---|
+| 9 | 991,664 | 897,305 | 1.1× |
+| 10 | 2,543,173 | 788,785 | 3.2× |
+| 11 | 4,148,363 | 1,964,522 | 2.1× |
+| 11 | 5,115,166 | 2,102,272 | 2.4× |
+| 11 | 12,727,413 | 2,164,754 | 5.9× |
+| 11 | 19,874,121 | 3,066,170 | 6.5× |
+| 11 | 31,430,317 | 9,462,502 | 3.3× |
+| 12 | **84,458,590** | **13,207,220** | **6.4×** |
+
+Worst case 6.4× better, mean 20.2M → 4.2M, and the spread *within* depth 11 fell
+from 7.6× to 4.8×. The correlation is the part worth trusting: the cheapest state
+gained 1.1× and the two dearest gained 6.4× and 6.5×. A projection that merely
+inflated the bound would help uniformly; one that supplies restore cost helps
+where restore cost dominates, and that is what the figures show.
+
+The price is cold construction: 83 s for all five tables, of which the pair table
+is 70 s. Paid once per session against a saving on every solve.
+
+**A projection is only a lower bound if it is the right one.** The search does
+not carry the pair coordinate in its state — it derives it from the corner half
+and the middle-edge half it already has, which assumes the middle-edge
+coordinate's first tracked piece is the pair's designated edge. Nothing in the
+types enforces that. If it stopped holding, the search would read another state's
+distance; one too large is inadmissible, and an inadmissible bound does not
+return a wrong cube — it prunes the branch holding the shorter answer, so the
+answer comes back longer, or the bounded search falsely reports exhaustion.
+Neither shows up in a replay check, so the derivation is pinned by a test that
+compares it against `CornerEdgePair.encode` through the real code path.
+
 **The cross is fixed on `D`.** Which face carries it is method policy rather
 than arithmetic, and fixing it keeps one coordinate rather than six. A caller
 wanting another face turns the cube first.
