@@ -22,21 +22,28 @@ mod TestRender {
     /// A solved cube draws as the net everyone prints: `U` above, `L F R B`
     /// around, `D` below.
     ///
-    /// Written out rather than computed, because a renderer checked against a
-    /// second renderer only proves the two agree.
-    ///
     @Test
     def aSolvedCubeDrawsAsTheFamiliarCross(): Unit \ Assert =
         let expected = List.join(String.lineSeparator(),
-            "      U U U"
-                :: "      U U U"
-                :: "      U U U"
-                :: "L L L F F F R R R B B B"
-                :: "L L L F F F R R R B B B"
-                :: "L L L F F F R R R B B B"
-                :: "      D D D"
-                :: "      D D D"
-                :: "      D D D" :: Nil);
+            "            ┌───┬───┬───┐"
+                :: "            │ U │ U │ U │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ U │ U │ U │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ U │ U │ U │"
+                :: "┌───┬───┬───┼───┼───┼───┼───┬───┬───┬───┬───┬───┐"
+                :: "│ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "└───┴───┴───┼───┼───┼───┼───┴───┴───┴───┴───┴───┘"
+                :: "            │ D │ D │ D │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ D │ D │ D │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ D │ D │ D │"
+                :: "            └───┴───┴───┘" :: Nil);
         Assert.assertEq(expected = expected, drawn(Render.net, made(3, "U U'")))
 
     ///
@@ -45,12 +52,19 @@ mod TestRender {
     @Test
     def aSolvedPocketCubeDrawsTheSameShapeSmaller(): Unit \ Assert =
         let expected = List.join(String.lineSeparator(),
-            "    U U"
-                :: "    U U"
-                :: "L L F F R R B B"
-                :: "L L F F R R B B"
-                :: "    D D"
-                :: "    D D" :: Nil);
+            "        ┌───┬───┐"
+                :: "        │ U │ U │"
+                :: "        ├───┼───┤"
+                :: "        │ U │ U │"
+                :: "┌───┬───┼───┼───┼───┬───┬───┐"
+                :: "│ L │ L │ F │ F │ R │ R │ B │ B │"
+                :: "├───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ L │ L │ F │ F │ R │ R │ B │ B │"
+                :: "└───┴───┼───┼───┼───┴───┴───┘"
+                :: "        │ D │ D │"
+                :: "        ├───┼───┤"
+                :: "        │ D │ D │"
+                :: "        └───┴───┘" :: Nil);
         Assert.assertEq(expected = expected, drawn(Render.net, made(2, "U U'")))
 
     ///
@@ -64,15 +78,25 @@ mod TestRender {
     @Test
     def aQuarterTurnMovesTheStickersItShould(): Unit \ Assert =
         let expected = List.join(String.lineSeparator(),
-            "      U U U"
-                :: "      U U U"
-                :: "      U U U"
-                :: "F F F R R R B B B L L L"
-                :: "L L L F F F R R R B B B"
-                :: "L L L F F F R R R B B B"
-                :: "      D D D"
-                :: "      D D D"
-                :: "      D D D" :: Nil);
+            "            ┌───┬───┬───┐"
+                :: "            │ U │ U │ U │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ U │ U │ U │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ U │ U │ U │"
+                :: "┌───┬───┬───┼───┼───┼───┼───┬───┬───┬───┬───┬───┐"
+                :: "│ F │ F │ F │ R │ R │ R │ B │ B │ B │ L │ L │ L │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤"
+                :: "│ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │"
+                :: "└───┴───┴───┼───┼───┼───┼───┴───┴───┴───┴───┴───┘"
+                :: "            │ D │ D │ D │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ D │ D │ D │"
+                :: "            ├───┼───┼───┤"
+                :: "            │ D │ D │ D │"
+                :: "            └───┴───┴───┘" :: Nil);
         Assert.assertEq(expected = expected, drawn(Render.net, made(3, "U")))
 
     ///

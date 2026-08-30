@@ -12,13 +12,20 @@ mod CubeSolve.Render {
     use CubeSolve.Model.Facelets
 
     ///
+    ///
+    ///
     /// The net, as face letters.
     ///
     /// ```
-    ///     U U U
-    ///     U U U
-    ///     U U U
-    /// L L L F F F R R R B B B
+    ///             ┌───┬───┬───┐
+    ///             │ U │ U │ U │
+    ///             ├───┼───┼───┤
+    ///             │ U │ U │ U │
+    ///             ├───┼───┼───┤
+    ///             │ U │ U │ U │
+    /// ┌───┬───┬───┼───┼───┼───┼───┬───┬───┬───┬───┬───┐
+    /// │ L │ L │ L │ F │ F │ F │ R │ R │ R │ B │ B │ B │
+    /// ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
     /// ...
     /// ```
     ///
@@ -26,7 +33,7 @@ mod CubeSolve.Render {
     /// below, which is the arrangement every printed algorithm sheet uses.
     ///
     pub def net(c: Cube.Cube): Result[String, String] =
-        draw(c, i -> letterOf(i))
+        draw(c, i -> " " + letterOf(i) + " ")
 
     ///
     /// The net in colour, for a terminal that understands 24-bit escapes.
@@ -37,7 +44,7 @@ mod CubeSolve.Render {
     /// prettiness is lost.
     ///
     pub def colouredNet(c: Cube.Cube): Result[String, String] =
-        draw(c, i -> paint(i, letterOf(i)))
+        draw(c, i -> paint(i, " " + letterOf(i) + " "))
 
     ///
     /// The letter for a face index, in the order `U R F D L B`.
@@ -82,31 +89,35 @@ mod CubeSolve.Render {
     ///
     def draw(c: Cube.Cube, sticker: Int32 -> String): Result[String, String] =
         let n = Cube.size(c);
-        Facelets.of(c) |> Result.map(fs ->
-            List.append(
-                band(n, sticker, fs, 0 :: Nil),
-                List.append(
-                    band(n, sticker, fs, 4 :: 2 :: 1 :: 5 :: Nil),
-                    band(n, sticker, fs, 3 :: Nil)))
-                |> List.join(String.lineSeparator()))
-
-    ///
-    /// The rows covering `faces`, side by side.
-    ///
-    /// A band of one face is indented under the `U`/`D` column; a band of four
-    /// is not. That is the only thing the layout has to decide.
-    ///
-    def band(
-        n: Int32,
-        sticker: Int32 -> String,
-        fs: Vector[Int32],
-        faces: List[Int32]
-    ): List[String] =
-        let indent = if (List.length(faces) == 1) String.repeat(2 * n, " ") else "";
-        List.range(0, n) |> List.map(row ->
-            indent + (faces
-                |> List.map(f -> rowOf(n, sticker, fs, f, row))
-                |> List.join(" ")))
+        let uIndent = String.repeat(4 * n, " ");
+        let uTop = uIndent + "┌" + String.repeat(n - 1, "───┬") + "───┐";
+        let uInner = uIndent + "├" + String.repeat(n - 1, "───┼") + "───┤";
+        let topMid = "┌" + String.repeat(n - 1, "───┬") + "───┼"
+            + String.repeat(n - 1, "───┼") + "───┼"
+            + String.repeat(2 * n - 1, "───┬") + "───┐";
+        let midInner = "├" + String.repeat(4 * n - 1, "───┼") + "───┤";
+        let botMid = "└" + String.repeat(n - 1, "───┴") + "───┼"
+            + String.repeat(n - 1, "───┼") + "───┼"
+            + String.repeat(2 * n - 1, "───┴") + "───┘";
+        let dBot = uIndent + "└" + String.repeat(n - 1, "───┴") + "───┘";
+        Facelets.of(c) |> Result.map(fs -> {
+            let uRows = List.range(0, n) |> List.flatMap(row -> {
+                let top = if (row == 0) uTop else uInner;
+                top :: (uIndent + "│" + rowOf(n, sticker, fs, 0, row)) :: Nil
+            });
+            let midRows = List.range(0, n) |> List.flatMap(row -> {
+                let top = if (row == 0) topMid else midInner;
+                top :: ("│" + ((4 :: 2 :: 1 :: 5 :: Nil)
+                    |> List.map(f -> rowOf(n, sticker, fs, f, row))
+                    |> List.join(""))) :: Nil
+            });
+            let dRows = List.range(0, n) |> List.flatMap(row -> {
+                let bot = if (row == n - 1) dBot else uInner;
+                (uIndent + "│" + rowOf(n, sticker, fs, 3, row)) :: bot :: Nil
+            });
+            List.append(uRows, List.append(midRows, botMid :: dRows))
+                |> List.join(String.lineSeparator())
+        })
 
     ///
     /// One row of one face.
@@ -118,8 +129,9 @@ mod CubeSolve.Render {
         face: Int32,
         row: Int32
     ): String =
+        let base = face * n * n + row * n;
         List.range(0, n)
-            |> List.map(col -> sticker(Vector.get(face * n * n + row * n + col, fs)))
-            |> List.join(" ")
+            |> List.map(col -> sticker(Vector.get(base + col, fs)) + "│")
+            |> List.join("")
 
 }
