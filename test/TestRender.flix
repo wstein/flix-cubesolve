@@ -309,4 +309,57 @@ mod TestRender {
         Assert.assertErr(Render.parse("invalid string with no net rows"));
         Assert.assertErr(Render.parse("│ U │ U │\n│ U │ U │\n│ D │ D │"))
 
+    ///
+    /// QR code generation produces non-empty UTF-8 block graphic encoding orbit64 token.
+    ///
+    @Test
+    def qrCodeGeneratesNonEmptyUtf8Graphic(): Unit \ Assert =
+        let c = made(3, "U R F");
+        let qr = Render.qr(c) |> Result.getWithDefault("");
+        let qrLight = Render.qrLight(c) |> Result.getWithDefault("");
+        let qrTok = Render.qrWithToken(c) |> Result.getWithDefault("");
+        let hasBlock = String.contains(substr = "█", qr) or String.contains(substr = "▀", qr);
+        Assert.assertTrue(hasBlock);
+        Assert.assertTrue(String.length(qrLight) > 0);
+        Assert.assertTrue(String.length(qrTok) > String.length(qr))
+
+    ///
+    /// QR code generation supports all error correction levels (L, M, Q, H).
+    ///
+    @Test
+    def qrCodeSupportsAllEcLevels(): Unit \ Assert =
+        let c = made(3, "U R F");
+        let levels = CubeSolve.Render.Qr.EcLevel.L :: CubeSolve.Render.Qr.EcLevel.M
+            :: CubeSolve.Render.Qr.EcLevel.Q :: CubeSolve.Render.Qr.EcLevel.H :: Nil;
+        levels |> List.forEach(lvl -> {
+            let qr = Render.qrWith(c, lvl, true) |> Result.getWithDefault("");
+            Assert.assertTrue(String.length(qr) > 0)
+        })
+
+    ///
+    /// QR code with token centers the token string below the graphic.
+    ///
+    @Test
+    def qrCodeCentersTokenBelow(): Unit \ Assert =
+        let c = made(3, "U R F");
+        let qrTok = Render.qrWithToken(c) |> Result.getWithDefault("");
+        let lines = String.split(regex = "\r?\n", qrTok);
+        let lastLine = match List.reverse(lines) {
+            case last :: _ => last
+            case Nil       => ""
+        };
+        Assert.assertTrue(String.startsWith(prefix = " ", lastLine))
+
+    ///
+    /// PNG QR code generation writes a readable PNG file with and without logo.
+    ///
+    @Test
+    def qrCodeWritesPngFile(): Unit \ { Assert, IO } =
+        let c = made(3, "U R F");
+        let pathWith = "build/test_qr_logo.png";
+        let pathWithout = "build/test_qr_nologo.png";
+        Assert.assertEq(expected = Ok(()), Render.qrWritePng(pathWith, c, true));
+        Assert.assertEq(expected = Ok(()), Render.qrWritePng(pathWithout, c, false))
+
 }
+

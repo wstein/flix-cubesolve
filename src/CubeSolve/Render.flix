@@ -59,6 +59,47 @@ mod CubeSolve.Render {
         draw(c, i -> paint(i, " " + colorLetterOf(i) + " "))
 
     ///
+    /// Generate a compact UTF-8 graphic QR code encoding the cube's orbit64 token.
+    ///
+    pub def qr(c: Cube.Cube): Result[String, String] =
+        Facelets.token(c) |> Result.map(Qr.render)
+
+    ///
+    /// Generate a compact UTF-8 QR code for light themes.
+    ///
+    pub def qrLight(c: Cube.Cube): Result[String, String] =
+        Facelets.token(c) |> Result.map(Qr.renderLight)
+
+    ///
+    /// Generate a compact UTF-8 QR code with explicit EC level and theme choice.
+    ///
+    pub def qrWith(c: Cube.Cube, ec: Qr.EcLevel, darkTheme: Bool): Result[String, String] =
+        Facelets.token(c) |> Result.map(tok -> Qr.renderWith(ec, darkTheme, tok))
+
+    ///
+    /// Generate a compact UTF-8 QR code with the orbit64 token centered below.
+    ///
+    pub def qrWithToken(c: Cube.Cube): Result[String, String] =
+        Facelets.token(c) |> Result.map(Qr.renderWithToken)
+
+    ///
+    /// Write a high-resolution PNG QR code to `path` with optional real 3D cube logo.
+    ///
+    pub def qrWritePng(path: String, c: Cube.Cube, withLogo: Bool): Result[String, Unit] \ IO =
+        match (Facelets.of(c), Facelets.token(c)) {
+            case (Ok(fs), Ok(tok)) =>
+                Qr.writeCubePng(path, Cube.size(c), fs, tok, withLogo)
+            case (Err(e), _) => Err(e)
+            case (_, Err(e)) => Err(e)
+        }
+
+    ///
+    /// Generate a compact UTF-8 graphic QR code from text.
+    ///
+    pub def qrOf(text: String): String =
+        Qr.render(text)
+
+    ///
     /// The letter for a face index, in the order `U R F D L B`.
     ///
     pub def letterOf(face: Int32): String = match face {
