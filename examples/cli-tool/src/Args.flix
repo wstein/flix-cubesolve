@@ -44,21 +44,71 @@ mod Args {
     /// than repeated, so these refusals stop being true the moment the engine
     /// grows -- and not before.
     ///
+    ///
+    ///
+    /// Pull an optional `--budget <name>` from arguments and hand the rest on.
+    ///
+    /// Defaults to `default`. An unknown name is refused with the ones that
+    /// exist rather than quietly falling back, for the same reason `--profile`
+    /// is: a caller who misspells a budget should be told, not given something
+    /// else and left to wonder why the answer changed.
+    ///
+    pub def withBudget(
+        args: List[String],
+        k: (Budgets.Budget, List[String]) -> Result[String, String] \ ef
+    ): Result[String, String] \ ef =
+        match extractOption("--budget", args) {
+            case Ok((Some(name), remaining)) =>
+                match Budgets.ofName(name) {
+                    case Some(b) => k(b, remaining)
+                    case None    => Err("'${name}' is not a budget: there is ${Budgets.names()}")
+                }
+            case Ok((None, remaining)) =>
+                k(Budgets.standard(), remaining)
+            case Err(msg) =>
+                Err(msg)
+        }
+
+    ///
+    /// Pull an optional `--size n` from arguments and hand the rest on.
+    ///
     pub def withSize(
         args: List[String],
         needs: Needs,
         k: (Int32, List[String]) -> Result[String, String] \ ef
-    ): Result[String, String] \ ef = match args {
-        case "--size" :: n :: rest =>
-            match Int32.fromString(n) {
-                case None    => Err("'${n}' is not a size")
-                case Some(s) => match refusal(needs, s) {
-                    case Some(why) => Err(why)
-                    case None      => k(s, rest)
+    ): Result[String, String] \ ef =
+        match extractOption("--size", args) {
+            case Ok((Some(nStr), remaining)) =>
+                match Int32.fromString(nStr) {
+                    case None    => Err("'${nStr}' is not a size")
+                    case Some(s) => match refusal(needs, s) {
+                        case Some(why) => Err(why)
+                        case None      => k(s, remaining)
+                    }
                 }
-            }
-        case rest => k(3, rest)
-    }
+            case Ok((None, remaining)) =>
+                k(3, remaining)
+            case Err(msg) =>
+                Err(msg)
+        }
+
+    def extractOption(flag: String, args: List[String]): Result[String, (Option[String], List[String])] =
+        match args {
+            case Nil => Ok((None, Nil))
+            case opt :: rest if opt == flag =>
+                match rest {
+                    case val :: remaining => Ok((Some(val), remaining))
+                    case Nil              => Err("missing value for option '${flag}'")
+                }
+            case opt :: rest if String.startsWith(prefix = flag + "=", opt) =>
+                let val = String.drop(String.length(flag) + 1, opt);
+                Ok((Some(val), rest))
+            case other :: rest =>
+                match extractOption(flag, rest) {
+                    case Ok((foundOpt, remaining)) => Ok((foundOpt, other :: remaining))
+                    case Err(msg)                  => Err(msg)
+                }
+        }
 
     ///
     /// Why `n` will not do for a command that needs `needs`, if it will not.
@@ -101,7 +151,7 @@ mod Args {
             |> List.join(", ")
 
     ///
-    /// Pull an optional `--profile <name>` off the front and hand the rest on.
+    /// Pull an optional `--profile <name>` from arguments and hand the rest on.
     ///
     /// Defaults to `default`, which is the algorithm the source lists first. An
     /// unknown name is refused with the ones that exist, rather than quietly
@@ -111,15 +161,18 @@ mod Args {
     pub def withProfile(
         args: List[String],
         k: (Profile.Profile, List[String]) -> Result[String, String] \ ef
-    ): Result[String, String] \ ef = match args {
-        case "--profile" :: name :: rest =>
-            match Profile.ofName(name) {
-                case Some(p) => k(p, rest)
-                case None    =>
-                    Err("'${name}' is not a profile: there is ${profileNames()}")
-            }
-        case rest => k(Profile.Profile.SourceFirst, rest)
-    }
+    ): Result[String, String] \ ef =
+        match extractOption("--profile", args) {
+            case Ok((Some(name), remaining)) =>
+                match Profile.ofName(name) {
+                    case Some(p) => k(p, remaining)
+                    case None    => Err("'${name}' is not a profile: there is ${profileNames()}")
+                }
+            case Ok((None, remaining)) =>
+                k(Profile.Profile.SourceFirst, remaining)
+            case Err(msg) =>
+                Err(msg)
+        }
 
     ///
     /// The profiles there are, written out.

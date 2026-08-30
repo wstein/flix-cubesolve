@@ -118,11 +118,42 @@ mod TestArgs {
     /// Solving an unreachable cube state returns an Err with the reachability reason.
     @Test
     def unreachableTokenIsRejectedWhenSolving(): Unit \ {Assert, IO} = {
-        let res = Args.onCube(3, "AK-bRtpiQ000" :: Nil, Engine.solveCube);
+        let solving = (n, c) -> Engine.solveCube(Budgets.standard(), n, c);
+        let res = Args.onCube(3, "AK-bRtpiQ000" :: Nil, solving);
         match res {
             case Ok(_) => Assert.assertTrueWithMsg(false, "unreachable cube should fail to solve")
             case Err(why) => Assert.assertTrue(String.contains(substr = "parity", why))
         }
+    }
+
+    /// `--budget` is read, defaults to `default`, and refuses an unknown name.
+    ///
+    /// The refusal matters as much as the parse: a caller who misspells a budget
+    /// and is quietly given another gets a different answer with no way to see
+    /// why, which is the failure `--profile` was given the same treatment for.
+    @Test
+    def budgetIsReadAndAnUnknownOneIsRefused(): Unit \ Assert = {
+        let echo = (b, rest) -> Ok("${Budgets.nameOf(b)}:${List.length(rest)}");
+        Assert.assertEq(expected = Ok("thorough:1"),
+            Args.withBudget("--budget" :: "thorough" :: "R" :: Nil, echo));
+        Assert.assertEq(expected = Ok("thorough:1"),
+            Args.withBudget("R" :: "--budget" :: "thorough" :: Nil, echo));
+        Assert.assertEq(expected = Ok("thorough:1"),
+            Args.withBudget("R" :: "--budget=thorough" :: Nil, echo));
+        Assert.assertEq(expected = Ok("default:1"),
+            Args.withBudget("R" :: Nil, echo));
+        Assert.assertEq(expected = Ok("deep:0"),
+            Args.withBudget("--budget" :: "deep" :: Nil, echo));
+        match Args.withBudget("--budget" :: "fastest" :: Nil, echo) {
+            case Ok(_)    => Assert.assertTrueWithMsg(false, "'fastest' is not a budget")
+            case Err(why) =>
+                Assert.assertTrueWithMsg(String.contains(substr = "fast, default", why),
+                    "the refusal should list the real ones: ${why}")
+        };
+        // every name round-trips
+        Budgets.all() |> Vector.forEach(b ->
+            Assert.assertEqWithMsg(expected = Some(b), Budgets.ofName(Budgets.nameOf(b)),
+                "${Budgets.nameOf(b)} should round-trip"))
     }
 
 }
