@@ -70,7 +70,7 @@ mod CubeSolve.Render.Qr {
     }
 
     ///
-    /// Write a high-resolution PNG QR code with real 3D oblique cube state in the center.
+    /// Write a high-resolution PNG QR code with real 3D isometric cube state in the center.
     ///
     pub def writeCubePng(
         path: String,
@@ -82,11 +82,15 @@ mod CubeSolve.Render.Qr {
         try {
             let bytes = String.toList(token) |> List.map(Char.toBmpCodePoint);
             let len = List.length(bytes);
-            let (ver, totalData, totalEc) = versionParams(EcLevel.H, len);
-            let codewords = encodeBytes(totalData, totalEc, bytes);
+            let (ver, totalData, numBlocks, dataPerBlock, ecPerBlock) =
+                versionParams(EcLevel.H, len);
+            let codewords = encodeBytes(
+                (totalData, numBlocks, dataPerBlock, ecPerBlock),
+                bytes
+            );
             let matrix = buildOptimalMatrix(ver, EcLevel.H, codewords);
             let size = Vector.length(matrix);
-            let scale = 12;
+            let scale = 14;
             let pad = 4;
             let dim = (size + 2 * pad) * scale;
             let img = new BufferedImage(dim, dim, 1);
@@ -156,7 +160,7 @@ mod CubeSolve.Render.Qr {
         Float64.tryToInt32(x) |> Option.getWithDefault(0)
 
     ///
-    /// Draw the real 3D isometric cube state inside an enlarged badge in the QR center (~20% area).
+    /// Draw the real 3D isometric cube state cut out as a hexagon (6-Eck) in the QR center.
     ///
     def drawObliqueLogo(
         g: Graphics2D,
@@ -167,19 +171,17 @@ mod CubeSolve.Render.Qr {
     ): Unit \ IO = {
         let pad = 4;
         let centerMod = (size / 2) + pad;
-        let badgeRadiusMod = 5;
         let cx = Int32.toFloat64(centerMod * scale + (scale / 2));
         let cy = Int32.toFloat64(centerMod * scale + (scale / 2));
-        let badgeSize = Int32.toFloat64((badgeRadiusMod * 2 + 1) * scale);
-        let bx = toInt(cx - (badgeSize / 2.0) - (Int32.toFloat64(scale) / 2.0));
-        let by = toInt(cy - (badgeSize / 2.0) - (Int32.toFloat64(scale) / 2.0));
-        let bw = toInt(badgeSize + Int32.toFloat64(scale));
+        let s = Int32.toFloat64(scale) * 5.4;
+        let sCut = s + Int32.toFloat64(scale) * 0.55;
         let colWhite = new Color(255, 255, 255);
         let colDark = new Color(15, 23, 42);
-        g.setColor(colWhite);
-        g.fillRoundRect(bx, by, bw, bw, scale * 2, scale * 2);
 
-        let s = badgeSize * 0.44;
+        // Hexagonal cutout (6-Eck) clearing the QR modules
+        drawCubeBody(g, cx, cy, sCut, colWhite);
+
+        // 3D isometric cube chassis and stickers
         drawCubeBody(g, cx, cy, s, colDark);
         drawTopFace(g, n, facelets, (cx, cy, s));
         drawFrontFace(g, n, facelets, (cx, cy, s));
@@ -222,7 +224,7 @@ mod CubeSolve.Render.Qr {
         let lx = s * 0.8660254037844386;
         let stepX = lx / Int32.toFloat64(n);
         let stepY = (s * 0.5) / Int32.toFloat64(n);
-        let gap = 0.09;
+        let gap = 0.06;
         List.range(0, n) |> List.forEach(r ->
             List.range(0, n) |> List.forEach(c -> {
                 let fIdx = Vector.get(r * n + c, facelets);
@@ -260,7 +262,7 @@ mod CubeSolve.Render.Qr {
         let stepX = lx / nf;
         let stepY = (s * 0.5) / nf;
         let stepZ = s / nf;
-        let gap = 0.09;
+        let gap = 0.06;
         List.range(0, n) |> List.forEach(r ->
             List.range(0, n) |> List.forEach(c -> {
                 let fIdx = Vector.get(2 * n * n + r * n + c, facelets);
@@ -298,7 +300,7 @@ mod CubeSolve.Render.Qr {
         let stepX = lx / nf;
         let stepY = (s * 0.5) / nf;
         let stepZ = s / nf;
-        let gap = 0.09;
+        let gap = 0.06;
         List.range(0, n) |> List.forEach(r ->
             List.range(0, n) |> List.forEach(c -> {
                 let fIdx = Vector.get(n * n + r * n + c, facelets);
@@ -327,15 +329,20 @@ mod CubeSolve.Render.Qr {
     pub def renderWith(ec: EcLevel, darkTheme: Bool, text: String): String =
         let bytes = String.toList(text) |> List.map(Char.toBmpCodePoint);
         let len = List.length(bytes);
-        let (ver, totalData, totalEc) = versionParams(ec, len);
-        let codewords = encodeBytes(totalData, totalEc, bytes);
+        let (ver, totalData, numBlocks, dataPerBlock, ecPerBlock) =
+            versionParams(ec, len);
+        let codewords = encodeBytes(
+            (totalData, numBlocks, dataPerBlock, ecPerBlock),
+            bytes
+        );
         let matrix = buildOptimalMatrix(ver, ec, codewords);
         drawMatrix(matrix, darkTheme)
 
     ///
-    /// Determine QR version (1-3) and codeword counts for a given EC level and byte length.
+    /// Determine QR version (1-4) and block parameters for a given EC level and byte length.
+    /// Returns: (version, totalData, numBlocks, dataPerBlock, ecPerBlock).
     ///
-    def versionParams(ec: EcLevel, len: Int32): (Int32, Int32, Int32) =
+    def versionParams(ec: EcLevel, len: Int32): (Int32, Int32, Int32, Int32, Int32) =
         match ec {
             case EcLevel.L => paramsL(len)
             case EcLevel.M => paramsM(len)
@@ -343,34 +350,81 @@ mod CubeSolve.Render.Qr {
             case EcLevel.H => paramsH(len)
         }
 
-    def paramsL(len: Int32): (Int32, Int32, Int32) =
-        if (len <= 17) (1, 19, 7)
-        else if (len <= 32) (2, 34, 10)
-        else (3, 55, 15)
+    def paramsL(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
+        if (len <= 17)
+            (1, 19, 1, 19, 7)
+        else if (len <= 32)
+            (2, 34, 1, 34, 10)
+        else if (len <= 53)
+            (3, 55, 1, 55, 15)
+        else
+            (4, 80, 1, 80, 20)
+    }
 
-    def paramsM(len: Int32): (Int32, Int32, Int32) =
-        if (len <= 14) (1, 16, 10)
-        else if (len <= 26) (2, 28, 16)
-        else (3, 44, 26)
+    def paramsM(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
+        if (len <= 14)
+            (1, 16, 1, 16, 10)
+        else if (len <= 26)
+            (2, 28, 1, 28, 16)
+        else if (len <= 42)
+            (3, 44, 1, 44, 26)
+        else
+            (4, 64, 2, 32, 18)
+    }
 
-    def paramsQ(len: Int32): (Int32, Int32, Int32) =
-        if (len <= 11) (1, 13, 13)
-        else if (len <= 20) (2, 22, 22)
-        else (3, 34, 36)
+    def paramsQ(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
+        if (len <= 11)
+            (1, 13, 1, 13, 13)
+        else if (len <= 20)
+            (2, 22, 1, 22, 22)
+        else if (len <= 32)
+            (3, 34, 2, 17, 18)
+        else
+            (4, 48, 2, 24, 26)
+    }
 
-    def paramsH(len: Int32): (Int32, Int32, Int32) =
-        if (len <= 7) (1, 9, 17)
-        else if (len <= 14) (2, 16, 28)
-        else (3, 26, 44)
+    def paramsH(len: Int32): (Int32, Int32, Int32, Int32, Int32) = {
+        if (len <= 7)
+            (1, 9, 1, 9, 17)
+        else if (len <= 14)
+            (2, 16, 1, 16, 28)
+        else if (len <= 24)
+            (3, 26, 2, 13, 22)
+        else
+            (4, 36, 4, 9, 16)
+    }
 
     ///
-    /// Encode raw bytes into QR data codewords + Reed-Solomon EC codewords.
+    /// Encode raw bytes into QR data codewords + interleaved Reed-Solomon EC codewords.
     ///
-    def encodeBytes(totalData: Int32, totalEc: Int32, bytes: List[Int32]): List[Int32] =
+    def encodeBytes(
+        params: (Int32, Int32, Int32, Int32),
+        bytes: List[Int32]
+    ): List[Int32] = {
+        let (totalData, numBlocks, dataPerBlock, ecPerBlock) = params;
         let bitBuf = buildBitBuffer(bytes, totalData);
         let dataCodewords = bitBufferToBytes(bitBuf, totalData);
-        let ecCodewords = computeRs(dataCodewords, totalEc);
-        List.append(dataCodewords, ecCodewords)
+        let dataVector = List.toVector(dataCodewords);
+        let dataBlocks = List.range(0, numBlocks) |> List.map(b ->
+            List.range(0, dataPerBlock) |> List.map(i ->
+                Vector.get(b * dataPerBlock + i, dataVector)
+            )
+        );
+        let ecBlocks = dataBlocks |> List.map(blk -> computeRs(blk, ecPerBlock));
+        let dataBlocksVec = List.map(List.toVector, dataBlocks) |> List.toVector;
+        let ecBlocksVec = List.map(List.toVector, ecBlocks) |> List.toVector;
+        let interleavedData = List.range(0, dataPerBlock) |> List.flatMap(col ->
+            List.range(0, numBlocks) |> List.map(b ->
+                Vector.get(col, Vector.get(b, dataBlocksVec))
+            )
+        );
+        let interleavedEc = List.range(0, ecPerBlock) |> List.flatMap(col ->
+            List.range(0, numBlocks) |> List.map(b ->
+                Vector.get(col, Vector.get(b, ecBlocksVec))
+            )
+        );
+        List.append(interleavedData, interleavedEc)
+    }
 
     ///
     /// Build bit buffer: mode indicator (0100) + length + bytes + terminator + pad.
@@ -568,6 +622,7 @@ mod CubeSolve.Render.Qr {
 
         if (ver == 2) addAlignment(18, 18, size, grid, isFunc) else ();
         if (ver == 3) addAlignment(22, 22, size, grid, isFunc) else ();
+        if (ver == 4) addAlignment(26, 26, size, grid, isFunc) else ();
 
         List.range(8, size - 8) |> List.forEach(i -> {
             let val = if (Int32.modulo(i, 2) == 0) 1 else 0;
@@ -662,7 +717,7 @@ mod CubeSolve.Render.Qr {
             }))
 
     ///
-    /// Place format information around top-left (MSB..LSB) and split (LSB..MSB).
+    /// Place format information around top-left (LSB..MSB) and split (LSB..MSB).
     ///
     def addFormatInfo(
         size: Int32,
@@ -672,7 +727,6 @@ mod CubeSolve.Render.Qr {
         isFunc: Array[Int32, rc]
     ): Unit \ rc =
         let code = formatInfoCode(ec, mask);
-        let bitsMsb = intToBits(code, 15);
         let bitsLsb = List.range(0, 15)
             |> List.map(i -> Int32.bitwiseAnd(Int32.rightShift(code, i), 1));
         let tl1 = (8, 0) :: (8, 1) :: (8, 2) :: (8, 3) :: Nil;
@@ -694,7 +748,7 @@ mod CubeSolve.Render.Qr {
             |> List.append(sp5)
             |> List.append(sp6)
             |> List.append(sp7);
-        List.zip(bitsMsb, coordsTopLeft) |> List.forEach(match (bit, (r, c)) -> {
+        List.zip(bitsLsb, coordsTopLeft) |> List.forEach(match (bit, (r, c)) -> {
             Array.put(bit, r * size + c, grid);
             Array.put(1, r * size + c, isFunc)
         });
