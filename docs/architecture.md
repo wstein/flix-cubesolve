@@ -397,13 +397,38 @@ can reach. A single "exhausted" would have hidden that difference.
 
 ## Human methods
 
+`CubeSolve.Method` answers a partial state the way a person does. Two kinds of
+step live there and they are not the same kind of thing:
+
+- **Algorithm steps** — OLL, PLL. A constrained state is recognised and a
+  memorised sequence played back. These need a corpus.
+- **Search steps** — the cross. There is no case list to look up: the four
+  edges can be anywhere, so it is solved by searching, and the answer is
+  optimal rather than memorised.
+
+The cross is the first of the second kind. Its coordinate tracks four edges and
+nothing else -- 190,080 states -- which is small enough to tabulate the exact
+distance to solved for every one. An IDA* with an exact heuristic expands only
+nodes on an optimal path, so the first answer found is a shortest one.
+
+**No move table.** A successor is four slot lookups; a table to avoid that would
+be thirteen megabytes to save a dozen array reads. The two-phase solver's tables
+exist because its successors are the hot loop of a search running tens of
+millions of steps; this one runs a few thousand.
+
+**The cross is fixed on `D`.** Which face carries it is method policy rather
+than arithmetic, and fixing it keeps one coordinate rather than six. A caller
+wanting another face turns the cube first.
+
 `CubeSolve.Solve` answers any cube by searching. `CubeSolve.Method` answers one
 particular partial state the way a person does: recognise it, then play back an
 algorithm that was memorised for it. These are different products, and neither
 is a better version of the other — a method answer is longer than a searched one
 and is not offered as a solution to an arbitrary cube.
 
-`Method.Oll` and `Method.Pll` are the last two steps of CFOP, in that order.
+`Method.Cross` is the first step of CFOP and `Method.Oll` and `Method.Pll` the
+last two. F2L, which joins them, is not implemented, so the method cannot yet
+answer a whole cube.
 
 **The goal of one step is the precondition of the next**, and they share the
 predicates that say so. `Method.LastLayer` answers "are the first two layers
