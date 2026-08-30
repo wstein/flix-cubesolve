@@ -18,11 +18,11 @@ mod Engine {
     ///
     /// A solution for `c`, with colored net, move count, metric, method, and pattern DB recognition.
     ///
-    pub def solveCube(size: Int32, c: Cube.Cube): Result[String, String] \ IO =
+    pub def solveCube(b: Budgets.Budget, size: Int32, c: Cube.Cube): Result[String, String] \ IO =
         forM (
             netStr <- RenderNet.colouredNet(c);
             tok <- CubeSolve.Model.Facelets.token(c);
-            ms <- movesFor(size, c)
+            ms <- movesFor(b, size, c)
         ) yield {
             let sol = Move.showAll(ms);
             let len = List.length(ms);
@@ -35,6 +35,7 @@ mod Engine {
                 + "${sol}${String.lineSeparator()}"
                 + "${len} moves (HTM)${String.lineSeparator()}"
                 + "method:  ${meth}${String.lineSeparator()}"
+                + "budget:  ${Budgets.nameOf(b)}${budgetNote(size)}${String.lineSeparator()}"
                 + "${patLine}${String.lineSeparator()}"
                 + "orbit64: ${tok}"
         }
@@ -42,10 +43,10 @@ mod Engine {
     ///
     /// A solution for `c` as structured JSON.
     ///
-    pub def solveCubeJson(size: Int32, c: Cube.Cube): Result[String, String] \ IO =
+    pub def solveCubeJson(b: Budgets.Budget, size: Int32, c: Cube.Cube): Result[String, String] \ IO =
         forM (
             tok <- CubeSolve.Model.Facelets.token(c);
-            ms <- movesFor(size, c)
+            ms <- movesFor(b, size, c)
         ) yield {
             let sol = Move.showAll(ms);
             let moveStrs = ms |> List.map(Move.show);
@@ -142,10 +143,25 @@ mod Engine {
     /// terminal should wait once, which is what the cache is for and what this
     /// is the only caller of.
     ///
-    def movesFor(size: Int32, c: Cube.Cube): Result[String, List[Move.Move]] \ IO =
+    ///
+    /// What the budget means for a 2x2x2, which ignores it.
+    ///
+    /// The pocket solver reads a table and returns a shortest answer; there is
+    /// nothing for a budget to buy. Saying so beats printing a budget that had
+    /// no effect.
+    ///
+    def budgetNote(size: Int32): String =
+        if (size == 2) " (ignored: the 2x2x2 answer is already shortest)" else ""
+
+    def movesFor(
+        b: Budgets.Budget,
+        size: Int32,
+        c: Cube.Cube
+    ): Result[String, List[Move.Move]] \ IO =
         match CubeSolve.Model.Validate.faultOf(c) {
             case Some(why) => Err(why)
-            case None      => Store.cached(() -> if (size == 2) pocket(c) else standard(c))
+            case None      =>
+                Store.cached(() -> if (size == 2) pocket(c) else standard(b, c))
         }
 
     ///
@@ -161,11 +177,14 @@ mod Engine {
     ///
     /// A 3x3x3 solution, which is short rather than shortest.
     ///
-    def standard(c: Cube.Cube): Result[String, List[Move.Move]] \ Table.Cache.Store =
+    def standard(
+        b: Budgets.Budget,
+        c: Cube.Cube
+    ): Result[String, List[Move.Move]] \ Table.Cache.Store =
         forM (
             t <- Standard.cachedTables();
             x <- Sized.standardOf(c);
-            ms <- Standard.solutionWith(t, Standard.defaultBudget(), x)
+            ms <- Standard.solutionWith(t, Budgets.solverBudget(b), x)
         ) yield ms
 
 }

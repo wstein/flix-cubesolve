@@ -29,8 +29,9 @@ def main(): Unit \ IO =
 def dispatch(args: List[String]): Unit \ IO =
     Args.withJson(args, (isJson, cmdArgs) -> match cmdArgs {
         case "solve" :: rest    =>
-            report(isJson, Args.withSize(rest, Solving, (size, more) ->
-                solveCommand(isJson, size, more)))
+            report(isJson, Args.withBudget(rest, (b, afterBudget) ->
+                Args.withSize(afterBudget, Solving, (size, more) ->
+                    solveCommand(isJson, b, size, more))))
         case "show" :: rest     =>
             report(isJson, Args.withSize(rest, Turning, (size, more) ->
                 showCommand(isJson, size, more)))
@@ -61,17 +62,18 @@ def dispatch(args: List[String]): Unit \ IO =
     })
 
 ///
-/// `solve [--size n] [--json] <scramble>`
+/// `solve [--size n] [--budget name] [--json] <scramble>`
 ///
 def solveCommand(
     isJson: Bool,
+    b: Budgets.Budget,
     size: Int32,
     rest: List[String]
 ): Result[String, String] \ IO =
     if (isJson)
-        Args.onCube(size, rest, Engine.solveCubeJson)
+        Args.onCube(size, rest, (n, c) -> Engine.solveCubeJson(b, n, c))
     else
-        Args.onCube(size, rest, Engine.solveCube)
+        Args.onCube(size, rest, (n, c) -> Engine.solveCube(b, n, c))
 
 ///
 /// `show [--size n] [--json] <scramble>`
