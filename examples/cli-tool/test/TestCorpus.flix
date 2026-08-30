@@ -10,7 +10,7 @@ mod TestCorpus {
             |> Result.flatMap(Corpus.show)
             |> Result.getWithDefault("");
         let expectedNet = Cube.solved(3)
-            |> Result.flatMap(Render.net)
+            |> Result.flatMap(RenderNet.net)
             |> Result.getWithDefault("");
         Assert.assertTrue(String.contains(substr = expectedNet, shown));
         Assert.assertTrue(String.contains(substr = "orbit64: ", shown))

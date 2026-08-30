@@ -14,15 +14,11 @@ mod Corpus {
     use CubeSolve.Render
 
     ///
-    /// The cube as a portable face-letter net, plus its Orbit64 token.
-    ///
-    /// This is deliberately the library renderer rather than the optional
-    /// ZXing/AWT graphics path: it is readable in a terminal, can be pasted
-    /// back to `show`, and does not depend on terminal colour support.
+    /// The cube as a portable face-letter net in box-drawing format, plus Orbit64 token.
     ///
     pub def show(c: Cube.Cube): Result[String, String] =
         forM (
-            netStr <- Render.net(c);
+            netStr <- RenderNet.net(c);
             tok <- CubeSolve.Model.Facelets.token(c)
         ) yield "${netStr}${String.lineSeparator()}orbit64: ${tok}"
 
@@ -31,7 +27,7 @@ mod Corpus {
     ///
     pub def showJson(size: Int32, c: Cube.Cube): Result[String, String] =
         forM (
-            netStr <- Render.net(c);
+            netStr <- RenderNet.net(c);
             fs <- CubeSolve.Model.Facelets.of(c);
             tok <- CubeSolve.Model.Facelets.token(c)
         ) yield JsonOut.show(size, tok, netStr, fs)
