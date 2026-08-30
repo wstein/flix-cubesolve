@@ -317,7 +317,8 @@ mod TestRender {
         let c = made(3, "U R F");
         let qr = Render.qr(c) |> Result.getWithDefault("");
         let qrLight = Render.qrLight(c) |> Result.getWithDefault("");
-        let qrTok = Render.qrWithToken(c) |> Result.getWithDefault("");
+        let qrTok = Render.qrWithToken(c, CubeSolve.Render.Qr.EcLevel.L)
+            |> Result.getWithDefault("");
         let hasBlock = String.contains(substr = "█", qr) or String.contains(substr = "▀", qr);
         Assert.assertTrue(hasBlock);
         Assert.assertTrue(String.length(qrLight) > 0);
@@ -342,7 +343,8 @@ mod TestRender {
     @Test
     def qrCodeCentersTokenBelow(): Unit \ Assert =
         let c = made(3, "U R F");
-        let qrTok = Render.qrWithToken(c) |> Result.getWithDefault("");
+        let qrTok = Render.qrWithToken(c, CubeSolve.Render.Qr.EcLevel.H)
+            |> Result.getWithDefault("");
         let lines = String.split(regex = "\r?\n", qrTok);
         let lastLine = match List.reverse(lines) {
             case last :: _ => last

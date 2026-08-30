@@ -5,6 +5,7 @@ mod DemoRender {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Render
+    use CubeSolve.Render.Qr.EcLevel
 
     pub def main(): Unit \ IO =
         match Cube.solved(4) |> Result.flatMap(c -> Cube.applyNotation("U R F", c)) {
@@ -20,7 +21,7 @@ mod DemoRender {
                     case Err(e)  => println("Error rendering: ${e}")
                 };
                 println("\n==> QR Code (Orbit64 token):");
-                match Render.qrWithToken(c) {
+                match Render.qrWithToken(c, EcLevel.H) {
                     case Ok(qr) => println(qr)
                     case Err(e) => println("Error generating QR: ${e}")
                 };

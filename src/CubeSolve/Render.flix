@@ -77,9 +77,15 @@ mod CubeSolve.Render {
         Facelets.token(c) |> Result.map(tok -> Qr.renderWith(ec, darkTheme, tok))
 
     ///
-    /// Generate a compact UTF-8 QR code with the orbit64 token centered below.
+    /// Generate a compact UTF-8 QR code with explicit EC level and the token centered below.
     ///
-    pub def qrWithToken(c: Cube.Cube): Result[String, String] =
+    pub def qrWithToken(c: Cube.Cube, ec: Qr.EcLevel): Result[String, String] =
+        Facelets.token(c) |> Result.map(tok -> Qr.renderWithTokenAndEc(ec, true, tok))
+
+    ///
+    /// Generate a compact UTF-8 QR code with the token centered below (default Level L).
+    ///
+    pub def qrWithTokenL(c: Cube.Cube): Result[String, String] =
         Facelets.token(c) |> Result.map(Qr.renderWithToken)
 
     ///

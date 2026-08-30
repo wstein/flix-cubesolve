@@ -40,10 +40,16 @@ mod CubeSolve.Render.Qr {
         renderWith(EcLevel.L, false, text)
 
     ///
-    /// Generate a compact UTF-8 QR code string with the token centered below.
+    /// Generate a compact UTF-8 QR code string with the token centered below (default Level L).
     ///
     pub def renderWithToken(token: String): String =
-        let qr = render(token);
+        renderWithTokenAndEc(EcLevel.L, true, token)
+
+    ///
+    /// Generate a compact UTF-8 QR code string with explicit EC level and centered token.
+    ///
+    pub def renderWithTokenAndEc(ec: EcLevel, darkTheme: Bool, token: String): String = {
+        let qr = renderWith(ec, darkTheme, token);
         let lines = String.split(regex = "\r?\n", qr);
         let width = match lines {
             case first :: _ => String.length(first)
@@ -53,6 +59,7 @@ mod CubeSolve.Render.Qr {
         let pad = if (width > tokLen) (width - tokLen) / 2 else 0;
         let padded = String.repeat(pad, " ") + token;
         qr + String.lineSeparator() + padded
+    }
 
     ///
     /// Write a high-resolution PNG QR code to `path` with optional colorful cube logo (Level H).
