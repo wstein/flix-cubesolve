@@ -83,6 +83,8 @@ mod Methods {
     ///
     /// Solve `c` by a human method, written out in steps.
     ///
+    /// Named `answer` rather than `solve` because `solve` is a Flix keyword.
+    ///
     /// Refuses a cube that is not 3x3x3 by naming the method, rather than
     /// falling back to the searching solver: somebody who asked for CFOP on a
     /// 4x4x4 wants to be told there is no such thing here, not handed a
@@ -92,7 +94,7 @@ mod Methods {
     /// and both methods use the same set. A command line pays that every time
     /// it runs; a program solving many cubes should build once and keep them.
     ///
-    pub def solve(m: Method, size: Int32, c: Cube.Cube): Result[String, String] =
+    pub def answer(m: Method, size: Int32, c: Cube.Cube): Result[String, String] =
         withPlan(m, size, c, plan -> Plan.render(plan))
 
     ///
@@ -102,7 +104,7 @@ mod Methods {
     /// caller asking for JSON wants the steps as data; the flattened sequence
     /// is included because that is what gets replayed.
     ///
-    pub def solveJson(
+    pub def answerJson(
         m: Method,
         size: Int32,
         c: Cube.Cube

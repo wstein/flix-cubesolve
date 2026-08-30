@@ -83,9 +83,9 @@ def solveCommand(
         else
             Args.onCube(size, rest, (n, c) -> Engine.solveCube(b, n, c))
     else if (isJson)
-        Args.onCube(size, rest, (n, c) -> Methods.solveJson(m, n, c))
+        Args.onCube(size, rest, (n, c) -> Methods.answerJson(m, n, c))
     else
-        Args.onCube(size, rest, (n, c) -> Methods.solve(m, n, c))
+        Args.onCube(size, rest, (n, c) -> Methods.answer(m, n, c))
 
 ///
 /// `show [--size n] [--json] <scramble>`
