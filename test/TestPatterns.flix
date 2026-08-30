@@ -2,7 +2,6 @@ mod TestPatterns {
 
     use CubeSolve.Patterns
     use CubeSolve.Model.Cube
-    use CubeSolve.Model.Facelets
     use CubeSolve.Model.Move
     use CubeSolve.Model.Rotation
     use CubeSolve.Model.Validate
@@ -128,7 +127,8 @@ mod TestPatterns {
         let all = Patterns.Revenge.all();
         Vector.forEach(p -> {
             let res = Patterns.Revenge.cube(p);
-            Assert.assertTrueWithMsg(Result.isOk(res), "4x4 pattern '${Patterns.Revenge.name(p)}' failed to apply")
+            let msg = "4x4 pattern '${Patterns.Revenge.name(p)}' failed to apply";
+            Assert.assertTrueWithMsg(Result.isOk(res), msg)
         }, all)
 
     /// Every 5x5x5 curated pattern algorithm parses and applies to a solved cube.
@@ -137,7 +137,8 @@ mod TestPatterns {
         let all = Patterns.Professor.all();
         Vector.forEach(p -> {
             let res = Patterns.Professor.cube(p);
-            Assert.assertTrueWithMsg(Result.isOk(res), "5x5 pattern '${Patterns.Professor.name(p)}' failed to apply")
+            let msg = "5x5 pattern '${Patterns.Professor.name(p)}' failed to apply";
+            Assert.assertTrueWithMsg(Result.isOk(res), msg)
         }, all)
 
 }

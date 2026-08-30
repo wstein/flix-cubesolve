@@ -8,7 +8,8 @@ mod DemoRender {
     use CubeSolve.Render.Qr.EcLevel
 
     pub def main(): Unit \ IO =
-        let alg = "2-4Fw' 2-4Rw2 2F2 2-4Rw2 2-4Dw2 2-3Fw2 2-4Dw S2 2-4Dw 2-3Fw L 2B' 2R2 2B L' 2B' Rw2 S' 2L2 S R2 S' 2L2 S";
+        let alg = "2-4Fw' 2-4Rw2 2F2 2-4Rw2 2-4Dw2 2-3Fw2 2-4Dw S2 2-4Dw "
+            + "2-3Fw L 2B' 2R2 2B L' 2B' Rw2 S' 2L2 S R2 S' 2L2 S";
         match Cube.solved(5) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
             case Ok(c) =>
                 println("==> Face letters (U R F D L B):");
@@ -54,7 +55,9 @@ mod DemoRender {
                 };
                 match Render.iconWritePngWithOptions("build/cube_icon_dark.png", c, 512, false) {
                     case Ok(()) =>
-                        println("Saved standalone 3D cube icon (dark bg) to build/cube_icon_dark.png")
+                        let msg = "Saved standalone 3D cube icon (dark bg) to "
+                            + "build/cube_icon_dark.png";
+                        println(msg)
                     case Err(e) =>
                         println("Error exporting dark cube icon: ${e}")
                 }

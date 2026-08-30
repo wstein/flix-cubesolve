@@ -313,7 +313,7 @@ mod TestRender {
     /// QR code generation produces non-empty UTF-8 block graphic encoding orbit64 token.
     ///
     @Test
-    def qrCodeGeneratesNonEmptyUtf8Graphic(): Unit \ Assert =
+    def qrCodeGeneratesNonEmptyUtf8Graphic(): Unit \ { Assert, IO } = {
         let c = made(3, "U R F");
         let qr = Render.qr(c) |> Result.getWithDefault("");
         let qrLight = Render.qrLight(c) |> Result.getWithDefault("");
@@ -323,12 +323,13 @@ mod TestRender {
         Assert.assertTrue(hasBlock);
         Assert.assertTrue(String.length(qrLight) > 0);
         Assert.assertTrue(String.length(qrTok) > String.length(qr))
+    }
 
     ///
     /// QR code generation supports all error correction levels (L, M, Q, H).
     ///
     @Test
-    def qrCodeSupportsAllEcLevels(): Unit \ Assert =
+    def qrCodeSupportsAllEcLevels(): Unit \ { Assert, IO } = {
         let c = made(3, "U R F");
         let levels = CubeSolve.Render.Qr.EcLevel.L :: CubeSolve.Render.Qr.EcLevel.M
             :: CubeSolve.Render.Qr.EcLevel.Q :: CubeSolve.Render.Qr.EcLevel.H :: Nil;
@@ -336,12 +337,13 @@ mod TestRender {
             let qr = Render.qrWith(c, lvl, true) |> Result.getWithDefault("");
             Assert.assertTrue(String.length(qr) > 0)
         })
+    }
 
     ///
     /// QR code with token centers the token string below the graphic.
     ///
     @Test
-    def qrCodeCentersTokenBelow(): Unit \ Assert =
+    def qrCodeCentersTokenBelow(): Unit \ { Assert, IO } = {
         let c = made(3, "U R F");
         let qrTok = Render.qrWithToken(c, CubeSolve.Render.Qr.EcLevel.H)
             |> Result.getWithDefault("");
@@ -351,23 +353,25 @@ mod TestRender {
             case Nil       => ""
         };
         Assert.assertTrue(String.startsWith(prefix = " ", lastLine))
+    }
 
     ///
     /// PNG QR code generation writes a readable PNG file with and without logo.
     ///
     @Test
-    def qrCodeWritesPngFile(): Unit \ { Assert, IO } =
+    def qrCodeWritesPngFile(): Unit \ { Assert, IO } = {
         let c = made(3, "U R F");
         let pathWith = "build/test_qr_logo.png";
         let pathWithout = "build/test_qr_nologo.png";
         Assert.assertEq(expected = Ok(()), Render.qrWritePng(pathWith, c, true));
         Assert.assertEq(expected = Ok(()), Render.qrWritePng(pathWithout, c, false))
+    }
 
     ///
     /// QR code generation with specific error correction levels produces expected dimensions.
     ///
     @Test
-    def qrCodeDimensionsAcrossEcLevels(): Unit \ Assert =
+    def qrCodeDimensionsAcrossEcLevels(): Unit \ { Assert, IO } = {
         let c3 = made(3, "U R F");
         let c4 = made(4, "U R F");
         let qr3L = Render.qrWith(c3, CubeSolve.Render.Qr.EcLevel.L, true)
@@ -395,12 +399,13 @@ mod TestRender {
         Assert.assertEq(expected = 19, List.length(lines4M));
         Assert.assertEq(expected = 19, List.length(lines4Q));
         Assert.assertEq(expected = 21, List.length(lines4H))
+    }
 
     ///
     /// QR code with full web URL produces valid UTF-8 graphic and PNG file.
     ///
     @Test
-    def qrCodeWithUrlGeneratesValidMatrixAndFile(): Unit \ { Assert, IO } =
+    def qrCodeWithUrlGeneratesValidMatrixAndFile(): Unit \ { Assert, IO } = {
         let c = made(3, "U R F");
         let prefix = "https://cubesolve.org/#";
         let qr = Render.qrWithUrl(c, prefix, CubeSolve.Render.Qr.EcLevel.H)
@@ -409,6 +414,7 @@ mod TestRender {
         Assert.assertTrue(hasBlock);
         let path = "build/test_qr_url.png";
         Assert.assertEq(expected = Ok(()), Render.qrWritePngWithUrl(path, c, prefix, true))
+    }
 
     ///
     /// Standalone 3D isometric cube icon exports successfully for all sizes 2x2 through 5x5.
@@ -420,7 +426,8 @@ mod TestRender {
             let path = "build/test_icon_${n}x${n}.png";
             Assert.assertEq(expected = Ok(()), Render.iconWritePng(path, c));
             let darkPath = "build/test_icon_dark_${n}x${n}.png";
-            Assert.assertEq(expected = Ok(()), Render.iconWritePngWithOptions(darkPath, c, 256, false))
+            let opt = Render.iconWritePngWithOptions(darkPath, c, 256, false);
+            Assert.assertEq(expected = Ok(()), opt)
         })
 
 }

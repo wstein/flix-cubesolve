@@ -43,7 +43,8 @@ mod CubeSolve.Patterns.Professor {
             "Nested Squares",
             "FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN",
             "ruwix1",
-            "2-4Fw' 2-4Rw2 2F2 2-4Rw2 2-4Dw2 2-3Fw2 2-4Dw S2 2-4Dw 2-3Fw L 2B' 2R2 2B L' 2B' Rw2 S' 2L2 S R2 S' 2L2 S"
+            "2-4Fw' 2-4Rw2 2F2 2-4Rw2 2-4Dw2 2-3Fw2 2-4Dw S2 2-4Dw "
+                + "2-3Fw L 2B' 2R2 2B L' 2B' Rw2 S' 2L2 S R2 S' 2L2 S"
         ),
         Pattern(
             "Center Dots",

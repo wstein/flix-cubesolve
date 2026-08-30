@@ -10,6 +10,7 @@ mod CubeSolve.Render.Icon {
     import java.awt.image.BufferedImage
     import java.io.File
     import java.lang.Throwable
+    import java.util.Objects
     import javax.imageio.ImageIO
 
     ///
@@ -23,7 +24,7 @@ mod CubeSolve.Render.Icon {
         transparent: Bool
     ): Result[String, Unit] \ IO =
         try {
-            let imgType = if (transparent) 2 else 1; // TYPE_INT_ARGB = 2, TYPE_INT_RGB = 1
+            let imgType = if (transparent) 2 else 1;
             let img = new BufferedImage(imgSize, imgSize, imgType);
             let g = img.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -43,7 +44,7 @@ mod CubeSolve.Render.Icon {
             g.dispose();
             let file = new File(path);
             let parent = file.getParentFile();
-            if (not Object.isNull(parent)) {
+            if (not Objects.isNull(parent)) {
                 let _ = parent.mkdirs();
                 ()
             } else ();
@@ -56,7 +57,10 @@ mod CubeSolve.Render.Icon {
     def toInt(x: Float64): Int32 =
         Float64.tryToInt32(x) |> Option.getWithDefault(0)
 
-    def drawCubeBody(
+    ///
+    /// Draw the 3D isometric hexagonal cube silhouette body.
+    ///
+    pub def drawCubeBody(
         g: Graphics2D,
         cx: Float64,
         cy: Float64,
@@ -76,7 +80,10 @@ mod CubeSolve.Render.Icon {
         g.fillPolygon(poly)
     }
 
-    def faceColor(fIdx: Int32, factor: Float64): Color \ IO = {
+    ///
+    /// Convert a face index to its corresponding shaded Color.
+    ///
+    pub def faceColor(fIdx: Int32, factor: Float64): Color \ IO = {
         let (br, bg, bb) = match fIdx {
             case 0 => (250.0, 250.0, 250.0) // U: White
             case 1 => (220.0, 38.0, 38.0)   // R: Red
@@ -92,7 +99,10 @@ mod CubeSolve.Render.Icon {
         new Color(r, g, b)
     }
 
-    def drawTopFace(
+    ///
+    /// Draw the top (U) isometric face stickers with lighting.
+    ///
+    pub def drawTopFace(
         g: Graphics2D,
         n: Int32,
         facelets: Vector[Int32],
@@ -126,7 +136,10 @@ mod CubeSolve.Render.Icon {
         )
     }
 
-    def drawFrontFace(
+    ///
+    /// Draw the front (F) isometric face stickers with lighting.
+    ///
+    pub def drawFrontFace(
         g: Graphics2D,
         n: Int32,
         facelets: Vector[Int32],
@@ -161,7 +174,10 @@ mod CubeSolve.Render.Icon {
         )
     }
 
-    def drawRightFace(
+    ///
+    /// Draw the right (R) isometric face stickers with lighting.
+    ///
+    pub def drawRightFace(
         g: Graphics2D,
         n: Int32,
         facelets: Vector[Int32],

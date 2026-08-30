@@ -83,7 +83,11 @@ mod CubeSolve.Model.Stickers {
         k: Int32,
         fs: Vector[Int32]
     ): Vector[Int32] =
-        if (k <= 0) fs else turnInner(n, f, depth, k - 1, quarterInner(n, f, depth, fs))
+        if (k <= 0)
+            fs
+        else
+            let stepped = quarterInner(n, f, depth, fs);
+            turnInner(n, f, depth, k - 1, stepped)
 
     ///
     /// One clockwise quarter turn of face `f`.
@@ -231,20 +235,26 @@ mod CubeSolve.Model.Stickers {
     }
 
     def aroundUpInner(n: Int32, d: Int32): List[List[Int32]] =
-        row(n, 2, d) :: row(n, 4, d) :: row(n, 5, d) :: row(n, 1, d) :: Nil
+        row(n, 2, d) :: row(n, 4, d)
+            :: row(n, 5, d) :: row(n, 1, d) :: Nil
 
-    def aroundDownInner(n: Int32, d: Int32): List[List[Int32]] =
+    def aroundDownInner(n: Int32, d: Int32): List[List[Int32]] = {
         let last = n - 1 - d;
-        row(n, 2, last) :: row(n, 1, last) :: row(n, 5, last) :: row(n, 4, last) :: Nil
+        row(n, 2, last) :: row(n, 1, last)
+            :: row(n, 5, last) :: row(n, 4, last) :: Nil
+    }
 
-    def aroundRightInner(n: Int32, d: Int32): List[List[Int32]] =
+    def aroundRightInner(n: Int32, d: Int32): List[List[Int32]] = {
         let last = n - 1 - d;
         col(n, 2, last) :: col(n, 0, last) :: back(col(n, 5, d))
             :: col(n, 3, last) :: Nil
+    }
 
-    def aroundLeftInner(n: Int32, d: Int32): List[List[Int32]] =
+    def aroundLeftInner(n: Int32, d: Int32): List[List[Int32]] = {
         let last = n - 1 - d;
-        col(n, 2, d) :: col(n, 3, d) :: back(col(n, 5, last)) :: col(n, 0, d) :: Nil
+        col(n, 2, d) :: col(n, 3, d)
+            :: back(col(n, 5, last)) :: col(n, 0, d) :: Nil
+    }
 
     def aroundFrontInner(n: Int32, d: Int32): List[List[Int32]] =
         let last = n - 1 - d;

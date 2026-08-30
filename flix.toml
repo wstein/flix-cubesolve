@@ -12,3 +12,7 @@ modules     = ["CubeSolve"]
 
 [dependencies]
 "github:wstein/flix-orbit64" = "0.3.0"
+
+[mvn-dependencies]
+"com.google.zxing:core" = "3.5.4"
+

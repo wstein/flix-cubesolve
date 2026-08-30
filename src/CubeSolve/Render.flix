@@ -61,31 +61,31 @@ mod CubeSolve.Render {
     ///
     /// Generate a compact UTF-8 graphic QR code encoding the cube's orbit64 token.
     ///
-    pub def qr(c: Cube.Cube): Result[String, String] =
+    pub def qr(c: Cube.Cube): Result[String, String] \ IO =
         Facelets.token(c) |> Result.map(Qr.render)
 
     ///
     /// Generate a compact UTF-8 QR code for light themes.
     ///
-    pub def qrLight(c: Cube.Cube): Result[String, String] =
+    pub def qrLight(c: Cube.Cube): Result[String, String] \ IO =
         Facelets.token(c) |> Result.map(Qr.renderLight)
 
     ///
     /// Generate a compact UTF-8 QR code with explicit EC level and theme choice.
     ///
-    pub def qrWith(c: Cube.Cube, ec: Qr.EcLevel, darkTheme: Bool): Result[String, String] =
+    pub def qrWith(c: Cube.Cube, ec: Qr.EcLevel, darkTheme: Bool): Result[String, String] \ IO =
         Facelets.token(c) |> Result.map(tok -> Qr.renderWith(ec, darkTheme, tok))
 
     ///
     /// Generate a compact UTF-8 QR code with explicit EC level and the token centered below.
     ///
-    pub def qrWithToken(c: Cube.Cube, ec: Qr.EcLevel): Result[String, String] =
+    pub def qrWithToken(c: Cube.Cube, ec: Qr.EcLevel): Result[String, String] \ IO =
         Facelets.token(c) |> Result.map(tok -> Qr.renderWithTokenAndEc(ec, true, tok))
 
     ///
     /// Generate a compact UTF-8 QR code with the token centered below (default Level L).
     ///
-    pub def qrWithTokenL(c: Cube.Cube): Result[String, String] =
+    pub def qrWithTokenL(c: Cube.Cube): Result[String, String] \ IO =
         Facelets.token(c) |> Result.map(Qr.renderWithToken)
 
     ///
@@ -102,7 +102,11 @@ mod CubeSolve.Render {
     ///
     /// Render a compact UTF-8 QR code encoding a full web URL with the cube token.
     ///
-    pub def qrWithUrl(c: Cube.Cube, urlPrefix: String, ec: Qr.EcLevel): Result[String, String] =
+    pub def qrWithUrl(
+        c: Cube.Cube,
+        urlPrefix: String,
+        ec: Qr.EcLevel
+    ): Result[String, String] \ IO =
         Facelets.token(c) |> Result.map(tok ->
             Qr.renderWith(ec, true, urlPrefix + tok)
         )
@@ -124,7 +128,8 @@ mod CubeSolve.Render {
         }
 
     ///
-    /// Write a standalone high-resolution 3D isometric cube icon PNG to `path` (transparent, 512px).
+    /// Write a standalone high-resolution 3D isometric cube icon PNG to `path`
+    /// (transparent background, 512px).
     ///
     pub def iconWritePng(path: String, c: Cube.Cube): Result[String, Unit] \ IO =
         iconWritePngWithOptions(path, c, 512, true)
@@ -145,7 +150,7 @@ mod CubeSolve.Render {
     ///
     /// Generate a compact UTF-8 graphic QR code from text.
     ///
-    pub def qrOf(text: String): String =
+    pub def qrOf(text: String): String \ IO =
         Qr.render(text)
 
     ///

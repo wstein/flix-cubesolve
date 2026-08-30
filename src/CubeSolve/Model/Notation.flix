@@ -162,24 +162,51 @@ mod CubeSolve.Model.Notation {
     ///
     /// A run of digits as a repeat count, or as a layer / range prefix for a move.
     ///
-    def lexCount(all: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] = {
+    def lexCount(all: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] =
         let (digits, after) = spanOf(Char.isDigit, all);
         match after {
             case '-' :: next :: _ if Char.isDigit(next) =>
-                let (digits2, afterDigits2) = spanOf(Char.isDigit, List.drop(1, after));
-                let (letters, afterWord) = spanOf(Char.isLetter, afterDigits2);
-                let fullWord = digits + "-" + digits2 + letters;
-                lexFrom(afterWord, Lexeme.Word(fullWord) :: acc)
+                lexRange(digits, List.drop(1, after), acc)
             case next :: _ if Char.isLetter(next) =>
-                let (letters, afterWord) = spanOf(Char.isLetter, after);
-                lexFrom(afterWord, Lexeme.Word(digits + letters) :: acc)
+                lexPrefixedWord(digits, after, acc)
             case _ =>
-                match Int32.fromString(digits) {
-                    case Some(k) => lexFrom(after, Lexeme.Count(k) :: acc)
-                    case None    => Err("'${digits}' is not a number this notation can use")
-                }
+                lexRepeatCount(digits, after, acc)
         }
+
+    def lexRange(
+        digits: String,
+        afterHyphen: List[Char],
+        acc: List[Lexeme]
+    ): Result[String, List[Lexeme]] = {
+        let (digits2, afterDigits2) = spanOf(Char.isDigit, afterHyphen);
+        let (letters, afterWord) = spanOf(Char.isLetter, afterDigits2);
+        let fullWord = digits + "-" + digits2 + letters;
+        let token = Lexeme.Word(fullWord);
+        lexFrom(afterWord, token :: acc)
     }
+
+    def lexPrefixedWord(
+        digits: String,
+        after: List[Char],
+        acc: List[Lexeme]
+    ): Result[String, List[Lexeme]] = {
+        let (letters, afterWord) = spanOf(Char.isLetter, after);
+        let token = Lexeme.Word(digits + letters);
+        lexFrom(afterWord, token :: acc)
+    }
+
+    def lexRepeatCount(
+        digits: String,
+        after: List[Char],
+        acc: List[Lexeme]
+    ): Result[String, List[Lexeme]] =
+        match Int32.fromString(digits) {
+            case Some(k) =>
+                let token = Lexeme.Count(k);
+                lexFrom(after, token :: acc)
+            case None =>
+                Err("'${digits}' is not a number this notation can use")
+        }
 
     ///
     /// The longest prefix of `cs` satisfying `p`, as a string, and the rest.
@@ -357,7 +384,11 @@ mod CubeSolve.Model.Notation {
     ///
     /// Parse numbered slice, range or wide moves like 2U, 2R, 2Rw, 2-4Fw, 3L.
     ///
-    def expandLayerPrefix(n: Int32, base: String, token: String): Option[Result[String, List[Op]]] = {
+    def expandLayerPrefix(
+        n: Int32,
+        base: String,
+        token: String
+    ): Option[Result[String, List[Op]]] = {
         if (String.contains(substr = "-", base))
             Some(expandRangeLayer(n, token, base))
         else {
@@ -370,7 +401,9 @@ mod CubeSolve.Model.Notation {
                     case Some(layerNum) if layerNum >= 1 and layerNum < n =>
                         Some(expandNumberedLayer(n, token, layerNum, rest))
                     case Some(layerNum) =>
-                        Some(Err("'${token}' specifies layer ${layerNum}, which is out of range for a ${n}x${n}x${n}"))
+                        let msg = "'${token}' specifies layer ${layerNum}, "
+                            + "which is out of range for a ${n}x${n}x${n}";
+                        Some(Err(msg))
                     case None =>
                         Some(Err("'${token}' has an invalid layer number"))
                 }
@@ -386,10 +419,19 @@ mod CubeSolve.Model.Notation {
         let afterHyphenChars = List.drop(1, afterHyphen);
         let (secondDigits, letterChars) = spanOf(Char.isDigit, afterHyphenChars);
         let letters = letterChars |> List.map(Char.toString) |> List.join("");
-        let faceStr = String.toUpperCase(if (String.endsWith(suffix = "w", letters)) String.dropRight(1, letters) else letters);
-        match (Int32.fromString(firstDigits), Int32.fromString(secondDigits), layerOf(faceStr)) {
-            case (Some(startL), Some(endL), Some(f)) if startL >= 1 and endL < n and startL <= endL =>
-                let ops = List.range(startL, endL + 1) |> List.flatMap(l -> expandSingleLayer(n, f, l));
+        let baseFace = if (String.endsWith(suffix = "w", letters))
+            String.dropRight(1, letters)
+        else
+            letters;
+        let faceStr = String.toUpperCase(baseFace);
+        let p1 = Int32.fromString(firstDigits);
+        let p2 = Int32.fromString(secondDigits);
+        let pf = layerOf(faceStr);
+        match (p1, p2, pf) {
+            case (Some(startL), Some(endL), Some(f))
+                if startL >= 1 and endL < n and startL <= endL =>
+                let ops = List.range(startL, endL + 1)
+                    |> List.flatMap(l -> expandSingleLayer(n, f, l));
                 Ok(ops)
             case _ => Err(unknownToken(token))
         }
@@ -398,12 +440,18 @@ mod CubeSolve.Model.Notation {
     ///
     /// Expand a valid layer number and face into outer and inner slice operations.
     ///
-    def expandNumberedLayer(n: Int32, token: String, layerNum: Int32, rest: String): Result[String, List[Op]] = {
+    def expandNumberedLayer(
+        n: Int32,
+        token: String,
+        layerNum: Int32,
+        rest: String
+    ): Result[String, List[Op]] = {
         let isWide = String.endsWith(suffix = "w", rest);
         let faceStr = String.toUpperCase(if (isWide) String.dropRight(1, rest) else rest);
         match layerOf(faceStr) {
             case Some(f) if isWide =>
-                let ops = List.range(1, layerNum + 1) |> List.flatMap(l -> expandSingleLayer(n, f, l));
+                let ops = List.range(1, layerNum + 1)
+                    |> List.flatMap(l -> expandSingleLayer(n, f, l));
                 Ok(ops)
             case Some(f) =>
                 Ok(expandSingleLayer(n, f, layerNum))
@@ -621,9 +669,13 @@ mod CubeSolve.Model.Notation {
     /// Operations for an odd-cube central slice move.
     def oddSliceOps(n: Int32, a: Face, b: Face, r: Rotation.Rotation): List[Op] = {
         let maxDepth = n / 2 - 1;
-        let innersA = List.range(1, maxDepth + 1) |> List.map(d -> Inner(Turn(a, 3), d));
-        let innersB = List.range(1, maxDepth + 1) |> List.map(d -> Inner(Turn(b, 1), d));
-        Layer(Turn(a, 3)) :: List.append(innersA, Layer(Turn(b, 1)) :: List.append(innersB, Frame(r) :: Nil))
+        let innersA = List.range(1, maxDepth + 1)
+            |> List.map(d -> Inner(Turn(a, 3), d));
+        let innersB = List.range(1, maxDepth + 1)
+            |> List.map(d -> Inner(Turn(b, 1), d));
+        let sideA = Layer(Turn(a, 3)) :: innersA;
+        let sideB = Layer(Turn(b, 1)) :: innersB;
+        List.append(sideA, List.append(sideB, Frame(r) :: Nil))
     }
 
     /// Even cubes turn the two middle slices symmetrically.
