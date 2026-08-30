@@ -7,3 +7,5 @@ lib/
 site/
 crash_report_*.txt
 tmp/
+metric.md
+metrics.md
