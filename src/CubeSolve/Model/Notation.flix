@@ -54,8 +54,9 @@ mod CubeSolve.Model.Notation {
     ///
     /// **Groups are grammar, not decoration.** Published algorithms are written
     /// with brackets, and a bracket sometimes carries a repeat count: `(M z)4`
-    /// is four of `M z`, while `(R U R' U')` is one and the brackets only show
-    /// where the fingers go. Stripping brackets would silently turn the first
+    /// or the equally common `(M z)x4` is four of `M z`. `(R U R' U')` is one;
+    /// its brackets only show where the fingers go. Stripping brackets would
+    /// silently turn the first
     /// into the second, so they are parsed rather than removed. Groups nest, and
     /// take the same suffixes a move does.
     ///
@@ -252,12 +253,26 @@ mod CubeSolve.Model.Notation {
     ///
     /// A bracketed group: its contents, its closing bracket, and its suffix.
     ///
+    /// Some published guides spell a group repeat as `( ... )x4`. Here `x` is
+    /// multiplication because it follows a completed group; elsewhere it is
+    /// still the whole-cube rotation. Reducing this spelling here keeps the
+    /// ambiguity at the grammar boundary rather than asking every caller to
+    /// rewrite a source algorithm first.
+    ///
     def group(n: Int32, lexemes: List[Lexeme]): Result[String, Parsed] =
         forM (
             inner <- sequence(n, lexemes, Nil);
             closed <- closing(inner);
-            out <- suffixed(inner#ops, closed, "( ... )")
+            out <- groupSuffixed(inner#ops, closed)
         ) yield out
+
+    /// Apply the normal group suffix, accepting `xN` as its published repeat spelling.
+    def groupSuffixed(ops: List[Op], lexemes: List[Lexeme]): Result[String, Parsed] =
+        match lexemes {
+            case Lexeme.Word("x") :: Lexeme.Count(k) :: rest =>
+                suffixed(ops, Lexeme.Count(k) :: rest, "( ... )")
+            case _ => suffixed(ops, lexemes, "( ... )")
+        }
 
     ///
     /// What follows a group's closing bracket, or why there is none.

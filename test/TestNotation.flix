@@ -116,6 +116,13 @@ mod TestNotation {
             Notation.parse(4, "M2")
         )
 
+    /// Kewbz and other guides use `xN` as multiplication after a group. At
+    /// that position it must repeat the group rather than turn the cube by x.
+    @Test
+    def aGroupCanUseThePublishedXRepeatMarker(): Unit \ Assert =
+        same(3, "(M2 U2 M2 U2 y)x2", "(M2 U2 M2 U2 y)2");
+        same(5, "(m' U)x4", "(m' U)4")
+
     @Test
     def sliceAndWideMovesHaveOrderFour(): Unit \ Assert =
         List.forEach(t -> {
@@ -224,6 +231,13 @@ mod TestNotation {
         Assert.assertOk(Notation.parse(5, "2D 2R' 2U2 2L 2B2 2F 2u 2r'"));
         Assert.assertErr(Notation.parse(5, "5R"));
         Assert.assertErr(Notation.parse(5, "0R"))
+
+    /// Kewbz's 4x4 and 5x5 notation guides use these spellings: lowercase for
+    /// an adjacent inner slice, `Fw` for two layers, and `3Fw` for three.
+    @Test
+    def kewbzBigCubeNotationAppliesAtItsPublishedSizes(): Unit \ Assert =
+        Assert.assertOk(Notation.parse(4, "Fw Rw Uw Bw Lw Dw f r u b l d"));
+        Assert.assertOk(Notation.parse(5, "Fw Rw Uw Bw Lw Dw 3Fw 3Rw 3Uw 3Bw 3Lw 3Dw M E S"))
 
     /// The 5x5x5 scramble with slice and numbered layer turns produces a valid cube.
     @Test
