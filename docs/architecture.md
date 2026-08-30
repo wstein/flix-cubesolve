@@ -536,22 +536,41 @@ rules make it safe to hand around:
 `CubeSolve.Model.Notation` stays strict and flat and knows nothing about any of
 this: it parses algorithms, `Plan` parses documents.
 
-`CubeSolve.Method.Beginner.solution` is the first orchestration: it runs the
-cross, the first layer and the middle edges in turn, threading each stage's
-result into the next, and returns them as a labelled `Plan`.
+**Two whole-cube methods, and they differ only in the middle.**
+`Method.Beginner.solution` runs five stages — cross, first layer, middle edges,
+OLL, PLL — and `Method.Cfop.solution` runs four: cross, F2L, OLL, PLL. Each
+threads one stage's result into the next and returns them as a labelled `Plan`.
+Both check from the ladder that they really got where they claim, rather than
+from any solver's own coordinate.
 
-**It answers three rungs of eight, and says which.** The last four are not
-implemented, so it returns an error naming the rung it stopped at rather than a
-plan that quietly does less than its name suggests — the difference between an
-unfinished method and a wrong one. It also checks from the ladder that it really
-got where it claims, rather than from any solver's own coordinate.
+The shared tail — turning a search result or a last-layer case into a named
+step, and the steps into a plan — is `Method.Steps`, for the reason
+`Method.LastLayer` exists: two copies would be free to drift, and two methods
+labelling the same stage differently would be a difference with nothing behind
+it.
+
+**Where they differ is one searched step against two.** The beginner method
+places the bottom corners and then the middle edges, with a named state between
+them; CFOP solves both layers as a single `Solve.TwoLayers` search. Both arrive
+at the same rung, and the shared ladder is what says so.
+
+**Neither is the textbook article, and both say which part is not.** The
+beginner method uses the full 57 OLL and 21 PLL cases rather than the smaller
+vocabulary a beginner is taught. CFOP's F2L step is not pair-by-pair insertion:
+it searches the first two layers as one goal, which finds shorter sequences than
+inserting four pairs and teaches nothing about pairs. The step is called `F2L`
+because that is the state it reaches, not because it is a demonstration of how
+to do F2L.
+
+**Nothing here is optimal, and the gap is large.** Four or five steps each short
+for its own goal do not make a short solution; `Solve.Standard` answers a whole
+cube in about the moves either method spends before the last layer.
 
 **The tables are built once and shared.** The two-layer tables already contain
 the cross and corner projections the first-layer search uses, so building both
-sets would construct the same 326,160 states twice.
-
-F2L, which joins the cross to the last layer for CFOP, is a different route and
-is not implemented.
+sets would construct the same 326,160 states twice. `Method.Cfop.build` and
+`Method.Beginner.build` return the same tables; a program offering both methods
+should build one set and hand it to each.
 
 **The goal of one step is the precondition of the next**, and they share the
 predicates that say so. `Method.LastLayer` answers "are the first two layers
