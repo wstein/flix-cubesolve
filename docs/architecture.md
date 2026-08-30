@@ -427,8 +427,17 @@ is a better version of the other — a method answer is longer than a searched o
 and is not offered as a solution to an arbitrary cube.
 
 `Method.Cross` is the first step of CFOP and `Method.Oll` and `Method.Pll` the
-last two. F2L, which joins them, is not implemented, so the method cannot yet
-answer a whole cube.
+last two. `CubeSolve.Method.lastLayer` runs those two together and returns the
+answer as **stages** rather than one sequence, which is the shape a method
+explanation needs: which step, which case, which moves, and what it cost.
+
+**A step that is not needed is a stage with no moves**, not an absent one. A last
+layer that arrives oriented has no OLL case and one that arrives solved has no
+PLL case; both are welcome and both are reported, because a reader given two
+stages where they expected three should be told which went and why.
+
+F2L, which joins the cross to the last layer, is not implemented, so the method
+cannot yet answer a whole cube.
 
 **The goal of one step is the precondition of the next**, and they share the
 predicates that say so. `Method.LastLayer` answers "are the first two layers
