@@ -31,7 +31,7 @@ mod CubeSolve.Model.Notation {
     use CubeSolve.Model.Move.Face.{U, R, F, D, L, B}
     use CubeSolve.Model.Move.Move.Turn
     use CubeSolve.Model.Rotation
-    use CubeSolve.Model.Notation.Op.{Layer, Frame}
+    use CubeSolve.Model.Notation.Op.{Layer, Inner, Frame}
 
     ///
     /// One step of a written sequence, after expansion.
@@ -39,6 +39,8 @@ mod CubeSolve.Model.Notation {
     pub enum Op with Eq, ToString {
         /// Turn one layer. The face is named in the frame current at this point.
         case Layer(Move.Move),
+        /// Turn an inner layer `depth` in from the named face.
+        case Inner(Move.Move, Int32),
         /// Rotate the whole cube. No piece moves relative to any other.
         case Frame(Rotation.Rotation)
     }
@@ -125,13 +127,13 @@ mod CubeSolve.Model.Notation {
     ///
     /// The symbols that are one character each.
     ///
-    /// The curly apostrophe is here because it is what a word processor leaves
-    /// behind, and an algorithm pasted out of one is still an algorithm.
+    /// The curly apostrophe and prime characters are supported for pasting from editors.
+    /// Square brackets are accepted for grouping.
     ///
     def onItsOwn(c: Char): Option[Lexeme] =
-        if (c == '(') Some(Lexeme.Open)
-        else if (c == ')') Some(Lexeme.Close)
-        else if (c == '\'' or c == '\u2019') Some(Lexeme.Prime)
+        if (c == '(' or c == '[') Some(Lexeme.Open)
+        else if (c == ')' or c == ']') Some(Lexeme.Close)
+        else if (c == '\'' or c == '\u2019' or c == '\u2018' or c == '\u2032') Some(Lexeme.Prime)
         else None
 
     ///
@@ -158,14 +160,26 @@ mod CubeSolve.Model.Notation {
         lexFrom(after, Lexeme.Word(word) :: acc)
 
     ///
-    /// A run of digits as a repeat count.
+    /// A run of digits as a repeat count, or as a layer / range prefix for a move.
     ///
-    def lexCount(all: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] =
+    def lexCount(all: List[Char], acc: List[Lexeme]): Result[String, List[Lexeme]] = {
         let (digits, after) = spanOf(Char.isDigit, all);
-        match Int32.fromString(digits) {
-            case Some(k) => lexFrom(after, Lexeme.Count(k) :: acc)
-            case None    => Err("'${digits}' is not a number this notation can use")
+        match after {
+            case '-' :: next :: _ if Char.isDigit(next) =>
+                let (digits2, afterDigits2) = spanOf(Char.isDigit, List.drop(1, after));
+                let (letters, afterWord) = spanOf(Char.isLetter, afterDigits2);
+                let fullWord = digits + "-" + digits2 + letters;
+                lexFrom(afterWord, Lexeme.Word(fullWord) :: acc)
+            case next :: _ if Char.isLetter(next) =>
+                let (letters, afterWord) = spanOf(Char.isLetter, after);
+                lexFrom(afterWord, Lexeme.Word(digits + letters) :: acc)
+            case _ =>
+                match Int32.fromString(digits) {
+                    case Some(k) => lexFrom(after, Lexeme.Count(k) :: acc)
+                    case None    => Err("'${digits}' is not a number this notation can use")
+                }
         }
+    }
 
     ///
     /// The longest prefix of `cs` satisfying `p`, as a string, and the rest.
@@ -309,6 +323,7 @@ mod CubeSolve.Model.Notation {
     def invert(ops: List[Op]): List[Op] =
         ops |> List.reverse |> List.map(op -> match op {
             case Layer(m) => Layer(Move.inverse(m))
+            case Inner(m, d) => Inner(Move.inverse(m), d)
             case Frame(r) => Frame(Rotation.inverse(r))
         })
 
@@ -323,6 +338,7 @@ mod CubeSolve.Model.Notation {
     pub def layersOnly(ops: List[Op]): List[Move.Move] =
         ops |> List.filterMap(op -> match op {
             case Layer(m) => Some(m)
+            case Inner(m, _) => Some(m)
             case Frame(_) => None
         })
 
@@ -330,10 +346,97 @@ mod CubeSolve.Model.Notation {
     /// What one quarter turn of `base` does, as layer turns and a frame rotation.
     ///
     def expand(n: Int32, base: String, token: String): Result[String, List[Op]] =
-        match layerOf(base) {
-            case Some(f) => Ok(Layer(Turn(f, 1)) :: Nil)
-            case None    => expandNonLayer(n, base, token)
+        match expandLayerPrefix(n, base, token) {
+            case Some(res) => res
+            case None      => match layerOf(base) {
+                case Some(f) => Ok(Layer(Turn(f, 1)) :: Nil)
+                case None    => expandNonLayer(n, base, token)
+            }
         }
+
+    ///
+    /// Parse numbered slice, range or wide moves like 2U, 2R, 2Rw, 2-4Fw, 3L.
+    ///
+    def expandLayerPrefix(n: Int32, base: String, token: String): Option[Result[String, List[Op]]] = {
+        if (String.contains(substr = "-", base))
+            Some(expandRangeLayer(n, token, base))
+        else {
+            let (digitsStr, restChars) = spanOf(Char.isDigit, String.toList(base));
+            if (digitsStr == "")
+                None
+            else {
+                let rest = restChars |> List.map(Char.toString) |> List.join("");
+                match Int32.fromString(digitsStr) {
+                    case Some(layerNum) if layerNum >= 1 and layerNum < n =>
+                        Some(expandNumberedLayer(n, token, layerNum, rest))
+                    case Some(layerNum) =>
+                        Some(Err("'${token}' specifies layer ${layerNum}, which is out of range for a ${n}x${n}x${n}"))
+                    case None =>
+                        Some(Err("'${token}' has an invalid layer number"))
+                }
+            }
+        }
+    }
+
+    ///
+    /// Expand a multi-layer range move like 2-4Fw into outer and inner slice operations.
+    ///
+    def expandRangeLayer(n: Int32, token: String, base: String): Result[String, List[Op]] = {
+        let (firstDigits, afterHyphen) = spanOf(Char.isDigit, String.toList(base));
+        let afterHyphenChars = List.drop(1, afterHyphen);
+        let (secondDigits, letterChars) = spanOf(Char.isDigit, afterHyphenChars);
+        let letters = letterChars |> List.map(Char.toString) |> List.join("");
+        let faceStr = String.toUpperCase(if (String.endsWith(suffix = "w", letters)) String.dropRight(1, letters) else letters);
+        match (Int32.fromString(firstDigits), Int32.fromString(secondDigits), layerOf(faceStr)) {
+            case (Some(startL), Some(endL), Some(f)) if startL >= 1 and endL < n and startL <= endL =>
+                let ops = List.range(startL, endL + 1) |> List.flatMap(l -> expandSingleLayer(n, f, l));
+                Ok(ops)
+            case _ => Err(unknownToken(token))
+        }
+    }
+
+    ///
+    /// Expand a valid layer number and face into outer and inner slice operations.
+    ///
+    def expandNumberedLayer(n: Int32, token: String, layerNum: Int32, rest: String): Result[String, List[Op]] = {
+        let isWide = String.endsWith(suffix = "w", rest);
+        let faceStr = String.toUpperCase(if (isWide) String.dropRight(1, rest) else rest);
+        match layerOf(faceStr) {
+            case Some(f) if isWide =>
+                let ops = List.range(1, layerNum + 1) |> List.flatMap(l -> expandSingleLayer(n, f, l));
+                Ok(ops)
+            case Some(f) =>
+                Ok(expandSingleLayer(n, f, layerNum))
+            case None => Err(unknownToken(token))
+        }
+    }
+
+    ///
+    /// Expand a single 1-based layer index on a cube of size n into operations.
+    ///
+    def expandSingleLayer(n: Int32, f: Face, l: Int32): List[Op] = {
+        let mid = (n + 1) / 2;
+        if (l == 1)
+            Layer(Turn(f, 1)) :: Nil
+        else if (Int32.modulo(n, 2) == 1 and l == mid)
+            oddSliceForFace(n, f)
+        else if (l < mid or (Int32.modulo(n, 2) == 0 and l <= n / 2))
+            Inner(Turn(f, 1), l - 1) :: Nil
+        else
+            Inner(Turn(Move.opposite(f), 3), n - l) :: Nil
+    }
+
+    ///
+    /// Central slice operations for an odd cube along any face axis.
+    ///
+    def oddSliceForFace(n: Int32, f: Face): List[Op] = match f {
+        case L => oddSliceOps(n, L, R, back(Rotation.x()))
+        case R => oddSliceOps(n, R, L, Rotation.x())
+        case D => oddSliceOps(n, D, U, back(Rotation.y()))
+        case U => oddSliceOps(n, U, D, Rotation.y())
+        case F => oddSliceOps(n, F, B, Rotation.z())
+        case B => oddSliceOps(n, B, F, back(Rotation.z()))
+    }
 
     ///
     /// Everything that is not a plain face turn.
@@ -350,7 +453,10 @@ mod CubeSolve.Model.Notation {
     def expandInner(n: Int32, base: String, token: String): Result[String, List[Op]] =
         match sliceOf(base) {
             case Some(ops) => middleLayer(n, token, ops)
-            case None      => expandWide(n, base, token)
+            case None      => if (n == 3) expandWide(n, base, token) else match innerFaceOf(base) {
+                case Some(f) => innerLayer(n, token, f)
+                case None    => expandWide(n, base, token)
+            }
         }
 
     ///
@@ -400,7 +506,7 @@ mod CubeSolve.Model.Notation {
     /// outer layers the other way and rotating the whole cube. `E` and `S`
     /// follow from the same identity about their own axes.
     ///
-    def sliceOf(base: String): Option[List[Op]] = match base {
+    def sliceOf(base: String): Option[List[Op]] = match String.toUpperCase(base) {
         case "M" => Some(slice(L, R, back(Rotation.x())))
         case "E" => Some(slice(D, U, back(Rotation.y())))
         case "S" => Some(slice(F, B, Rotation.z()))
@@ -452,13 +558,15 @@ mod CubeSolve.Model.Notation {
     /// inner slices while leaving the outer faces in place.
     ///
     def middleLayer(n: Int32, token: String, ops: List[Op]): Result[String, List[Op]] =
-        if (n >= 3) Ok(ops)
+        if (n == 3) Ok(ops)
+        else if (n > 3) Ok(middleSlices(n, baseOf(token)))
         else
             Err("'${token}' does not name a move on a 2x2x2: a cube with only two layers "
                 + "has no inner slice to turn")
 
     ///
-    /// A wide turn: the opposite face's layer, plus a rotation about that axis.
+    /// A wide turn on a 3x3x3 is the whole cube less its opposite face. On a
+    /// bigger cube it is the outer layer plus the adjacent inner one.
     ///
     /// On an n x n x n (n >= 3) a wide turn turns all layers except the opposite face.
     ///
@@ -468,11 +576,74 @@ mod CubeSolve.Model.Notation {
         opposite: Face,
         r: Rotation.Rotation
     ): Result[String, List[Op]] =
-        if (n >= 3)
+        if (n == 3)
             Ok(Layer(Turn(opposite, 1)) :: Frame(r) :: Nil)
+        else if (n > 3)
+            let face = Move.opposite(opposite);
+            Ok(Layer(Turn(face, 1)) :: Inner(Turn(face, 1), 1) :: Nil)
         else
             Err("'${token}' does not name a move on a 2x2x2: both of its layers are "
                 + "outer layers, so a wide turn would be the whole cube -- write a "
                 + "rotation instead")
+
+    /// The face named by a lower-case inner-slice spelling on a big cube.
+    def innerFaceOf(base: String): Option[Face] = match base {
+        case "r" => Some(R)
+        case "l" => Some(L)
+        case "u" => Some(U)
+        case "d" => Some(D)
+        case "f" => Some(F)
+        case "b" => Some(B)
+        case _   => None
+    }
+
+    /// One inner slice immediately below the named outer face.
+    def innerLayer(n: Int32, token: String, f: Face): Result[String, List[Op]] =
+        if (n > 3) Ok(Inner(Turn(f, 1), 1) :: Nil)
+        else Err("'${token}' does not name an inner slice on a ${n}x${n}x${n}")
+
+    /// The M, E and S middle slice(s), following L, D and F respectively.
+    def middleSlices(n: Int32, base: String): List[Op] =
+        if (Int32.modulo(n, 2) == 1)
+            oddMiddleSlice(n, base)
+        else
+            evenMiddleSlice(n, base)
+
+    /// Odd cubes turn the center slice without displacing fixed center references in orbits.
+    def oddMiddleSlice(n: Int32, base: String): List[Op] =
+        match String.toUpperCase(base) {
+            case "M" => oddSliceOps(n, L, R, back(Rotation.x()))
+            case "E" => oddSliceOps(n, D, U, back(Rotation.y()))
+            case "S" => oddSliceOps(n, F, B, Rotation.z())
+            case _   => Nil
+        }
+
+    /// Operations for an odd-cube central slice move.
+    def oddSliceOps(n: Int32, a: Face, b: Face, r: Rotation.Rotation): List[Op] = {
+        let maxDepth = n / 2 - 1;
+        let innersA = List.range(1, maxDepth + 1) |> List.map(d -> Inner(Turn(a, 3), d));
+        let innersB = List.range(1, maxDepth + 1) |> List.map(d -> Inner(Turn(b, 1), d));
+        Layer(Turn(a, 3)) :: List.append(innersA, Layer(Turn(b, 1)) :: List.append(innersB, Frame(r) :: Nil))
+    }
+
+    /// Even cubes turn the two middle slices symmetrically.
+    def evenMiddleSlice(n: Int32, base: String): List[Op] =
+        match sliceAxis(base) {
+            case Some(f) =>
+                let depth = n / 2 - 1;
+                Inner(Turn(f, 1), depth) :: Inner(Turn(Move.opposite(f), 3), depth) :: Nil
+            case None => Nil
+        }
+
+    /// Which outer face gives a middle-slice move its direction.
+    def sliceAxis(base: String): Option[Face] = match String.toUpperCase(base) {
+        case "M" => Some(L)
+        case "E" => Some(D)
+        case "S" => Some(F)
+        case _   => None
+    }
+
+    /// The base word, before its count or inverse suffix is handled.
+    def baseOf(token: String): String = token
 
 }

@@ -18,7 +18,7 @@ mod CubeSolve.Method.Profile {
     use CubeSolve.Method.Profile.Profile.{SourceFirst, Shortest, NoRotations}
     use CubeSolve.Method.Profile.Status.{Chosen, FellBack}
     use CubeSolve.Model.Notation
-    use CubeSolve.Model.Notation.Op.{Layer, Frame}
+    use CubeSolve.Model.Notation.Op.{Layer, Inner, Frame}
 
     ///
     /// A rule for picking an algorithm.
@@ -133,6 +133,7 @@ mod CubeSolve.Method.Profile {
         Notation.parse(3, alg)
             |> Result.map(ops -> ops |> List.exists(op -> match op {
                 case Frame(_) => true
+                case Inner(_, _) => false
                 case Layer(_) => false
             }))
             |> Result.getWithDefault(true)

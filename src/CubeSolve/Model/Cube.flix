@@ -17,7 +17,7 @@ mod CubeSolve.Model.Cube {
     use CubeSolve.Model.Move.Face
     use CubeSolve.Model.Move.Move.Turn
     use CubeSolve.Model.Notation
-    use CubeSolve.Model.Notation.Op.{Layer, Frame}
+    use CubeSolve.Model.Notation.Op.{Layer, Inner, Frame}
     use CubeSolve.Model.Orbits
     use CubeSolve.Model.Rotation
     use CubeSolve.Model.Stickers
@@ -158,6 +158,17 @@ mod CubeSolve.Model.Cube {
         Stickers.turnOrbits(size(c), Move.faceIndex(f), k, orbits(c))
             |> Result.map(os -> Cube(size(c), orientation(c), os))
 
+    /// An inner layer `depth` in from `m`'s face.
+    def applyInner(m: Move.Move, depth: Int32, c: Cube): Result[String, Cube] =
+        let inFrame = Rotation.reframe(m, orientation(c));
+        let f = Move.face(inFrame);
+        let k = Move.amount(inFrame);
+        if (size(c) <= 3)
+            Err("inner layers need a cube larger than 3x3x3")
+        else
+            Stickers.turnInnerOrbits(size(c), Move.faceIndex(f), depth, k, orbits(c))
+                |> Result.map(os -> Cube(size(c), orientation(c), os))
+
     ///
     /// `c` rotated bodily by `r`. No piece moves relative to any other.
     ///
@@ -169,6 +180,7 @@ mod CubeSolve.Model.Cube {
     ///
     pub def applyOp(op: Notation.Op, c: Cube): Result[String, Cube] = match op {
         case Layer(m) => apply(m, c)
+        case Inner(m, depth) => applyInner(m, depth, c)
         case Frame(r) => Ok(rotate(r, c))
     }
 

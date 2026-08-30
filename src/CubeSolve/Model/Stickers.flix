@@ -39,6 +39,23 @@ mod CubeSolve.Model.Stickers {
             folded <- Orbit64.Net.fromFacelets(n, turn(n, f, k, before))
         ) yield folded
 
+    /// `orbits` after turning an inner layer `depth` in from face `f`.
+    ///
+    /// Unlike an outer turn, an inner turn does not spin a face; it only cycles
+    /// the four strips parallel to it. This is what a 4x4x4 `Rw` needs for its
+    /// second layer and what an even-cube `M` uses for its two middle slices.
+    pub def turnInnerOrbits(
+        n: Int32,
+        f: Int32,
+        depth: Int32,
+        k: Int32,
+        orbits: List[Coord]
+    ): Result[String, List[Coord]] =
+        forM (
+            before <- Orbit64.Net.toFacelets(n, orbits);
+            folded <- Orbit64.Net.fromFacelets(n, turnInner(n, f, depth, k, before))
+        ) yield folded
+
     ///
     /// `fs` after `k` clockwise quarter turns of face `f`.
     ///
@@ -58,12 +75,26 @@ mod CubeSolve.Model.Stickers {
     pub def turn(n: Int32, f: Int32, k: Int32, fs: Vector[Int32]): Vector[Int32] =
         if (k <= 0) fs else turn(n, f, k - 1, quarterTurn(n, f, fs))
 
+    /// `fs` after `k` quarter turns of the layer `depth` in from `f`.
+    pub def turnInner(
+        n: Int32,
+        f: Int32,
+        depth: Int32,
+        k: Int32,
+        fs: Vector[Int32]
+    ): Vector[Int32] =
+        if (k <= 0) fs else turnInner(n, f, depth, k - 1, quarterInner(n, f, depth, fs))
+
     ///
     /// One clockwise quarter turn of face `f`.
     ///
     def quarterTurn(n: Int32, f: Int32, fs: Vector[Int32]): Vector[Int32] =
         let spun = spinFace(n, f, fs);
         cycleStrips(strips(n, f), spun)
+
+    /// One turn of an inner layer: strips move, but no face itself spins.
+    def quarterInner(n: Int32, f: Int32, depth: Int32, fs: Vector[Int32]): Vector[Int32] =
+        cycleStrips(innerStrips(n, f, depth), fs)
 
     ///
     /// Face `f`'s own stickers, rotated a quarter turn clockwise.
@@ -186,6 +217,44 @@ mod CubeSolve.Model.Stickers {
             :: row(n, 3, n - 1)
             :: back(col(n, 1, n - 1))
             :: Nil
+
+    /// The four strips `depth` in from face `f`, in the same send order as an
+    /// outer turn of that face. Depth zero is intentionally handled by the
+    /// outer-turn path, which also spins the face itself.
+    def innerStrips(n: Int32, f: Int32, depth: Int32): List[List[Int32]] = match f {
+        case 0 => aroundUpInner(n, depth)
+        case 1 => aroundRightInner(n, depth)
+        case 2 => aroundFrontInner(n, depth)
+        case 3 => aroundDownInner(n, depth)
+        case 4 => aroundLeftInner(n, depth)
+        case _ => aroundBackInner(n, depth)
+    }
+
+    def aroundUpInner(n: Int32, d: Int32): List[List[Int32]] =
+        row(n, 2, d) :: row(n, 4, d) :: row(n, 5, d) :: row(n, 1, d) :: Nil
+
+    def aroundDownInner(n: Int32, d: Int32): List[List[Int32]] =
+        let last = n - 1 - d;
+        row(n, 2, last) :: row(n, 1, last) :: row(n, 5, last) :: row(n, 4, last) :: Nil
+
+    def aroundRightInner(n: Int32, d: Int32): List[List[Int32]] =
+        let last = n - 1 - d;
+        col(n, 2, last) :: col(n, 0, last) :: back(col(n, 5, d))
+            :: col(n, 3, last) :: Nil
+
+    def aroundLeftInner(n: Int32, d: Int32): List[List[Int32]] =
+        let last = n - 1 - d;
+        col(n, 2, d) :: col(n, 3, d) :: back(col(n, 5, last)) :: col(n, 0, d) :: Nil
+
+    def aroundFrontInner(n: Int32, d: Int32): List[List[Int32]] =
+        let last = n - 1 - d;
+        row(n, 0, last) :: col(n, 1, d) :: back(row(n, 3, d))
+            :: back(col(n, 4, last)) :: Nil
+
+    def aroundBackInner(n: Int32, d: Int32): List[List[Int32]] =
+        let last = n - 1 - d;
+        back(row(n, 0, d)) :: col(n, 4, d) :: row(n, 3, last)
+            :: back(col(n, 1, last)) :: Nil
 
     ///
     /// Row `r` of face `f`, left to right as drawn.

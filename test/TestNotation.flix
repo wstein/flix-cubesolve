@@ -2,6 +2,8 @@ mod TestNotation {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
+    use CubeSolve.Model.Notation.Op.{Layer, Inner}
+    use CubeSolve.Model.Move.Move.Turn
     use CubeSolve.Model.Rotation
     use CubeSolve.Model.Move.Face.{U, R, F, D, L, B}
 
@@ -87,6 +89,32 @@ mod TestNotation {
         same(3, "Rw", "r");
         same(3, "Uw2", "u2");
         same(3, "Fw'", "f'")
+
+    /// On a 4x4x4 a wide move is exactly its outer layer plus the adjacent
+    /// inner layer, not the whole cube less its opposite face. The latter is a
+    /// 3x3x3 identity and would turn three layers here.
+    @Test
+    def wideTurnsOnABigCubeTurnExactlyTwoLayers(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Ok(Layer(Turn(R, 1)) :: Inner(Turn(R, 1), 1) :: Nil),
+            Notation.parse(4, "Rw")
+        );
+        Assert.assertEq(
+            expected = Ok(Inner(Turn(U, 3), 1) :: Layer(Turn(U, 3)) :: Nil),
+            Notation.parse(4, "Uw'")
+        )
+
+    /// An even cube has two middle slices. WCA notation defines M as both of
+    /// them together, following L; this is the convention Ruwix's Rings
+    /// pattern uses for M2.
+    @Test
+    def middleMovesOnAnEvenCubeTurnBothMiddleSlices(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Ok(
+                Inner(Turn(L, 1), 1) :: Inner(Turn(R, 3), 1)
+                    :: Inner(Turn(L, 1), 1) :: Inner(Turn(R, 3), 1) :: Nil),
+            Notation.parse(4, "M2")
+        )
 
     @Test
     def sliceAndWideMovesHaveOrderFour(): Unit \ Assert =
@@ -189,5 +217,20 @@ mod TestNotation {
                     direct |> Result.map(Cube.orbits)
                 )
         }
+
+    /// Numbered slice moves like 2U, 2R', 2D2 turn the specified inner layer.
+    @Test
+    def numberedLayerMovesOnBigCubes(): Unit \ Assert =
+        Assert.assertOk(Notation.parse(5, "2D 2R' 2U2 2L 2B2 2F 2u 2r'"));
+        Assert.assertErr(Notation.parse(5, "5R"));
+        Assert.assertErr(Notation.parse(5, "0R"))
+
+    /// The 5x5x5 scramble with slice and numbered layer turns produces a valid cube.
+    @Test
+    def fiveByFiveScrambleWithLayerTurnsApplies(): Unit \ Assert =
+        let alg = "2D 2R' 2U2 2L F 2L2 L2 E' S' U E' R D2 2B2 M 2D2 B2 2D' U' "
+            + "2L' 2D2 S2 2L L S U L2 M' D B' F L R 2B2 D U2 2L M 2B' F'";
+        let res = Cube.solved(5) |> Result.flatMap(c -> Cube.applyNotation(alg, c));
+        Assert.assertOk(res)
 
 }
