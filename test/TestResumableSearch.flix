@@ -136,7 +136,7 @@ mod TestResumableSearch {
     def aStarvedBudgetExplainsItself(t: Standard.Tables): Unit \ Assert =
         let c = scrambled(t, 90100i64);
         let starved = Standard.budget({
-            probeMin = 1, probeMax = 1, maxDepth = 25, handovers = 1
+            minViews = 1, probeMax = 1, maxDepth = 25, handovers = 1
         });
         // One probe cannot be spread over six views, so this ends out of probes
         // rather than out of views -- whether or not it found anything first.
@@ -172,7 +172,7 @@ mod TestResumableSearch {
     def continuingUnderALargerBudgetNeverLosesGround(t: Standard.Tables): Unit \ Assert =
         let c = scrambled(t, 90102i64);
         let small = Standard.budget({
-            probeMin = 1, probeMax = 3, maxDepth = 25, handovers = 300
+            minViews = 1, probeMax = 3, maxDepth = 25, handovers = 300
         });
         match drain(Standard.start(t, small, c)) {
             case (_, stopped) =>
@@ -209,7 +209,7 @@ mod TestResumableSearch {
     /// Driving the search by hand reaches an answer at least as good as asking
     /// for one outright.
     ///
-    /// `solution` stops at the `probeMin` floor; `next` has no floor and keeps
+    /// `solution` stops at its `minViews` target; `next` has no target and keeps
     /// going while views remain. So the anytime interface is not a worse way to
     /// use the solver, which is the only reason to offer it.
     ///

@@ -108,13 +108,13 @@ mod JsonOut {
             case Some(out) =>
                 let termStr = match out#termination {
                     case CubeSolve.Solve.Standard.Termination.SolvedImmediately => "solved-immediately"
-                    case CubeSolve.Solve.Standard.Termination.ProbeFloor => "probe-floor"
+                    case CubeSolve.Solve.Standard.Termination.Settled => "settled"
                     case CubeSolve.Solve.Standard.Termination.ProbeCap => "probe-cap"
                     case CubeSolve.Solve.Standard.Termination.ViewsExhausted => "views-exhausted"
                 };
                 let statsObj = JObject(Map#{
                     "probesSpent" => num(out#probesSpent),
-                    "probeFloor" => num(out#probeFloor),
+                    "viewTarget" => num(out#viewTarget),
                     "probeCap" => num(out#probeCap),
                     "viewsTried" => num(out#viewsTried),
                     "viewsAvailable" => num(out#viewsAvailable),

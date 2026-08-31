@@ -47,12 +47,14 @@ mod Engine {
                 case Some(out) =>
                     let termStr = match out#termination {
                         case Standard.Termination.SolvedImmediately => "cube is already solved"
-                        case Standard.Termination.ProbeFloor => "answer settled at the ${Budgets.nameOf(b)} probe floor"
+                        case Standard.Termination.Settled =>
+                            "answer settled after the ${Budgets.nameOf(b)} view target"
                         case Standard.Termination.ProbeCap => "exhausted the ${Budgets.nameOf(b)} probe cap"
                         case Standard.Termination.ViewsExhausted => "searched all views without further improvement"
                     };
-                    "${String.lineSeparator()}probes:  ${out#probesSpent} / ${out#probeCap} (floor ${out#probeFloor})"
-                        + "${String.lineSeparator()}views:   ${out#viewsTried} / ${out#viewsAvailable}"
+                    "${String.lineSeparator()}views:   ${out#viewsTried} / ${out#viewsAvailable}"
+                        + " (target ${out#viewTarget})"
+                        + "${String.lineSeparator()}probes:  ${out#probesSpent} / ${out#probeCap}"
                         + "${String.lineSeparator()}stopped: ${termStr}"
                 case None => ""
             } else "";
@@ -274,7 +276,7 @@ mod Engine {
                 + "first ${firstHtmStr} HTM, final ${finalHtmStr} HTM");
         let stopMsg = match out#termination {
             case Standard.Termination.SolvedImmediately => "cube is already solved"
-            case Standard.Termination.ProbeFloor => "answer settled at the ${budgetName} probe floor"
+            case Standard.Termination.Settled => "answer settled after the ${budgetName} view target"
             case Standard.Termination.ProbeCap => "exhausted the ${budgetName} probe cap"
             case Standard.Termination.ViewsExhausted => "searched all views without further improvement"
         };

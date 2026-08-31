@@ -191,7 +191,7 @@ mod CubeSolve.Scramble.Standard {
     ///
     def boundsOnly(): Budget =
         CubeSolve.Solve.Standard.budget(
-            { probeMin = 1, probeMax = 200, maxDepth = 25, handovers = 300 })
+            { minViews = 1, probeMax = 200, maxDepth = 25, handovers = 300 })
 
     ///
     /// Draw until a scramble satisfies `wanted`, or give up with `whenExhausted`.

@@ -57,7 +57,7 @@ mod TestTwoPhase {
     /// - **An exhausted budget is reported with its numbers** -- not a hang,
     ///   and not a wrong answer.
     /// - **More probes are never worse.** A quality property, and the reason
-    ///   `probeMin` exists: the first solution found is rarely the best.
+    ///   `minViews` exists: the first solution found is rarely the best.
     /// - **The same budget gives the same solution.** Every fixture and every
     ///   reproduction of a reported bug depends on it.
     ///
@@ -99,7 +99,7 @@ mod TestTwoPhase {
             };
 
             let starved = Standard.budget(
-                { probeMin = 1, probeMax = 1, maxDepth = 4, handovers = 300 });
+                { minViews = 1, probeMax = 1, maxDepth = 4, handovers = 300 });
             let hard = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
             match Standard.solutionWith(t, starved, hard) {
                 case Ok(ms) =>
@@ -111,9 +111,9 @@ mod TestTwoPhase {
             };
 
             let quick = Standard.budget(
-                { probeMin = 1, probeMax = 40, maxDepth = 25, handovers = 300 });
+                { minViews = 1, probeMax = 40, maxDepth = 25, handovers = 300 });
             let patient = Standard.budget(
-                { probeMin = 80, probeMax = 400, maxDepth = 25, handovers = 300 });
+                { minViews = 4, probeMax = 400, maxDepth = 25, handovers = 300 });
             // Three of the corpus rather than all six: this solves each scramble
             // twice, and the property is about the budget rather than about any
             // particular cube.
@@ -180,8 +180,8 @@ mod TestTwoPhase {
             //     two views, budget split          mean 21.0
             //     six views, budget split          mean 21.1
             //     six views, budget shared         mean 20.9  (fastBudget)
-            //     six views, probeMin 120          mean 20.8  (defaultBudget)
-            //     six views, probeMin 600/1200     mean 20.6  (thoroughBudget)
+            //     six views, two-view target        mean 20.8  (defaultBudget)
+            //     six views, four-view target      mean 20.6  (thoroughBudget)
             //     + phase-two handover pruning     mean 20.4  (defaultBudget)
             //
             // Pre-scramble was implemented, measured and removed: with the premoves

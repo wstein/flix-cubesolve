@@ -44,7 +44,7 @@ mod TestOutcome {
     def outcomeSuite(): Unit \ Assert =
         let t = tables();
         assertSolvedImmediately(t);
-        assertProbeFloor(t);
+        assertSettled(t);
         assertProbeCap(t);
         assertViewsExhausted(t);
         assertCountersReconcile(t);
@@ -60,11 +60,11 @@ mod TestOutcome {
         Assert.assertEq(expected = 0, out#viewsTried);
         Assert.assertEq(expected = Termination.SolvedImmediately, out#termination)
 
-    def assertProbeFloor(t: Standard.Tables): Unit \ Assert =
+    def assertSettled(t: Standard.Tables): Unit \ Assert =
         let c = scrambled("R U R' U'");
-        let b = Standard.budget({ probeMin = 1, probeMax = 500, maxDepth = 25, handovers = 300 });
+        let b = Standard.budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 300 });
         let out = Standard.solveWithOutcome(t, b, c);
-        Assert.assertEq(expected = Termination.ProbeFloor, out#termination);
+        Assert.assertEq(expected = Termination.Settled, out#termination);
         Assert.assertTrue(not Option.isEmpty(out#answer));
         match out#answer {
             case Some(ms) => Assert.assertTrue(replayToSolved(c, ms))
@@ -75,7 +75,7 @@ mod TestOutcome {
         // maxDepth=20 allows handovers to be probed (bound <= room) while keeping
         // phase two from reaching its full distance, yielding exactly 2 probes and no answer
         let c = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        let b = Standard.budget({ probeMin = 100, probeMax = 2, maxDepth = 20, handovers = 1 });
+        let b = Standard.budget({ minViews = 6, probeMax = 2, maxDepth = 20, handovers = 1 });
         let out = Standard.solveWithOutcome(t, b, c);
         let sumProbes = out#viewStats |> List.map(v -> v#probesSpent) |> List.sum;
         Assert.assertEq(expected = Termination.ProbeCap, out#termination);
@@ -86,7 +86,7 @@ mod TestOutcome {
     def assertViewsExhausted(t: Standard.Tables): Unit \ Assert =
         // A 20-move scramble with maxDepth=3 and ample probes exhausts all 6 views
         let c = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        let b = Standard.budget({ probeMin = 100, probeMax = 500, maxDepth = 3, handovers = 50 });
+        let b = Standard.budget({ minViews = 6, probeMax = 500, maxDepth = 3, handovers = 50 });
         let out = Standard.solveWithOutcome(t, b, c);
         Assert.assertEq(expected = Termination.ViewsExhausted, out#termination);
         Assert.assertEq(expected = None, out#answer);

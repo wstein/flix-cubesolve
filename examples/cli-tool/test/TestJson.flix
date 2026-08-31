@@ -101,14 +101,14 @@ mod TestJson {
         let dummyStats = {
             answer = Some(Nil),
             probesSpent = 42,
-            probeFloor = 100,
+            viewTarget = 4,
             probeCap = 500,
             viewsTried = 3,
             viewsAvailable = 6,
             firstHtm = Some(21),
             finalHtm = Some(20),
             improvements = 1,
-            termination = CubeSolve.Solve.Standard.Termination.ProbeFloor,
+            termination = CubeSolve.Solve.Standard.Termination.Settled,
             viewStats = Nil
         };
         let json = JsonOut.solutionWithStats(
@@ -123,14 +123,14 @@ mod TestJson {
         );
         Assert.assertTrue(String.contains(substr = "\"stats\":{", json));
         Assert.assertTrue(String.contains(substr = "\"probesSpent\":42", json));
-        Assert.assertTrue(String.contains(substr = "\"probeFloor\":100", json));
+        Assert.assertTrue(String.contains(substr = "\"viewTarget\":4", json));
         Assert.assertTrue(String.contains(substr = "\"probeCap\":500", json));
         Assert.assertTrue(String.contains(substr = "\"viewsTried\":3", json));
         Assert.assertTrue(String.contains(substr = "\"viewsAvailable\":6", json));
         Assert.assertTrue(String.contains(substr = "\"firstHtm\":21", json));
         Assert.assertTrue(String.contains(substr = "\"finalHtm\":20", json));
         Assert.assertTrue(String.contains(substr = "\"improvements\":1", json));
-        Assert.assertTrue(String.contains(substr = "\"termination\":\"probe-floor\"", json))
+        Assert.assertTrue(String.contains(substr = "\"termination\":\"settled\"", json))
     }
 
 }

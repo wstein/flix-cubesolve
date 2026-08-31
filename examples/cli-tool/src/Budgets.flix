@@ -122,7 +122,7 @@ mod Budgets {
         case Budget.Thorough => Standard.thoroughBudget()
         case Budget.Deep     =>
             Standard.budget({
-                probeMin = 1200, probeMax = 2400, maxDepth = 25, handovers = 300
+                minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 300
             })
     }
 
