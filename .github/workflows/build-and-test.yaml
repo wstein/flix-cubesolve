@@ -37,7 +37,7 @@ jobs:
   # slips past the stratum is caught before a release rather than after one.
   exhaustive-patterns:
     name: all 110 patterns
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - name: Check out
@@ -137,7 +137,7 @@ jobs:
   # per round, which is a minute or two better spent once on main.
   cache-race:
     name: gate 13.2, two processes
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - name: Check out

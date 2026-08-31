@@ -3,6 +3,7 @@
 # Run the CLI tool against the local package build in the current checkout.
 #
 # This creates a disposable, isolated consumer overlay in a temporary directory
+# using Flix's resolver-cache mechanism (lib/github/wstein/flix-cubesolve/<version>)
 # so you can develop and test CLI features against unreleased or in-flight library
 # changes without publishing or modifying the committed example manifest.
 #
@@ -23,7 +24,7 @@ fi
 # 2. Extract metadata
 VERSION="$(grep -m1 '^version' "${ROOT_DIR}/flix.toml" | cut -d'"' -f2)"
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
-if ! git diff --quiet 2>/dev/null; then
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
     COMMIT="${COMMIT}-dirty"
 fi
 
@@ -63,7 +64,7 @@ if [ -d "${ROOT_DIR}/examples/cli-tool/lib" ]; then
     cp -r "${ROOT_DIR}/examples/cli-tool/lib/"* "${TMP_DIR}/lib/" 2>/dev/null || true
 fi
 
-# Seed the local package into the consumer cache
+# Seed the local package into the consumer resolver cache
 CACHE_PKG_DIR="${TMP_DIR}/lib/github/wstein/flix-cubesolve/${VERSION}"
 mkdir -p "${CACHE_PKG_DIR}"
 cp "${FPKG}" "${CACHE_PKG_DIR}/flix-cubesolve-${VERSION}.fpkg"
