@@ -132,11 +132,13 @@ mod Methods {
     /// 4x4x4 wants to be told there is no such thing here, not handed a
     /// two-phase answer under a CFOP heading.
     ///
-    /// **The tables take about eighty seconds to build**, once per invocation,
-    /// and both methods use the same set. A command line pays that every time
-    /// it runs; a program solving many cubes should build once and keep them.
+    /// **The tables are read from the on-disk cache**, and built only when it
+    /// has nothing to offer. They are 3.8 million states and take a minute or
+    /// two to construct, so a command line that built them on every invocation
+    /// would pay that every time -- which is what this did until `0.4.2` gave
+    /// the first-two-layer tables a cache at all.
     ///
-    pub def answer(m: Method, size: Int32, c: Cube.Cube): Result[String, String] =
+    pub def answer(m: Method, size: Int32, c: Cube.Cube): Result[String, String] \ IO =
         withPlan(m, size, c, plan -> Plan.render(plan))
 
     ///
@@ -150,7 +152,7 @@ mod Methods {
         m: Method,
         size: Int32,
         c: Cube.Cube
-    ): Result[String, String] =
+    ): Result[String, String] \ IO =
         withPlan(m, size, c, plan ->
             JsonOut.plan(
                 size,
@@ -169,15 +171,15 @@ mod Methods {
         size: Int32,
         c: Cube.Cube,
         k: Plan.Plan -> String
-    ): Result[String, String] =
+    ): Result[String, String] \ IO =
         if (size != 3)
             Err("${nameOf(m)} solves 3x3x3 only, and this is ${size}x${size}x${size}"
                 + ": use --method kociemba")
         else
-            forM (
-                t <- Cfop.build();
+            Store.cached(() -> forM (
+                t <- Cfop.cachedTables();
                 plan <- planFor(m, t, c)
-            ) yield k(plan)
+            ) yield k(plan))
 
     ///
     /// The plan a method makes, or why it made none.
