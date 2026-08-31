@@ -128,20 +128,28 @@ def solveCommand(
     size: Int32,
     rest: List[String]
 ): Result[String, String] \ IO =
-    Verbosity.say(loud, Verbosity.Level.Verbose,
-        "solving a ${size}x${size}x${size} by ${Methods.nameOf(m)}, "
-            + "budget ${Budgets.nameOf(b)}");
-    Verbosity.say(loud, Verbosity.Level.Verbose, Methods.cost(m, b));
-    Verbosity.timed(loud, Verbosity.Level.Verbose, "solving", () ->
-    if (Methods.twoPhase(m))
-        if (isJson)
-            Args.onCube(size, rest, (n, c) -> Engine.solveCubeJsonDetailed(loud, withStats, b, n, c))
-        else
-            Args.onCube(size, rest, (n, c) -> Engine.solveCubeDetailed(loud, withStats, b, n, c))
-    else if (isJson)
-        Args.onCube(size, rest, (n, c) -> Methods.answerJson(m, b, n, c))
-    else
-        Args.onCube(size, rest, (n, c) -> Methods.answer(m, b, n, c)))
+    Args.onCube(size, rest, (n, c) -> {
+        if (not isJson) {
+            match RenderNet.colouredNet(c) {
+                case Ok(netStr) => println(netStr)
+                case Err(_)     => ()
+            }
+        };
+        Verbosity.say(loud, Verbosity.Level.Verbose,
+            "solving a ${size}x${size}x${size} by ${Methods.nameOf(m)}, "
+                + "budget ${Budgets.nameOf(b)}");
+        Verbosity.say(loud, Verbosity.Level.Verbose, Methods.cost(m, b));
+        Verbosity.timed(loud, Verbosity.Level.Verbose, "solving", () ->
+            if (Methods.twoPhase(m))
+                if (isJson)
+                    Engine.solveCubeJsonDetailed(loud, withStats, b, n, c)
+                else
+                    Engine.solveCubeDetailed(loud, withStats, b, n, c)
+            else if (isJson)
+                Methods.answerJson(m, b, n, c)
+            else
+                Methods.answer(m, b, n, c))
+    })
 
 ///
 /// `show [--size n] [--json] <scramble>`

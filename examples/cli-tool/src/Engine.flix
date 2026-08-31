@@ -32,12 +32,7 @@ mod Engine {
         c: Cube.Cube
     ): Result[String, String] \ IO =
         forM (
-            netStr <- RenderNet.colouredNet(c);
             tok <- CubeSolve.Model.Facelets.token(c);
-            _ <- {
-                println(netStr);
-                Ok(())
-            };
             (ms, outOpt) <- solveDetails(loud, b, size, c)
         ) yield {
             let sol = Move.showAll(ms);
