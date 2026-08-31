@@ -40,10 +40,17 @@
 /// reaches 157. Holding under two different stopping rules makes it a property
 /// of the search rather than of when the search stops.
 ///
-/// **`deep`'s view target does nothing.** Its row is identical to six views at
-/// three hundred handovers, and forty-eight views over eight cubes is six
-/// apiece: the probe floor of six hundred takes it to every view before the
-/// target of five is ever reached. `deep` and `max` differ only in handovers.
+/// **`deep` now asks for six views, because five described nothing.** Its row
+/// was already identical to six views at three hundred handovers -- forty-eight
+/// views over eight cubes is six apiece -- since the floor of six hundred probes
+/// reached every view before the target of five was tested. `deep` and `max`
+/// differ in handovers, not breadth.
+///
+/// **`fast` keeps half the standard handovers, and the measurement is why.** At
+/// the standard three hundred it answers the corpus in 164, the same as
+/// `default`, for fewer probes -- which leaves `default` buying nothing and
+/// collapses two tiers into one. At a hundred and fifty it is 165, and the
+/// ladder is monotone in quality and in cost together.
 ///
 /// **Most endings are rejected rather than tried.** At `max`, 24,233 of 28,376
 /// selected are pruned by the lower bound before phase two -- 85% -- and 1,450

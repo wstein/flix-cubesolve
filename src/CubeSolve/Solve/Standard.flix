@@ -221,9 +221,11 @@ mod CubeSolve.Solve.Standard {
     /// inverted -- and `minViews` is how many of those it must finish before it
     /// settles. One, here: the first view that yields an answer is accepted.
     ///
-    /// It also offers phase one half as many handovers as the default. Views
-    /// and handovers are the two things that make a search wider, and this is
-    /// the relaxed end of both.
+    /// Half the standard handovers as well as one view. Both, and measurably
+    /// so: at the standard three hundred this tier answers the corpus in the
+    /// same total as `default` for fewer probes, which leaves `default` buying
+    /// nothing. At a hundred and fifty it is 165 moves against `default`'s 164,
+    /// which is a tier somebody can choose between.
     ///
     pub def fastBudget(): Budget =
         Budget({ minViews = 1, probeFloor = 30, probeMax = 500, maxDepth = 25,
@@ -240,18 +242,23 @@ mod CubeSolve.Solve.Standard {
             handovers = 300, phase1Depth = Phase1.maxDepth() })
 
     ///
-    /// Five of the six views, at the standard handovers.
+    /// Every view, at the standard handovers.
     ///
     /// Measured mean **20.6** moves, which is min2phase's own average. What is
     /// left after this is the gap between a two-phase solver and an optimal
     /// one, and no budget closes that.
     ///
-    /// Five rather than six so that it stays distinguishable from a budget that
-    /// takes every view: a tier nobody can tell apart from the one above it is
-    /// the defect this ladder was rebuilt to remove.
+    /// Six and not five. It was five, and the five did nothing: the floor of
+    /// six hundred probes reached every view before the target of five was ever
+    /// tested, so the measured behaviour was identical to six all along. A
+    /// number in a tier that describes nothing that happens is worse than no
+    /// number.
+    ///
+    /// What separates this from `maxBudget` is handovers, not breadth. Both
+    /// take every view; `max` offers phase two twice the endings.
     ///
     pub def deepBudget(): Budget =
-        Budget({ minViews = 5, probeFloor = 600, probeMax = 1200, maxDepth = 25,
+        Budget({ minViews = 6, probeFloor = 600, probeMax = 1200, maxDepth = 25,
             handovers = 300, phase1Depth = Phase1.maxDepth() })
 
     ///
