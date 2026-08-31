@@ -63,7 +63,8 @@ mod TestOutcome {
 
     def assertSettled(t: Standard.Tables): Unit \ Assert =
         let c = scrambled("R U R' U'");
-        let b = Standard.budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 300 });
+        let b = Standard.budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 300,
+                            phase1Depth = 12 });
         let out = Standard.solveWithOutcome(t, b, c);
         Assert.assertEq(expected = Termination.Settled, out#termination);
         Assert.assertTrue(not Option.isEmpty(out#answer));
@@ -76,7 +77,8 @@ mod TestOutcome {
         // maxDepth=20 allows handovers to be probed (bound <= room) while keeping
         // phase two from reaching its full distance, yielding exactly 2 probes and no answer
         let c = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        let b = Standard.budget({ minViews = 6, probeMax = 2, maxDepth = 20, handovers = 1 });
+        let b = Standard.budget({ minViews = 6, probeMax = 2, maxDepth = 20, handovers = 1,
+                            phase1Depth = 12 });
         let out = Standard.solveWithOutcome(t, b, c);
         let sumProbes = out#viewStats |> List.map(v -> v#probesSpent) |> List.sum;
         Assert.assertEq(expected = Termination.ProbeCap, out#termination);
@@ -87,7 +89,8 @@ mod TestOutcome {
     def assertViewsExhausted(t: Standard.Tables): Unit \ Assert =
         // A 20-move scramble with maxDepth=3 and ample probes exhausts all 6 views
         let c = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        let b = Standard.budget({ minViews = 6, probeMax = 500, maxDepth = 3, handovers = 50 });
+        let b = Standard.budget({ minViews = 6, probeMax = 500, maxDepth = 3, handovers = 50,
+                            phase1Depth = 12 });
         let out = Standard.solveWithOutcome(t, b, c);
         Assert.assertEq(expected = Termination.ViewsExhausted, out#termination);
         Assert.assertEq(expected = None, out#answer);
@@ -153,7 +156,8 @@ mod TestOutcome {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the token")
                     case Ok(c)  =>
                         let b = Standard.budget({
-                            minViews = 6, probeMax = 4000, maxDepth = 25, handovers = 600
+                            minViews = 6, probeMax = 4000, maxDepth = 25, handovers = 600,
+                            phase1Depth = 12
                         });
                         let out = Standard.solveWithOutcome(t, b, c);
                         out#viewStats |> List.forEach(v -> {

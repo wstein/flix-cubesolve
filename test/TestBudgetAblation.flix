@@ -101,7 +101,7 @@ mod TestBudgetAblation {
                 combinations() |> List.forEach(match (name, views, handovers) -> {
                     let b = Standard.budget({
                         minViews = views, probeMax = 4000,
-                        maxDepth = 25, handovers = handovers
+                        maxDepth = 25, handovers = handovers, phase1Depth = 12
                     });
                     let (htm, probes, solved) = overCorpus(t, b);
                     let pad = String.padRight(24, ' ', name);
@@ -145,7 +145,7 @@ mod TestBudgetAblation {
                     combinations() |> List.forEach(match (name, views, handovers) -> {
                         let b = Standard.budget({
                             minViews = views, probeMax = 4000,
-                            maxDepth = 25, handovers = handovers
+                            maxDepth = 25, handovers = handovers, phase1Depth = 12
                         });
                         let (_, _, solved) = overCorpus(t, b);
                         Assert.assertEqWithMsg(expected = List.length(corpus()), solved,

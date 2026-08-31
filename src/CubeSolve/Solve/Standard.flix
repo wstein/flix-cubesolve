@@ -193,7 +193,8 @@ mod CubeSolve.Solve.Standard {
     /// answer everywhere.
     ///
     pub enum Budget {
-        case Budget({ minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 })
+        case Budget({ minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 })
     }
 
     ///
@@ -210,7 +211,8 @@ mod CubeSolve.Solve.Standard {
     /// the relaxed end of both.
     ///
     pub def fastBudget(): Budget =
-        Budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 150 })
+        Budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 150,
+            phase1Depth = Phase1.maxDepth() })
 
     ///
     /// The budget to use when nothing else is stated.
@@ -219,7 +221,8 @@ mod CubeSolve.Solve.Standard {
     /// stated as a multiple of this one.
     ///
     pub def defaultBudget(): Budget =
-        Budget({ minViews = 2, probeMax = 500, maxDepth = 25, handovers = 300 })
+        Budget({ minViews = 2, probeMax = 500, maxDepth = 25, handovers = 300,
+            phase1Depth = Phase1.maxDepth() })
 
     ///
     /// Five of the six views, at the standard handovers.
@@ -233,7 +236,8 @@ mod CubeSolve.Solve.Standard {
     /// the defect this ladder was rebuilt to remove.
     ///
     pub def deepBudget(): Budget =
-        Budget({ minViews = 5, probeMax = 1200, maxDepth = 25, handovers = 300 })
+        Budget({ minViews = 5, probeMax = 1200, maxDepth = 25, handovers = 300,
+            phase1Depth = Phase1.maxDepth() })
 
     ///
     /// All six views, with double the handovers and double the probe cap.
@@ -247,7 +251,8 @@ mod CubeSolve.Solve.Standard {
     /// handovers does anything on its own -- see `TestBudgetAblation`.
     ///
     pub def maxBudget(): Budget =
-        Budget({ minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 600 })
+        Budget({ minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 600,
+            phase1Depth = Phase1.maxDepth() })
 
     ///
     /// Deprecated name for `deepBudget`.
@@ -258,7 +263,8 @@ mod CubeSolve.Solve.Standard {
     /// A budget, from its parts.
     ///
     pub def budget(
-        parts: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 }
+        parts: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 }
     ): Budget = Budget(parts)
 
     ///
@@ -575,12 +581,17 @@ mod CubeSolve.Solve.Standard {
     /// a view either improves on the answer or gives up quickly.
     ///
     def shareFor(
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 },
+        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 },
         spent: Int32,
         best: Option[List[Move.Move]]
     ): Budget =
         Budget({
             minViews = 1,
+            // The view inherits the caller's phase-one depth. Substituting the
+            // default here would silently discard a deeper search that was
+            // asked for, which is what it did when this field was introduced.
+            phase1Depth = limits#phase1Depth,
             probeMax = limits#probeMax - spent,
             maxDepth = shorterThanBest(best, limits#maxDepth),
             handovers = limits#handovers
@@ -612,7 +623,8 @@ mod CubeSolve.Solve.Standard {
             searchOutcome(p1, p2, budget, limits, c)
 
     def solvedOutcome(
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 }
+        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 }
     ): Outcome = {
         answer = Some(Nil),
         probesSpent = 0,
@@ -631,7 +643,8 @@ mod CubeSolve.Solve.Standard {
         p1: Phase1.Tables,
         p2: Domino.Tables,
         budget: Budget,
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 },
+        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 },
         c: Sized.Standard
     ): Outcome = {
         let settled = runToSettled(start(Tables.Tables(p1, p2), budget, c));
@@ -794,7 +807,8 @@ mod CubeSolve.Solve.Standard {
     type alias Attempt = {
         phase1 = Phase1.Tables,
         phase2 = Domino.Tables,
-        limits = { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 },
+        limits = { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 },
         cube = Sized.Standard
     }
 
@@ -817,7 +831,7 @@ mod CubeSolve.Solve.Standard {
         // two presets that differed only in a probe floor came to behave
         // identically.
         let spent = probes >= limits#probeMax;
-        if (depth > Phase1.maxDepth() or spent)
+        if (depth > limits#phase1Depth or spent)
             (best, probes, tally)
         else {
             let handovers = IdaStar.enumerate(
@@ -838,7 +852,8 @@ mod CubeSolve.Solve.Standard {
     def hasSettled(
         best: Option[List[Move.Move]],
         viewsDone: Int32,
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 }
+        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
+          phase1Depth = Int32 }
     ): Bool =
         Option.isEmpty(best) == false and viewsDone >= limits#minViews
 
