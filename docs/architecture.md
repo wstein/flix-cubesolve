@@ -576,6 +576,29 @@ method solves the first layer first and hands the search a narrower problem.
 That is why CFOP can take materially longer than beginner on the same cube,
 which is the reverse of what the move counts suggest.
 
+**The methods solve the `D` cross, and in this scheme `D` is yellow.** Every
+beginner guide starts with the *white* cross, so what these methods produce is
+the mirror image of what a person is reading. Fixing that is not a matter of
+turning the cube first, and the reason is worth recording because the obvious
+attempt fails.
+
+A whole-cube rotation changes only `Cube.orientation`, the reference frame; the
+orbit data is untouched. The coordinate encoders — `Cross.encode` and the rest —
+read that orbit data in the canonical frame and ignore orientation, so a rotated
+cube encodes to the same coordinate and the search targets the same physical
+pieces. Meanwhile `Cube.applyNotation` *does* reframe each move by the
+orientation. So rotating before solving leaves the search planning in one frame
+and the moves landing in another: the plan stops solving. Measured, not
+supposed — it was tried, and both whole-cube method tests failed while the other
+272 passed.
+
+Doing it properly means conjugating the *state* into the canonical frame so the
+white pieces occupy the `D` slots — `CubeSolve.Model.Holding` already conjugates
+a 3×3×3 state over all 24 rotations — solving there, and conjugating the answer
+back so each move names the face the person will be looking at after their own
+`x2`. The test that would hold it honest asserts that the bottom shows face 0
+after the inspection step, not merely that the plan replays.
+
 **A step keeps its notation, not a list of layer turns.** Several published OLL
 and PLL algorithms rotate the whole cube partway through, and `Notation.layersOnly`
 drops frame rotations — right for comparing against a solver's output, wrong for
