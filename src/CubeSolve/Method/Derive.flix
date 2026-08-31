@@ -65,12 +65,18 @@ mod CubeSolve.Method.Derive {
             None
         else
             match descend(spec, start, depth, -1) {
-                case Some(found) => Some(List.reverse(found))
+                case Some(found) => Some(found)
                 case None        => deepen(spec, start, depth + 1, maxDepth)
             }
 
     ///
-    /// Depth-first to exactly `left` more moves, newest move first in the answer.
+    /// Depth-first to exactly `left` more moves.
+    ///
+    /// The answer is built as `m :: rest` with `m` the move made here, so it
+    /// comes back in the order it is performed and needs no reversing. An
+    /// earlier version reversed it, which returned a sequence that reached the
+    /// goal backwards -- and a test that checked only the length of the answer
+    /// agreed with it.
     ///
     def descend(
         spec: Spec,

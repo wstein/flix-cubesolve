@@ -29,7 +29,16 @@ mod TestDerive {
             case Some(ms) =>
                 println("  derive: undo of 'R U R'' is '${Move.showAll(ms)}'");
                 Assert.assertEqWithMsg(expected = 3, List.length(ms),
-                    "the shortest undo is three moves")
+                    "the shortest undo is three moves");
+                // The length alone is not the claim. An earlier version of the
+                // search returned the moves in reverse, which has the right
+                // length and does not solve anything.
+                match Cube.applyAll(ms, c) {
+                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "replaying")
+                    case Ok(done) =>
+                        Assert.assertTrueWithMsg(Cube.isSolved(done),
+                            "'${Move.showAll(ms)}' should solve the cube, in that order")
+                }
         }
 
     /// How deep it can go, and how long that takes.
@@ -41,6 +50,12 @@ mod TestDerive {
             case None     => Assert.assertTrueWithMsg(false, "six moves should be reachable")
             case Some(ms) =>
                 println("  derive: six-move case answered in ${List.length(ms)}");
-                Assert.assertTrueWithMsg(List.length(ms) <= 6, "at most six")
+                Assert.assertTrueWithMsg(List.length(ms) <= 6, "at most six");
+                match Cube.applyAll(ms, c) {
+                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "replaying")
+                    case Ok(done) =>
+                        Assert.assertTrueWithMsg(Cube.isSolved(done),
+                            "the answer should solve the cube, in the order given")
+                }
         }
 }
