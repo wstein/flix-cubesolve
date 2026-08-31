@@ -161,9 +161,10 @@ mod TestOutcome {
                                 expected = v#handoversSelected,
                                 v#handoversUnreachable + v#handoversPruned
                                     + v#phaseTwoAttempts,
-                                "a view selected ${v#handoversSelected} endings and "
-                                    + "accounted for "
-                                    + "${v#handoversUnreachable + v#handoversPruned + v#phaseTwoAttempts}");
+                                let seen = v#handoversUnreachable + v#handoversPruned
+                                    + v#phaseTwoAttempts;
+                                "a view selected ${v#handoversSelected} endings "
+                                    + "and accounted for ${seen}");
                             Assert.assertEqWithMsg(expected = v#probesSpent,
                                 v#phaseTwoAttempts,
                                 "a probe is a phase-two attempt, so the two counts "

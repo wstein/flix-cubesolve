@@ -7,7 +7,7 @@
 /// records 20.9 moves for `fast` against 20.8 for `default`, for roughly four
 /// times the probes.
 ///
-/// `exhaustive` is this package's own, built from `Standard.budget` rather than taken
+/// `max` is this package's own, built from `Standard.budget` rather than taken
 /// from the library, because the library offers nothing beyond `deep`. Its
 /// numbers are a deliberate step past `deep` and **its effect on move count
 /// is not measured here** -- what it promises is more searching, not a stated
@@ -24,7 +24,7 @@ mod Budgets {
         case Fast
         case Standard
         case Deep
-        case Exhaustive
+        case Max
     }
 
     ///
@@ -35,7 +35,7 @@ mod Budgets {
         case "default"    => Some(Budget.Standard)
         case "deep"       => Some(Budget.Deep)
         case "thorough"   => Some(Budget.Deep)
-        case "exhaustive" => Some(Budget.Exhaustive)
+        case "max" => Some(Budget.Max)
         case _            => None
     }
 
@@ -46,7 +46,7 @@ mod Budgets {
         case Budget.Fast       => "fast"
         case Budget.Standard   => "default"
         case Budget.Deep       => "deep"
-        case Budget.Exhaustive => "exhaustive"
+        case Budget.Max        => "max"
     }
 
     ///
@@ -74,7 +74,7 @@ mod Budgets {
     /// Every budget there is, for a caller listing them.
     ///
     pub def all(): Vector[Budget] =
-        Vector#{Budget.Fast, Budget.Standard, Budget.Deep, Budget.Exhaustive}
+        Vector#{Budget.Fast, Budget.Standard, Budget.Deep, Budget.Max}
 
     ///
     /// The budgets there are, written out.
@@ -86,21 +86,21 @@ mod Budgets {
     /// What the solver is actually handed.
     ///
     /// The first three are the library's own, so their recorded averages apply.
-    /// `exhaustive` doubles `deep`'s floor and its cap; it is this package's
+    /// `max` takes every view and doubles `deep`'s handovers; it is this package's
     /// choice and carries no recorded average.
     ///
     pub def nodeBudget(b: Budget): Int64 = match b {
         case Budget.Fast       => 5_000_000i64
         case Budget.Standard   => 50_000_000i64
         case Budget.Deep       => 200_000_000i64
-        case Budget.Exhaustive => 2_000_000_000i64
+        case Budget.Max => 2_000_000_000i64
     }
 
     pub def solverBudget(b: Budget): Standard.Budget = match b {
         case Budget.Fast       => Standard.fastBudget()
         case Budget.Standard   => Standard.defaultBudget()
         case Budget.Deep       => Standard.deepBudget()
-        case Budget.Exhaustive => Standard.exhaustiveBudget()
+        case Budget.Max => Standard.maxBudget()
     }
 
 }

@@ -142,8 +142,8 @@ mod TestArgs {
             Args.withBudget("R" :: "--budget=deep" :: Nil, echo));
         Assert.assertEq(expected = Ok("default:1"),
             Args.withBudget("R" :: Nil, echo));
-        Assert.assertEq(expected = Ok("exhaustive:0"),
-            Args.withBudget("--budget" :: "exhaustive" :: Nil, echo));
+        Assert.assertEq(expected = Ok("max:0"),
+            Args.withBudget("--budget" :: "max" :: Nil, echo));
         match Args.withBudget("--budget" :: "fastest" :: Nil, echo) {
             case Ok(_)    => Assert.assertTrueWithMsg(false, "'fastest' is not a budget")
             case Err(why) =>

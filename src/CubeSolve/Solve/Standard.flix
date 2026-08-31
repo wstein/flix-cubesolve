@@ -236,9 +236,17 @@ mod CubeSolve.Solve.Standard {
         Budget({ minViews = 5, probeMax = 1200, maxDepth = 25, handovers = 300 })
 
     ///
-    /// All six views, with double the probe cap and double the floor.
+    /// All six views, with double the handovers and double the probe cap.
     ///
-    pub def exhaustiveBudget(): Budget =
+    /// The top of the ladder, and named for that rather than for being
+    /// exhaustive of anything: it takes every view this solver has and offers
+    /// phase two twice the endings, which is more search, not all of it.
+    ///
+    /// Measured over eight cubes it is three moves shorter in total than
+    /// `deepBudget` for 43% more probes. Neither the sixth view nor the doubled
+    /// handovers does anything on its own -- see `TestBudgetAblation`.
+    ///
+    pub def maxBudget(): Budget =
         Budget({ minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 600 })
 
     ///
@@ -484,7 +492,8 @@ mod CubeSolve.Solve.Standard {
             case Nil          => None
             case view :: rest =>
                 let (found, used, tally) = searchOneView(s, view);
-                Some(folded(s, view, rest, found, used, tally))
+                Some(folded(s, view, rest,
+                    { found = found, used = used, tally = tally }))
         }
 
     def axisOf(r: Rotation.Rotation): ViewAxis =
@@ -520,10 +529,11 @@ mod CubeSolve.Solve.Standard {
         s: Search,
         view: (Rotation.Rotation, Bool),
         rest: List[(Rotation.Rotation, Bool)],
-        found: Option[List[Move.Move]],
-        used: Int32,
-        tally: Counts
+        result: { found = Option[List[Move.Move]], used = Int32, tally = Counts }
     ): Search =
+        let found = result#found;
+        let used = result#used;
+        let tally = result#tally;
         let Search.Search(f) = s;
         let (r, inverted) = view;
         let improved = isBetter(f#best, found);
@@ -774,7 +784,8 @@ mod CubeSolve.Solve.Standard {
             case Ok(start) =>
                 let first = Phase1.heuristicAt(p1, start);
                 let attempt = { phase1 = p1, phase2 = p2, limits = limits, cube = c };
-                byDepth(attempt, start, first, 0, None, noCounts())
+                byDepth(attempt, start, first,
+                    { probes = 0, best = None, tally = noCounts() })
         }
 
     ///
@@ -794,10 +805,11 @@ mod CubeSolve.Solve.Standard {
         attempt: Attempt,
         start: Int64,
         depth: Int32,
-        probes: Int32,
-        best: Option[List[Move.Move]],
-        tally: Counts
+        carried: { probes = Int32, best = Option[List[Move.Move]], tally = Counts }
     ): (Option[List[Move.Move]], Int32, Counts) =
+        let probes = carried#probes;
+        let best = carried#best;
+        let tally = carried#tally;
         let limits = attempt#limits;
         // A view runs to its own end. The tier counts whole views, so stopping
         // one part-way would make "a view" mean different amounts of work
@@ -815,7 +827,8 @@ mod CubeSolve.Solve.Standard {
                 attempts = 0, limitReached = offered >= limits#handovers });
             let (probed, improved, counted) =
                 tryHandovers(attempt, handovers, probes, best, seen);
-            byDepth(attempt, start, depth + 1, probed, improved, counted)
+            byDepth(attempt, start, depth + 1,
+                { probes = probed, best = improved, tally = counted })
         }
 
     ///
