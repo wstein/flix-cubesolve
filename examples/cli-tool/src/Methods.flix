@@ -96,17 +96,19 @@ mod Methods {
     /// Said at `--verbose` because the step methods build over three million
     /// states, and a long silence is indistinguishable from a hang.
     ///
-    pub def cost(m: Method): String = match m {
-        case Method.Kociemba =>
-            "two-phase search; the tables are cached after the first run"
-        case Method.Cfop =>
-            "searches the first two layers as one goal, entered with only the "
-                + "cross solved, which is the widest handoff here and can take "
-                + "minutes; tables are cached after the first build"
-        case Method.Beginner =>
-            "searches the cross, the first layer and the middle edges in turn; "
-                + "tables are cached after the first build"
-    }
+    pub def cost(m: Method, b: Budgets.Budget): String =
+        let nodes = "${Budgets.nodeBudget(b)} nodes per stage";
+        match m {
+            case Method.Kociemba =>
+                "two-phase search; the tables are cached after the first run"
+            case Method.Cfop =>
+                "searches the first two layers as one goal, entered with only "
+                    + "the cross solved, which is the widest handoff here; "
+                    + "${nodes}"
+            case Method.Beginner =>
+                "searches the cross, the first layer and the middle edges in "
+                    + "turn; ${nodes}"
+        }
 
     ///
     /// Whether this method answers through `CubeSolve.Solve.Standard`.
@@ -138,8 +140,13 @@ mod Methods {
     /// would pay that every time -- which is what this did until `0.4.2` gave
     /// the first-two-layer tables a cache at all.
     ///
-    pub def answer(m: Method, size: Int32, c: Cube.Cube): Result[String, String] \ IO =
-        withPlan(m, size, c, plan -> Plan.render(plan))
+    pub def answer(
+        m: Method,
+        b: Budgets.Budget,
+        size: Int32,
+        c: Cube.Cube
+    ): Result[String, String] \ IO =
+        withPlan(m, b, size, c, plan -> Plan.render(plan))
 
     ///
     /// The same answer as structured JSON.
@@ -150,10 +157,11 @@ mod Methods {
     ///
     pub def answerJson(
         m: Method,
+        b: Budgets.Budget,
         size: Int32,
         c: Cube.Cube
     ): Result[String, String] \ IO =
-        withPlan(m, size, c, plan ->
+        withPlan(m, b, size, c, plan ->
             JsonOut.plan(
                 size,
                 Facelets.token(c) |> Result.getWithDefault("unknown"),
@@ -168,6 +176,7 @@ mod Methods {
     ///
     def withPlan(
         m: Method,
+        b: Budgets.Budget,
         size: Int32,
         c: Cube.Cube,
         k: Plan.Plan -> String
@@ -178,7 +187,7 @@ mod Methods {
         else
             Store.cached(() -> forM (
                 t <- Cfop.cachedTables();
-                plan <- planFor(m, t, c)
+                plan <- planFor(m, t, c, Budgets.nodeBudget(b))
             ) yield k(plan))
 
     ///
@@ -187,11 +196,14 @@ mod Methods {
     def planFor(
         m: Method,
         t: TwoLayers.Tables,
-        c: Cube.Cube
+        c: Cube.Cube,
+        maxNodes: Int64
     ): Result[String, Plan.Plan] = match m {
-        case Method.Cfop     => Cfop.solution(t, Profile.Profile.SourceFirst, c)
+        case Method.Cfop     =>
+            Cfop.solution(t, Profile.Profile.SourceFirst, c, maxNodes)
         case Method.Beginner =>
-            Beginner.solution(Beginner.Tables.Tables(t), Profile.Profile.SourceFirst, c)
+            Beginner.solution(Beginner.Tables.Tables(t), Profile.Profile.SourceFirst, c,
+                maxNodes)
         case Method.Kociemba =>
             Err("kociemba is not a step method: this is a fault in the command "
                 + "line, not in the cube")

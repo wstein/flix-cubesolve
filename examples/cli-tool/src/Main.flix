@@ -132,9 +132,9 @@ def solveCommand(
     rest: List[String]
 ): Result[String, String] \ IO =
     Verbosity.say(loud, Verbosity.Level.Verbose,
-        "solving a ${size}x${size}x${size} by ${Methods.nameOf(m)}"
-            + (if (Methods.twoPhase(m)) ", budget ${Budgets.nameOf(b)}" else ""));
-    Verbosity.say(loud, Verbosity.Level.Verbose, Methods.cost(m));
+        "solving a ${size}x${size}x${size} by ${Methods.nameOf(m)}, "
+            + "budget ${Budgets.nameOf(b)}");
+    Verbosity.say(loud, Verbosity.Level.Verbose, Methods.cost(m, b));
     Verbosity.timed(loud, Verbosity.Level.Verbose, "solving", () ->
     if (Methods.twoPhase(m))
         if (isJson)
@@ -142,9 +142,9 @@ def solveCommand(
         else
             Args.onCube(size, rest, (n, c) -> Engine.solveCube(b, n, c))
     else if (isJson)
-        Args.onCube(size, rest, (n, c) -> Methods.answerJson(m, n, c))
+        Args.onCube(size, rest, (n, c) -> Methods.answerJson(m, b, n, c))
     else
-        Args.onCube(size, rest, (n, c) -> Methods.answer(m, n, c)))
+        Args.onCube(size, rest, (n, c) -> Methods.answer(m, b, n, c)))
 
 ///
 /// `show [--size n] [--json] <scramble>`

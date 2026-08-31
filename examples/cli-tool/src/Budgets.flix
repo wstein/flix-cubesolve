@@ -88,6 +88,33 @@ mod Budgets {
     /// `deep` doubles `thorough`'s floor and its cap; it is this package's
     /// choice and carries no recorded average.
     ///
+    ///
+    /// How many search nodes a step method's stage may spend.
+    ///
+    /// `--budget` used to mean nothing to `cfop` and `beginner`, on the wrong
+    /// belief that they were not searches. They are, and this is what the flag
+    /// buys them: a bound that fails with a count reached rather than running
+    /// on indefinitely.
+    ///
+    /// **The bound is per stage, not per solve.** Cross, the first layer and
+    /// the first two layers are separate searches with separate budgets, so a
+    /// solve that clears three stages may spend three times this.
+    ///
+    /// **Only the low end is measured.** The first-two-layer search has been
+    /// recorded at 13.2 million nodes from a state with the first layer solved,
+    /// and CFOP enters it with only the cross done, so `fast` is deliberately
+    /// below what a hard cube needs -- it is for a quick answer or a quick
+    /// refusal, not for every cube. The three larger numbers are room to work
+    /// rather than measurements, and will be replaced by measurements once the
+    /// node counts for the wider handoff are recorded.
+    ///
+    pub def nodeBudget(b: Budget): Int64 = match b {
+        case Budget.Fast     => 5_000_000i64
+        case Budget.Standard => 50_000_000i64
+        case Budget.Thorough => 200_000_000i64
+        case Budget.Deep     => 2_000_000_000i64
+    }
+
     pub def solverBudget(b: Budget): Standard.Budget = match b {
         case Budget.Fast     => Standard.fastBudget()
         case Budget.Standard => Standard.defaultBudget()

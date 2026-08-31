@@ -12,4 +12,4 @@ authors     = ["Werner Stein"]
 # directly, which the default "plain" security context forbids for a dependency.
 # This is the sibling package this example exists to prove works, not a
 # third-party unknown, so granting it is the deliberate choice here.
-"github:wstein/flix-cubesolve" = { version = "0.4.2", security = "unrestricted" }
+"github:wstein/flix-cubesolve" = { version = "0.4.3", security = "unrestricted" }
