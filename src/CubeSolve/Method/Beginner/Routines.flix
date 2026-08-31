@@ -68,18 +68,111 @@ mod CubeSolve.Method.Beginner.Routines {
         List.append(cornerInsertions(), middleInsertions())
 
     ///
-    /// Putting a first-layer corner in from the top, by how it is twisted.
+    /// Putting a first-layer corner in, by where it is and how it is twisted.
+    ///
+    /// Fourteen: four top slots by three twists, and the corner sitting in its
+    /// own slot the wrong way round, which has to come out before it can go
+    /// back. `Spec.cornerSituations` is the list this must cover, and
+    /// `TestRoutines` checks that it does.
     ///
     pub def cornerInsertions(): List[Routine] =
-        { name = "corner-insert-right-slot-0-twist-0",
-          situation = Situation.CornerInsertRight(0, 0),
-          setup = "R2 U R2 U' R2", sequence = "R2 U R2 U' R2", length = 5 } ::
-        { name = "corner-insert-right-slot-0-twist-1",
-          situation = Situation.CornerInsertRight(0, 1),
-          setup = "R U' R'", sequence = "R U R'", length = 3 } ::
-        { name = "corner-insert-right-slot-0-twist-2",
-          situation = Situation.CornerInsertRight(0, 2),
-          setup = "R U R' U'", sequence = "U R U' R'", length = 4 } ::
+        List.append(cornerFromTop(), cornerInPlace())
+
+    ///
+    /// The corner waiting in the top layer: four slots, three twists.
+    ///
+    pub def cornerFromTop(): List[Routine] =
+        List.append(cornerFromFrontSlots(), cornerFromBackSlots())
+
+    ///
+    /// Waiting at `UR` or `UF`, the two top slots nearest the one it belongs in.
+    ///
+    pub def cornerFromFrontSlots(): List[Routine] =
+        { name = "corner-insertion-slot-0-twist-0",
+          situation = Situation.CornerInsertion(0, 0),
+          setup = "R2 U R2 U' R2",
+          sequence = "R2 U R2 U' R2",
+          length = 5 } ::
+        { name = "corner-insertion-slot-0-twist-1",
+          situation = Situation.CornerInsertion(0, 1),
+          setup = "R U' R'",
+          sequence = "R U R'",
+          length = 3 } ::
+        { name = "corner-insertion-slot-0-twist-2",
+          situation = Situation.CornerInsertion(0, 2),
+          setup = "R U R' U'",
+          sequence = "U R U' R'",
+          length = 4 } ::
+        { name = "corner-insertion-slot-1-twist-0",
+          situation = Situation.CornerInsertion(1, 0),
+          setup = "R2 U R2 U' R2 U",
+          sequence = "U' R2 U R2 U' R2",
+          length = 6 } ::
+        { name = "corner-insertion-slot-1-twist-1",
+          situation = Situation.CornerInsertion(1, 1),
+          setup = "R U' R' U",
+          sequence = "U' R U R'",
+          length = 4 } ::
+        { name = "corner-insertion-slot-1-twist-2",
+          situation = Situation.CornerInsertion(1, 2),
+          setup = "R U R'",
+          sequence = "R U' R'",
+          length = 3 } ::
+        Nil
+
+    ///
+    /// Waiting at `UL` or `UB`, which take a further turn to bring round.
+    ///
+    pub def cornerFromBackSlots(): List[Routine] =
+        { name = "corner-insertion-slot-2-twist-0",
+          situation = Situation.CornerInsertion(2, 0),
+          setup = "R2 U R2 U' R2 U2",
+          sequence = "U2 R2 U R2 U' R2",
+          length = 6 } ::
+        { name = "corner-insertion-slot-2-twist-1",
+          situation = Situation.CornerInsertion(2, 1),
+          setup = "R U' R' U2",
+          sequence = "U2 R U R'",
+          length = 4 } ::
+        { name = "corner-insertion-slot-2-twist-2",
+          situation = Situation.CornerInsertion(2, 2),
+          setup = "R U2 R'",
+          sequence = "R U2 R'",
+          length = 3 } ::
+        { name = "corner-insertion-slot-3-twist-0",
+          situation = Situation.CornerInsertion(3, 0),
+          setup = "R2 U R2 U' R2 U'",
+          sequence = "U R2 U R2 U' R2",
+          length = 6 } ::
+        { name = "corner-insertion-slot-3-twist-1",
+          situation = Situation.CornerInsertion(3, 1),
+          setup = "R U' R' U'",
+          sequence = "U R U R'",
+          length = 4 } ::
+        { name = "corner-insertion-slot-3-twist-2",
+          situation = Situation.CornerInsertion(3, 2),
+          setup = "R U R' U2",
+          sequence = "U2 R U' R'",
+          length = 4 } ::
+        Nil
+
+    ///
+    /// The corner already in its slot and the wrong way round.
+    ///
+    /// It has to come out before it can go back, which is why these are longer
+    /// than the twelve above and why they are a case rather than an exception.
+    ///
+    pub def cornerInPlace(): List[Routine] =
+        { name = "corner-insertion-slot-4-twist-1",
+          situation = Situation.CornerInsertion(4, 1),
+          setup = "R U R' U' R U R'",
+          sequence = "R U' R' U R U' R'",
+          length = 7 } ::
+        { name = "corner-insertion-slot-4-twist-2",
+          situation = Situation.CornerInsertion(4, 2),
+          setup = "R U' R' U R U' R'",
+          sequence = "R U R' U' R U R'",
+          length = 7 } ::
         Nil
 
     ///

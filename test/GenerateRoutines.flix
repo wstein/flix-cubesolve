@@ -11,6 +11,7 @@ mod GenerateRoutines {
     use CubeSolve.Method.Facts
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
+    use CubeSolve.Method.Beginner.Spec
     use CubeSolve.Method.Beginner.Spec.Situation
 
     def alphabet(letters: List[String]): Vector[Move.Move] \ Assert =
@@ -92,21 +93,25 @@ mod GenerateRoutines {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) =>
                 println("=== BEGIN GENERATED ===");
-                Vector.range(0, 4) |> Vector.forEach(slot ->
-                    Vector.range(0, 3) |> Vector.forEach(t ->
-                    match Derive.shortest(solved, caseGoal(slot, t), ru, 8) {
+                Spec.cornerSituations() |> List.forEach(sit ->
+                    match sit {
+                        case Situation.CornerInsertion(slot, t) =>
+                    match Derive.shortest(solved, caseGoal(slot, t), ru,
+                            Spec.maxDepth(sit)) {
                         case None =>
                             println("        // slot ${slot} twist ${t}: none found")
                         case Some(setup) =>
                             let routine = Move.inverseOf(setup);
                             println("        { name = "
-                                + "\"corner-insert-right-slot-${slot}-twist-${t}\",");
+                                + "\"corner-insertion-slot-${slot}-twist-${t}\",");
                             println("          situation = "
-                                + "Situation.CornerInsertRight(${slot}, ${t}),");
+                                + "Situation.CornerInsertion(${slot}, ${t}),");
                             println("          setup = \"${Move.showAll(setup)}\",");
                             println("          sequence = \"${Move.showAll(routine)}\",");
                             println("          length = ${List.length(routine)} } ::")
-                    }));
+                    }
+                        case _ => ()
+                    });
                 println("=== END GENERATED ===")
         }
 }
