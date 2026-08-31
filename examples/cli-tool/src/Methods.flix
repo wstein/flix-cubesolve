@@ -146,7 +146,20 @@ mod Methods {
         size: Int32,
         c: Cube.Cube
     ): Result[String, String] \ IO =
-        withPlan(m, b, size, c, plan -> Plan.render(plan))
+        forM (
+            netStr <- RenderNet.colouredNet(c);
+            tok <- Facelets.token(c);
+            plan <- withPlan(m, b, size, c, p -> p)
+        ) yield {
+            let sep = String.lineSeparator();
+            "${netStr}${sep}"
+                + "${Plan.render(plan)}${sep}"
+                + "${Plan.layerTurns(plan)} moves (HTM)${sep}"
+                + "method:  ${nameOf(m)}${sep}"
+                + "budget:  ${Budgets.nameOf(b)}, "
+                + "${Budgets.nodeBudget(b)} nodes per stage${sep}"
+                + "orbit64: ${tok}"
+        }
 
     ///
     /// The same answer as structured JSON.
@@ -179,8 +192,8 @@ mod Methods {
         b: Budgets.Budget,
         size: Int32,
         c: Cube.Cube,
-        k: Plan.Plan -> String
-    ): Result[String, String] \ IO =
+        k: Plan.Plan -> a
+    ): Result[String, a] \ IO =
         if (size != 3)
             Err("${nameOf(m)} solves 3x3x3 only, and this is ${size}x${size}x${size}"
                 + ": use --method kociemba")
