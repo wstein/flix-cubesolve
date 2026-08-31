@@ -37,22 +37,23 @@ released build is actually usable, not only that the library compiles:
 ```
 
 For **local development** against the working tree before cutting a release,
-use the disposable local package overlay helper:
+use the disposable local package overlay helper (supported on macOS/Linux and Windows via WSL/Git Bash):
 
 ```sh
 ./scripts/run-cli-local.sh -- solve R U R' U'
 ./scripts/qualify-local-overlay.sh
+./scripts/test-local-overlay.sh
 ```
 
-`./scripts/run-cli-local.sh` builds a fresh `.fpkg` from the current working tree
-and mounts it into an isolated temporary workspace via `mktemp -d` without
-modifying `examples/cli-tool/flix.toml` or any committed files. It also copies
-the root's resolver-verified third-party dependency cache into that workspace,
-so repeated local runs do not re-download Orbit64; the freshly built Cubesolve
-artifact is then seeded explicitly over that cache. This allows developing CLI
-features against in-flight library changes while preserving the published-package
-release gate intact. If Flix gains an official workspace/path dependency
-mechanism, this helper will be retired.
+`./scripts/run-cli-local.sh` mounts the local package into an isolated temporary
+workspace without modifying `examples/cli-tool/flix.toml` or any committed files.
+It compiles and caches a deterministic CLI fatjar under `tmp/local-overlay-cache/`
+keyed by the combined SHA-256 digest of library sources, example sources, manifests,
+and dependency caches, verified with a companion `.sha256` sidecar. Repeated runs
+execute the cached jar directly with sub-second response times without recompiling.
+If any source or dependency changes, it builds fresh artifacts and atomically updates
+the cache. If Flix gains an official workspace/path dependency mechanism, this helper
+will be retired.
 
 `examples/cli-tool` carries no wrapper of its own and needs a `cubesolve`
 release to resolve against when run via `flixw examples run`; see
