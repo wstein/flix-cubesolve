@@ -7,9 +7,9 @@
 /// records 20.9 moves for `fast` against 20.8 for `default`, for roughly four
 /// times the probes.
 ///
-/// `deep` is this package's own, built from `Standard.budget` rather than taken
-/// from the library, because the library offers nothing beyond `thorough`. Its
-/// numbers are a deliberate step past `thorough` and **its effect on move count
+/// `exhaustive` is this package's own, built from `Standard.budget` rather than taken
+/// from the library, because the library offers nothing beyond `deep`. Its
+/// numbers are a deliberate step past `deep` and **its effect on move count
 /// is not measured here** -- what it promises is more searching, not a stated
 /// average.
 ///
@@ -23,29 +23,30 @@ mod Budgets {
     pub enum Budget with Eq, ToString {
         case Fast
         case Standard
-        case Thorough
         case Deep
+        case Exhaustive
     }
 
     ///
     /// The budget a name asks for, if it names one.
     ///
     pub def ofName(s: String): Option[Budget] = match String.toLowerCase(s) {
-        case "fast"     => Some(Budget.Fast)
-        case "default"  => Some(Budget.Standard)
-        case "thorough" => Some(Budget.Thorough)
-        case "deep"     => Some(Budget.Deep)
-        case _          => None
+        case "fast"       => Some(Budget.Fast)
+        case "default"    => Some(Budget.Standard)
+        case "deep"       => Some(Budget.Deep)
+        case "thorough"   => Some(Budget.Deep)
+        case "exhaustive" => Some(Budget.Exhaustive)
+        case _            => None
     }
 
     ///
     /// What a budget is called.
     ///
     pub def nameOf(b: Budget): String = match b {
-        case Budget.Fast     => "fast"
-        case Budget.Standard => "default"
-        case Budget.Thorough => "thorough"
-        case Budget.Deep     => "deep"
+        case Budget.Fast       => "fast"
+        case Budget.Standard   => "default"
+        case Budget.Deep       => "deep"
+        case Budget.Exhaustive => "exhaustive"
     }
 
     ///
@@ -73,7 +74,7 @@ mod Budgets {
     /// Every budget there is, for a caller listing them.
     ///
     pub def all(): Vector[Budget] =
-        Vector#{Budget.Fast, Budget.Standard, Budget.Thorough, Budget.Deep}
+        Vector#{Budget.Fast, Budget.Standard, Budget.Deep, Budget.Exhaustive}
 
     ///
     /// The budgets there are, written out.
@@ -85,45 +86,21 @@ mod Budgets {
     /// What the solver is actually handed.
     ///
     /// The first three are the library's own, so their recorded averages apply.
-    /// `deep` doubles `thorough`'s floor and its cap; it is this package's
+    /// `exhaustive` doubles `deep`'s floor and its cap; it is this package's
     /// choice and carries no recorded average.
     ///
-    ///
-    /// How many search nodes a step method's stage may spend.
-    ///
-    /// The step methods search too, so a budget means something to them: a
-    /// bound that fails with a count reached rather than running on
-    /// indefinitely. Nothing consumes this until the routine executor exists,
-    /// and it is kept because the bound is a property of the search, not of
-    /// whichever method happens to call it.
-    ///
-    /// **The bound is per stage, not per solve.** Cross, the first layer and
-    /// the first two layers are separate searches with separate budgets, so a
-    /// solve that clears three stages may spend three times this.
-    ///
-    /// **Only the low end is measured.** The first-two-layer search has been
-    /// recorded at 13.2 million nodes from a state with the first layer solved,
-    /// and CFOP enters it with only the cross done, so `fast` is deliberately
-    /// below what a hard cube needs -- it is for a quick answer or a quick
-    /// refusal, not for every cube. The three larger numbers are room to work
-    /// rather than measurements, and will be replaced by measurements once the
-    /// node counts for the wider handoff are recorded.
-    ///
     pub def nodeBudget(b: Budget): Int64 = match b {
-        case Budget.Fast     => 5_000_000i64
-        case Budget.Standard => 50_000_000i64
-        case Budget.Thorough => 200_000_000i64
-        case Budget.Deep     => 2_000_000_000i64
+        case Budget.Fast       => 5_000_000i64
+        case Budget.Standard   => 50_000_000i64
+        case Budget.Deep       => 200_000_000i64
+        case Budget.Exhaustive => 2_000_000_000i64
     }
 
     pub def solverBudget(b: Budget): Standard.Budget = match b {
-        case Budget.Fast     => Standard.fastBudget()
-        case Budget.Standard => Standard.defaultBudget()
-        case Budget.Thorough => Standard.thoroughBudget()
-        case Budget.Deep     =>
-            Standard.budget({
-                minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 600
-            })
+        case Budget.Fast       => Standard.fastBudget()
+        case Budget.Standard   => Standard.defaultBudget()
+        case Budget.Deep       => Standard.deepBudget()
+        case Budget.Exhaustive => Standard.exhaustiveBudget()
     }
 
 }

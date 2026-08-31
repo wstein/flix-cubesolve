@@ -97,7 +97,7 @@ mod TestResumableSearch {
         Vector.range(0, 3) |> Vector.forEach(i -> {
             let seed = Int32.toInt64(i) + 90000i64;
             let c = scrambled(t, seed);
-            let improvements = collect(Standard.start(t, Standard.thoroughBudget(), c), Nil);
+            let improvements = collect(Standard.start(t, Standard.deepBudget(), c), Nil);
             Assert.assertTrueWithMsg(List.length(improvements) >= 1,
                 "seed ${seed}: the search produced no solution at all");
             improvements |> List.forEach(ms ->

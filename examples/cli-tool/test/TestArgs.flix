@@ -134,16 +134,16 @@ mod TestArgs {
     @Test
     def budgetIsReadAndAnUnknownOneIsRefused(): Unit \ Assert = {
         let echo = (b, rest) -> Ok("${Budgets.nameOf(b)}:${List.length(rest)}");
-        Assert.assertEq(expected = Ok("thorough:1"),
-            Args.withBudget("--budget" :: "thorough" :: "R" :: Nil, echo));
-        Assert.assertEq(expected = Ok("thorough:1"),
-            Args.withBudget("R" :: "--budget" :: "thorough" :: Nil, echo));
-        Assert.assertEq(expected = Ok("thorough:1"),
-            Args.withBudget("R" :: "--budget=thorough" :: Nil, echo));
+        Assert.assertEq(expected = Ok("deep:1"),
+            Args.withBudget("--budget" :: "deep" :: "R" :: Nil, echo));
+        Assert.assertEq(expected = Ok("deep:1"),
+            Args.withBudget("R" :: "--budget" :: "deep" :: Nil, echo));
+        Assert.assertEq(expected = Ok("deep:1"),
+            Args.withBudget("R" :: "--budget=deep" :: Nil, echo));
         Assert.assertEq(expected = Ok("default:1"),
             Args.withBudget("R" :: Nil, echo));
-        Assert.assertEq(expected = Ok("deep:0"),
-            Args.withBudget("--budget" :: "deep" :: Nil, echo));
+        Assert.assertEq(expected = Ok("exhaustive:0"),
+            Args.withBudget("--budget" :: "exhaustive" :: Nil, echo));
         match Args.withBudget("--budget" :: "fastest" :: Nil, echo) {
             case Ok(_)    => Assert.assertTrueWithMsg(false, "'fastest' is not a budget")
             case Err(why) =>

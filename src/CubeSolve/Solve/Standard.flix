@@ -187,8 +187,19 @@ mod CubeSolve.Solve.Standard {
     /// takes every view: a tier nobody can tell apart from the one above it is
     /// the defect this ladder was rebuilt to remove.
     ///
-    pub def thoroughBudget(): Budget =
+    pub def deepBudget(): Budget =
         Budget({ minViews = 5, probeMax = 1200, maxDepth = 25, handovers = 300 })
+
+    ///
+    /// All six views, with double the probe cap and double the floor.
+    ///
+    pub def exhaustiveBudget(): Budget =
+        Budget({ minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 600 })
+
+    ///
+    /// Deprecated name for `deepBudget`.
+    ///
+    pub def thoroughBudget(): Budget = deepBudget()
 
     ///
     /// A budget, from its parts.
