@@ -431,6 +431,73 @@ mod CubeSolve.Table {
         eachState(0, 0)
 
     ///
+    /// The same distances, built without holding a frontier.
+    ///
+    /// `distancesFrom` keeps two `Int32` arrays the size of the whole state
+    /// space, which is the right trade while a table has a few million states
+    /// and impossible once it has a hundred million: those two arrays alone
+    /// would be a gigabyte before the distances are counted.
+    ///
+    /// This sweeps the distance array instead. Each pass walks every state,
+    /// and from each one already at the current depth writes `depth + 1` into
+    /// any neighbour still unseen. No frontier is stored, so the extra memory
+    /// is nothing and the cost is a full pass per depth rather than a pass over
+    /// what the last depth found.
+    ///
+    /// **Slower, and only worth it when it is the difference between building a
+    /// table and not.** For a table of a few million states, prefer
+    /// `distancesFrom`: it touches the frontier rather than everything, and at
+    /// that size the memory it wants is free.
+    ///
+    pub def distancesBySweep(
+        shape: { states = Int32, goal = Int32, moves = Int32, bits = Int32 },
+        successor: (Int32, Int32) -> Int32
+    ): Result[String, TableView] =
+        region rc {
+            let sweep = {
+                distances = filledPayload(rc, shape#bits, shape#states, widest(shape#bits)),
+                successor = successor,
+                moves = shape#moves,
+                bits = shape#bits
+            };
+            putEntry(sweep#distances, shape#bits, shape#goal, 0);
+            sweepLayers(sweep, shape#states, 0);
+            ofPayload(shape#bits, shape#states, sweep#distances)
+        }
+
+    ///
+    /// One sweep, then the next, until a sweep writes nothing.
+    ///
+    def sweepLayers(sweep: Sweep[r], states: Int32, depth: Int32): Unit \ r =
+        let written = oneSweep(sweep, states, depth);
+        if (written == 0) () else sweepLayers(sweep, states, depth + 1)
+
+    ///
+    /// Every neighbour of a state at `depth` that has not been seen.
+    ///
+    def oneSweep(sweep: Sweep[r], states: Int32, depth: Int32): Int32 \ r =
+        let bits = sweep#bits;
+        let marker = widest(bits);
+        def eachState(i, written) =
+            if (i >= states) written
+            else if (getEntry(sweep#distances, bits, i) != depth)
+                eachState(i + 1, written)
+            else {
+                def eachMove(m, w) =
+                    if (m >= sweep#moves) w
+                    else {
+                        let t = (sweep#successor)(i, m);
+                        if (getEntry(sweep#distances, bits, t) == marker) {
+                            putEntry(sweep#distances, bits, t, depth + 1);
+                            eachMove(m + 1, w + 1)
+                        } else
+                            eachMove(m + 1, w)
+                    };
+                eachState(i + 1, eachMove(0, written))
+            };
+        eachState(0, 0)
+
+    ///
     /// One table, from the cache or freshly built and kept.
     ///
     /// Every table in this project goes through here, so a table is cached under
