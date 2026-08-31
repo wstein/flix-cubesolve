@@ -1,6 +1,7 @@
 mod TestOutcome {
 
     use CubeSolve.Model.Cube
+    use CubeSolve.Model.Holding
     use CubeSolve.Model.Move
     use CubeSolve.Model.Sized
     use CubeSolve.Solve.Standard
@@ -123,5 +124,56 @@ mod TestOutcome {
             case _                     =>
                 Assert.assertTrueWithMsg(false, "mismatched legacy outcome")
         }
+
+
+    ///
+    /// The handover counters account for every ending, and stay within bounds.
+    ///
+    /// The counters exist to say *why* a budget's handover limit mattered, so
+    /// they are only worth reading if they add up. Three properties, per view:
+    ///
+    /// - every selected ending was unreachable, pruned, or attempted;
+    /// - the attempts are the probes, since a probe is a phase-two attempt;
+    /// - nothing claims more endings than the limit allowed, per depth, which
+    ///   shows up as the total never exceeding the limit times the depths tried.
+    ///
+    /// Without the first, a counter could drift and still look plausible; the
+    /// point of reporting them is that they cannot.
+    ///
+    @Test
+    def handoverCountersAccountForEveryEnding(): Unit \ Assert + IO =
+        if (Slow.skip("TestOutcome.handoverCountersAccountForEveryEnding",
+                "builds the phase tables and searches every view"))
+            ()
+        else
+            match Standard.buildTables() {
+                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables")
+                case Ok(t)  => match Holding.ofToken(3, "AD44qcBJiFJM")
+                        |> Result.flatMap(Sized.standardOf) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the token")
+                    case Ok(c)  =>
+                        let b = Standard.budget({
+                            minViews = 6, probeMax = 4000, maxDepth = 25, handovers = 600
+                        });
+                        let out = Standard.solveWithOutcome(t, b, c);
+                        out#viewStats |> List.forEach(v -> {
+                            Assert.assertEqWithMsg(
+                                expected = v#handoversSelected,
+                                v#handoversUnreachable + v#handoversPruned
+                                    + v#phaseTwoAttempts,
+                                "a view selected ${v#handoversSelected} endings and "
+                                    + "accounted for "
+                                    + "${v#handoversUnreachable + v#handoversPruned + v#phaseTwoAttempts}");
+                            Assert.assertEqWithMsg(expected = v#probesSpent,
+                                v#phaseTwoAttempts,
+                                "a probe is a phase-two attempt, so the two counts "
+                                    + "are the same number")
+                        });
+                        let attempts = out#viewStats
+                            |> List.foldLeft((a, v) -> a + v#phaseTwoAttempts, 0);
+                        Assert.assertEqWithMsg(expected = out#probesSpent, attempts,
+                            "the views' attempts should sum to the probes spent")
+                }
+            }
 
 }

@@ -297,8 +297,15 @@ mod Engine {
             })
         };
         if (Verbosity.says(loud, Verbosity.Level.Trace) and out#improvements > 0) {
+            let countStr =
+                if (out#improvements == 1) "1 accepted improvement"
+                else "${out#improvements} accepted improvements";
+            let delta = match (out#firstHtm, out#finalHtm) {
+                case (Some(f), Some(l)) => f - l
+                case _                  => 0
+            };
             Verbosity.say(loud, Verbosity.Level.Trace,
-                "improvement: ${firstHtmStr} -> ${finalHtmStr} (${out#improvements} reduction(s))")
+                "improvement: ${firstHtmStr} -> ${finalHtmStr} (${countStr}, ${delta} HTM shorter)")
         }
     }
 

@@ -96,7 +96,52 @@ mod CubeSolve.Solve.Standard {
         inverted = Bool,
         probesSpent = Int32,
         foundMoves = Option[Int32],
-        accepted = Bool
+        accepted = Bool,
+        handoversSelected = Int32,
+        handoversUnreachable = Int32,
+        handoversPruned = Int32,
+        phaseTwoAttempts = Int32,
+        handoverLimitReached = Bool
+    }
+
+    ///
+    /// What became of the phase-one endings a view was offered.
+    ///
+    /// **`handoversSelected` is what the limit admitted, not what exists.**
+    /// Enumeration stops at the configured limit, so the number of endings the
+    /// depth could have produced is not a fact this search holds, and counting
+    /// it would mean enumerating past the cap -- which is a change to the search
+    /// rather than a report of it. `handoverLimitReached` is the honest signal
+    /// in its place: it says a depth returned exactly the limit, which is what
+    /// distinguishes a limit that bound from one that was never approached.
+    ///
+    /// The three outcomes account for every selected ending, so
+    /// `selected = unreachable + pruned + attempts` and `attempts` is the
+    /// view's probe count. `TestOutcome` asserts both.
+    ///
+    type alias Counts = {
+        selected = Int32,
+        unreachable = Int32,
+        pruned = Int32,
+        attempts = Int32,
+        limitReached = Bool
+    }
+
+    ///
+    /// No endings seen yet.
+    ///
+    def noCounts(): Counts =
+        { selected = 0, unreachable = 0, pruned = 0, attempts = 0, limitReached = false }
+
+    ///
+    /// Two tallies added.
+    ///
+    def plus(a: Counts, b: Counts): Counts = {
+        selected = a#selected + b#selected,
+        unreachable = a#unreachable + b#unreachable,
+        pruned = a#pruned + b#pruned,
+        attempts = a#attempts + b#attempts,
+        limitReached = a#limitReached or b#limitReached
     }
 
     ///
@@ -438,8 +483,8 @@ mod CubeSolve.Solve.Standard {
         match f#views {
             case Nil          => None
             case view :: rest =>
-                let (found, used) = searchOneView(s, view);
-                Some(folded(s, view, rest, found, used))
+                let (found, used, tally) = searchOneView(s, view);
+                Some(folded(s, view, rest, found, used, tally))
         }
 
     def axisOf(r: Rotation.Rotation): ViewAxis =
@@ -460,7 +505,7 @@ mod CubeSolve.Solve.Standard {
     def searchOneView(
         s: Search,
         view: (Rotation.Rotation, Bool)
-    ): (Option[List[Move.Move]], Int32) =
+    ): (Option[List[Move.Move]], Int32, Counts) =
         let Search.Search(f) = s;
         let Tables.Tables(p1, p2) = f#tables;
         let Budget(limits) = f#budget;
@@ -476,7 +521,8 @@ mod CubeSolve.Solve.Standard {
         view: (Rotation.Rotation, Bool),
         rest: List[(Rotation.Rotation, Bool)],
         found: Option[List[Move.Move]],
-        used: Int32
+        used: Int32,
+        tally: Counts
     ): Search =
         let Search.Search(f) = s;
         let (r, inverted) = view;
@@ -486,7 +532,12 @@ mod CubeSolve.Solve.Standard {
             inverted = inverted,
             probesSpent = used,
             foundMoves = Option.map(List.length, found),
-            accepted = improved
+            accepted = improved,
+            handoversSelected = tally#selected,
+            handoversUnreachable = tally#unreachable,
+            handoversPruned = tally#pruned,
+            phaseTwoAttempts = tally#attempts,
+            handoverLimitReached = tally#limitReached
         };
         let newFirst = match f#firstHtm {
             case Some(h) => Some(h)
@@ -650,7 +701,7 @@ mod CubeSolve.Solve.Standard {
         share: Budget,
         c: Sized.Standard,
         view: { rotation = Rotation.Rotation, inverted = Bool }
-    ): (Option[List[Move.Move]], Int32) =
+    ): (Option[List[Move.Move]], Int32, Counts) =
         let r = view#rotation;
         // A 3x3x3 has no centre orbit, so neither of these can refuse; the
         // Result is here for the sizes that do, and a refusal is treated as a
@@ -658,11 +709,11 @@ mod CubeSolve.Solve.Standard {
         let looking = Cube.conjugate(r, Sized.cubeOfStandard(c))
             |> Result.flatMap(seen -> if (view#inverted) Cube.inverse(seen) else Ok(seen));
         match looking |> Result.flatMap(Sized.standardOf) {
-            case Err(_) => (None, 0)
+            case Err(_) => (None, 0, noCounts())
             case Ok(turned) =>
-                let (found, used) = searchOnce(p1, p2, share, turned);
+                let (found, used, tally) = searchOnce(p1, p2, share, turned);
                 let named = ms -> namedInTheCallersFrame(ms, r, view#inverted);
-                (found |> Option.map(named), used)
+                (found |> Option.map(named), used, tally)
         }
 
     ///
@@ -696,8 +747,8 @@ mod CubeSolve.Solve.Standard {
     ): Result[String, List[Move.Move]] =
         let Budget(limits) = budget;
         match searchOnce(p1, p2, budget, c) {
-            case (Some(best), _) => Ok(best)
-            case (None, _) =>
+            case (Some(best), _, _) => Ok(best)
+            case (None, _, _) =>
                 Err("no solution within ${limits#probeMax} probes and "
                     + "${limits#maxDepth} moves: raise the budget rather than "
                     + "retrying this search unchanged")
@@ -716,14 +767,14 @@ mod CubeSolve.Solve.Standard {
         p2: Domino.Tables,
         budget: Budget,
         c: Sized.Standard
-    ): (Option[List[Move.Move]], Int32) =
+    ): (Option[List[Move.Move]], Int32, Counts) =
         let Budget(limits) = budget;
         match Phase1.stateOf(c) {
-            case Err(_) => (None, 0)
+            case Err(_) => (None, 0, noCounts())
             case Ok(start) =>
                 let first = Phase1.heuristicAt(p1, start);
                 let attempt = { phase1 = p1, phase2 = p2, limits = limits, cube = c };
-                byDepth(attempt, start, first, 0, None)
+                byDepth(attempt, start, first, 0, None, noCounts())
         }
 
     ///
@@ -744,8 +795,9 @@ mod CubeSolve.Solve.Standard {
         start: Int64,
         depth: Int32,
         probes: Int32,
-        best: Option[List[Move.Move]]
-    ): (Option[List[Move.Move]], Int32) =
+        best: Option[List[Move.Move]],
+        tally: Counts
+    ): (Option[List[Move.Move]], Int32, Counts) =
         let limits = attempt#limits;
         // A view runs to its own end. The tier counts whole views, so stopping
         // one part-way would make "a view" mean different amounts of work
@@ -754,12 +806,16 @@ mod CubeSolve.Solve.Standard {
         // identically.
         let spent = probes >= limits#probeMax;
         if (depth > Phase1.maxDepth() or spent)
-            (best, probes)
+            (best, probes, tally)
         else {
             let handovers = IdaStar.enumerate(
                 Phase1.phaseOf(attempt#phase1), start, depth, limits#handovers);
-            let (probed, improved) = tryHandovers(attempt, handovers, probes, best);
-            byDepth(attempt, start, depth + 1, probed, improved)
+            let offered = List.length(handovers);
+            let seen = plus(tally, { selected = offered, unreachable = 0, pruned = 0,
+                attempts = 0, limitReached = offered >= limits#handovers });
+            let (probed, improved, counted) =
+                tryHandovers(attempt, handovers, probes, best, seen);
+            byDepth(attempt, start, depth + 1, probed, improved, counted)
         }
 
     ///
@@ -815,27 +871,34 @@ mod CubeSolve.Solve.Standard {
         attempt: Attempt,
         handovers: List[List[Int32]],
         probes: Int32,
-        best: Option[List[Move.Move]]
-    ): (Int32, Option[List[Move.Move]]) =
+        best: Option[List[Move.Move]],
+        tally: Counts
+    ): (Int32, Option[List[Move.Move]], Counts) =
         match handovers {
-            case Nil => (probes, best)
+            case Nil => (probes, best, tally)
             case first :: rest =>
                 let limits = attempt#limits;
                 if (probes >= limits#probeMax)
-                    (probes, best)
+                    (probes, best, tally)
                 else
                     match describe(attempt, first) {
-                        case None => tryHandovers(attempt, rest, probes, best)
+                        case None =>
+                            // Never reaches the domino group, so phase two has
+                            // nothing to finish and this is not a probe.
+                            tryHandovers(attempt, rest, probes, best,
+                                { unreachable = tally#unreachable + 1 | tally })
                         case Some(h) =>
                             let room =
                                 shorterThanBest(best, limits#maxDepth) - List.length(h#prefix);
                             if (h#bound > room)
                                 // Proven unable to beat the answer in hand, so it
                                 // is not attempted and is not a probe.
-                                tryHandovers(attempt, rest, probes, best)
+                                tryHandovers(attempt, rest, probes, best,
+                                    { pruned = tally#pruned + 1 | tally })
                             else
-                                tryHandovers(
-                                    attempt, rest, probes + 1, tryOne(attempt, h, best))
+                                tryHandovers(attempt, rest, probes + 1,
+                                    tryOne(attempt, h, best),
+                                    { attempts = tally#attempts + 1 | tally })
                     }
         }
 
