@@ -106,9 +106,6 @@ trap cleanup_all EXIT
 
 # Populate disposable overlay with tracked wrapper only (no .flixw/local)
 cp -r "${ROOT_DIR}/examples/cli-tool/src" "${TMP_DIR}/"
-if [ -d "${ROOT_DIR}/examples/cli-tool/test" ]; then
-    cp -r "${ROOT_DIR}/examples/cli-tool/test" "${TMP_DIR}/"
-fi
 cp "${ROOT_DIR}/examples/cli-tool/flix.toml" "${TMP_DIR}/"
 stage_tracked_wrapper "${ROOT_DIR}" "${TMP_DIR}"
 seed_dependency_cache "${ROOT_DIR}" "${TMP_DIR}"

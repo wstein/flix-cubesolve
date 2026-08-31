@@ -102,6 +102,7 @@ mod TestJson {
             answer = Some(Nil),
             probesSpent = 42,
             viewTarget = 4,
+            probeFloor = 120,
             probeCap = 500,
             viewsTried = 3,
             viewsAvailable = 6,
