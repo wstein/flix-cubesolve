@@ -28,6 +28,7 @@ mod CubeSolve.Method.Beginner {
     use CubeSolve.Method.Steps
     use CubeSolve.Model.Cube
     use CubeSolve.Solve.Cross
+    use CubeSolve.Table.Cache
     use CubeSolve.Solve.FirstLayer
     use CubeSolve.Solve.TwoLayers
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
@@ -192,6 +193,15 @@ mod CubeSolve.Method.Beginner {
         TwoLayers.build() |> Result.map(Tables.Tables)
 
     ///
+    /// The same tables, read from the cache where they are there.
+    ///
+    /// **Prefer this to `build`.** A program that solves one cube per process
+    /// and calls `build` rebuilds 3.8 million states every time it runs.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
+        TwoLayers.cachedTables() |> Result.map(Tables.Tables)
+
+    ///
     /// Solve `c` the way a person would, in named steps.
     ///
     /// **Five stages: cross, first layer, middle edges, OLL, PLL.** The first
@@ -216,13 +226,13 @@ mod CubeSolve.Method.Beginner {
         let first = TwoLayers.firstLayerTables(two);
         forM (
             crossStep <- Steps.stage("Cross", Cross.solution(crossTableOf(first), c));
-            afterCross <- Cube.applyAll(crossStep#moves, c);
+            afterCross <- Cube.applyNotation(crossStep#sequence, c);
             layerStep <- Steps.stage("First layer",
                 FirstLayer.solution(first, afterCross));
-            afterLayer <- Cube.applyAll(layerStep#moves, afterCross);
+            afterLayer <- Cube.applyNotation(layerStep#sequence, afterCross);
             middleStep <- Steps.stage("Middle edges",
                 TwoLayers.solution(two, afterLayer));
-            afterMiddles <- Cube.applyAll(middleStep#moves, afterLayer);
+            afterMiddles <- Cube.applyNotation(middleStep#sequence, afterLayer);
             _ <- reachedTwoLayers(afterMiddles);
             lastSteps <- Steps.lastLayer(p, afterMiddles);
             plan <- Steps.plan(List.append(crossStep :: layerStep :: middleStep :: Nil,

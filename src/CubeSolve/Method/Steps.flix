@@ -22,9 +22,15 @@ mod CubeSolve.Method.Steps {
     use CubeSolve.Model.Notation
 
     ///
-    /// One step: what it is called, and the moves it makes.
+    /// One step: what it is called, and the notation that performs it.
     ///
-    pub type alias Step = { name = String, moves = List[Move.Move] }
+    /// **Notation, not a list of layer turns.** Several published OLL and PLL
+    /// algorithms rotate the whole cube partway through, and a rotation cannot
+    /// be written as a layer turn: dropping it leaves every later letter naming
+    /// a different face, and the sequence stops solving. A step therefore keeps
+    /// what it was given.
+    ///
+    pub type alias Step = { name = String, sequence = String }
 
     ///
     /// A step, or the failure of the search behind it, named for the step.
@@ -38,7 +44,7 @@ mod CubeSolve.Method.Steps {
         found: Result[String, List[Move.Move]]
     ): Result[String, Step] =
         found
-            |> Result.map(ms -> { name = name, moves = ms })
+            |> Result.map(ms -> { name = name, sequence = Move.showAll(Move.compact(ms)) })
             |> Result.mapErr(why -> "${name}: ${why}")
 
     ///
@@ -57,11 +63,11 @@ mod CubeSolve.Method.Steps {
     ///
     pub def plan(steps: List[Step]): Result[String, Plan.Plan] =
         steps
-            |> Result.traverse(s -> Plan.step(3, s#name, Move.showAll(s#moves)))
+            |> Result.traverse(s -> Plan.step(3, s#name, s#sequence))
             |> Result.map(Plan.of)
 
     def ofStage(s: Method.Stage): Step =
-        { name = labelFor(s), moves = movesOf(s) }
+        { name = labelFor(s), sequence = Notation.compact(s#sequence) }
 
     def labelFor(s: Method.Stage): String =
         if (s#caseName == "skip")
@@ -69,17 +75,4 @@ mod CubeSolve.Method.Steps {
         else
             "${s#step}: ${s#caseName}"
 
-    ///
-    /// The moves a last-layer stage makes.
-    ///
-    /// A stage carries its algorithm as notation, and the notation is what was
-    /// checked when the case was recorded, so a parse failure here would mean a
-    /// corrupt table rather than a bad cube. It yields no moves, which shows up
-    /// as a step that does nothing and a plan that does not reach the goal --
-    /// louder than a plan that silently omits a step.
-    ///
-    def movesOf(s: Method.Stage): List[Move.Move] =
-        Notation.parse(3, s#sequence)
-            |> Result.map(Notation.layersOnly)
-            |> Result.getWithDefault(Nil)
 }

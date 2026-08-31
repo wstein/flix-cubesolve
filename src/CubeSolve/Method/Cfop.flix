@@ -30,6 +30,7 @@ mod CubeSolve.Method.Cfop {
     use CubeSolve.Method.Steps
     use CubeSolve.Model.Cube
     use CubeSolve.Solve.Cross
+    use CubeSolve.Table.Cache
     use CubeSolve.Solve.FirstLayer
     use CubeSolve.Solve.TwoLayers
 
@@ -45,6 +46,15 @@ mod CubeSolve.Method.Cfop {
     ///
     pub def build(): Result[String, TwoLayers.Tables] =
         TwoLayers.build()
+
+    ///
+    /// The same tables, read from the cache where they are there.
+    ///
+    /// **Prefer this to `build`.** A program that solves one cube per process
+    /// and calls `build` rebuilds 3.8 million states every time it runs.
+    ///
+    pub def cachedTables(): Result[String, TwoLayers.Tables] \ Cache.Store =
+        TwoLayers.cachedTables()
 
     ///
     /// Solve `c` as CFOP, in named steps.
@@ -63,9 +73,9 @@ mod CubeSolve.Method.Cfop {
         forM (
             crossStep <- Steps.stage("Cross",
                 Cross.solution(crossTableOf(t), c));
-            afterCross <- Cube.applyAll(crossStep#moves, c);
+            afterCross <- Cube.applyNotation(crossStep#sequence, c);
             f2lStep <- Steps.stage("F2L", TwoLayers.solution(t, afterCross));
-            afterF2l <- Cube.applyAll(f2lStep#moves, afterCross);
+            afterF2l <- Cube.applyNotation(f2lStep#sequence, afterCross);
             _ <- reachedTwoLayers(afterF2l);
             lastSteps <- Steps.lastLayer(p, afterF2l);
             plan <- Steps.plan(List.append(crossStep :: f2lStep :: Nil, lastSteps))

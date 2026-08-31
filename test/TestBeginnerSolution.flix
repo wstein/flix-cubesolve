@@ -26,6 +26,21 @@ mod TestBeginnerSolution {
     def scrambles(): Vector[String] = Vector#{"AJmiz2F3jagE"}
 
     ///
+    /// Scrambles given as notation, for cases found by hand.
+    ///
+    /// The second one is a reported failure: its last layer draws an OLL and a
+    /// PLL whose published algorithms contain a cube rotation, and a plan that
+    /// dropped the rotation left the cube unsolved. A token would hide what is
+    /// being tested; the notation says it.
+    ///
+    def writtenScrambles(): Vector[String] = Vector#{
+        "R L F2 U2 R' L' F2 U2 R2 F2 U R2 L2 F2 B2 D' U2 B' R U' L F B2 U F' "
+            + "U F2 L2 U D B2 L2 B2 L2",
+        "F U R U' R' F' U2 R U R' U R U2 R'",
+        "R U R' U' R' F R2 U' R' U' R U R' F'"
+    }
+
+    ///
     /// The plan runs, in order, and leaves the cube two layers solved.
     ///
     /// Replayed as one sequence, then judged by the ladder -- not by any
@@ -44,9 +59,25 @@ mod TestBeginnerSolution {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables should build")
             case Ok(t)  =>
                 stagesComposeAndLeaveTheCubeTwoLayersSolved(t);
+                everyWrittenScrambleIsSolvedWholly(t);
                 eachStageLeavesTheCubeAtItsOwnRung(t);
                 anAlreadySolvedTwoLayersCostsNothing(t)
         }
+
+    ///
+    /// Every hand-written scramble is solved, all the way.
+    ///
+    /// The plan is replayed as notation, exactly as a reader would follow it.
+    /// That is the point: a step whose algorithm turns the whole cube must
+    /// carry that rotation into the plan, and a plan flattened to layer turns
+    /// silently drops it and stops solving.
+    ///
+    def everyWrittenScrambleIsSolvedWholly(t: Beginner.Tables): Unit \ Assert =
+        writtenScrambles() |> Vector.forEach(text ->
+            match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(text, c)) {
+                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "scrambling '${text}'")
+                case Ok(c)  => check(t, text, c)
+            })
 
     def stagesComposeAndLeaveTheCubeTwoLayersSolved(t: Beginner.Tables): Unit \ Assert =
         scrambles() |> Vector.forEach(token ->

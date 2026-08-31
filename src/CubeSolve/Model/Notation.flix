@@ -377,6 +377,90 @@ mod CubeSolve.Model.Notation {
     /// dropped, so this is not equivalent to the original sequence unless the
     /// frame happens to end where it started.
     ///
+    ///
+    /// `text` with adjacent turns of one face composed into a single turn.
+    ///
+    /// Works on the written form rather than on parsed operations, and that is
+    /// deliberate: a published algorithm may rotate the cube or turn a wide
+    /// layer, and this must hand those back exactly as they were given. Any
+    /// token that is not a plain face turn is left alone and acts as a barrier,
+    /// so nothing is composed across a rotation that would change which face a
+    /// letter names.
+    ///
+    /// **Written for what a person reads.** A last-layer step is an orienting
+    /// turn joined to an algorithm that begins with one of its own, so an
+    /// uncompacted step prints `U U U U F ...` -- a whole turn of one face,
+    /// which is to say nothing at all -- and reports a move count to match.
+    ///
+    pub def compact(text: String): String =
+        text
+            |> String.splitOn(substr = " ")
+            |> List.filter(t -> not String.isEmpty(t))
+            |> List.foldLeft(composeOnto, Nil)
+            |> List.reverse
+            |> List.join(" ")
+
+    ///
+    /// `token` composed onto `acc`, which is in reverse order.
+    ///
+    /// Both must be plain face turns of the same face, or the token is simply
+    /// pushed: anything else -- a rotation, a wide move, a bracketed group --
+    /// is a barrier.
+    ///
+    def composeOnto(acc: List[String], token: String): List[String] =
+        match (acc, quarterTurnsOf(token)) {
+            case (last :: rest, Some((face, turns))) =>
+                match quarterTurnsOf(last) {
+                    case Some((lastFace, lastTurns)) if lastFace == face =>
+                        let composed = (lastTurns + turns) `Int32.remainder` 4;
+                        if (composed == 0) rest else writtenTurn(face, composed) :: rest
+                    case _ => token :: acc
+                }
+            case _ => token :: acc
+        }
+
+    ///
+    /// `token` as a face and a number of clockwise quarter turns, if it is one.
+    ///
+    /// Only the six single-letter face turns: `U`, `U2`, `U'`. A wide move, a
+    /// slice, a rotation or anything bracketed is not one of these and is left
+    /// for the caller to treat as a barrier.
+    ///
+    def quarterTurnsOf(token: String): Option[(String, Int32)] =
+        let face = String.take(1, token);
+        let rest = String.drop(1, token);
+        if (not List.memberOf(face, "U" :: "R" :: "F" :: "D" :: "L" :: "B" :: Nil))
+            None
+        else if (String.isEmpty(rest))
+            Some((face, 1))
+        else if (rest == "2")
+            Some((face, 2))
+        else if (rest == "'")
+            Some((face, 3))
+        else
+            None
+
+    ///
+    /// A face and a number of quarter turns, written the usual way.
+    ///
+    def writtenTurn(face: String, turns: Int32): String = match turns {
+        case 1 => face
+        case 2 => face + "2"
+        case _ => face + "'"
+    }
+
+    ///
+    /// Only the layer turns of `ops`, in order.
+    ///
+    /// **The frame rotations are dropped, so this is not equivalent to the
+    /// original sequence** unless the frame happens to end where it started.
+    /// That makes it right for comparing against a solver's output, which never
+    /// rotates, and wrong for replaying a published algorithm: several OLL and
+    /// PLL algorithms turn the whole cube partway through, and a plan built
+    /// from these would name a different face for every turn after the
+    /// rotation. `CubeSolve.Method.Steps` keeps a step's notation for exactly
+    /// this reason.
+    ///
     pub def layersOnly(ops: List[Op]): List[Move.Move] =
         ops |> List.filterMap(op -> match op {
             case Layer(m) => Some(m)
