@@ -18,7 +18,7 @@ repository's `flixw`; run it with your own Flix install, or from the root
 project with `./flixw examples run cli-tool -- <args>`:
 
 ```sh
-# Using the repository flixw wrapper:
+# Using the repository flixw wrapper (published release contract):
 ./flixw examples run cli-tool -- solve "R U R' U'"
 ./flixw examples run cli-tool -- solve --json "R U R' U'"
 ./flixw examples run cli-tool -- show "M2 E2 S2"
@@ -29,6 +29,13 @@ project with `./flixw examples run cli-tool -- <args>`:
 ./flixw examples run cli-tool -- scramble --json
 ./flixw examples run cli-tool -- patterns --json --size 2
 ./flixw examples run cli-tool -- help
+
+# Or against the current repository checkout (local development overlay):
+./scripts/run-cli-local.sh -- solve "R U R' U'"
+./scripts/run-cli-local.sh -- help
+
+# Qualify the local development overlay:
+./scripts/qualify-local-overlay.sh
 
 # Or directly with your own Flix install:
 cd examples/cli-tool

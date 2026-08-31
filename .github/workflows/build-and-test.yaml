@@ -113,6 +113,24 @@ jobs:
           fi
           echo "tested ${found} example package(s)"
 
+  # Qualify the disposable local package overlay against the CLI example.
+  # Exercises the local checkout build as a consumer before/without publishing.
+  local-overlay:
+    name: local package overlay
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Qualify local overlay
+        run: ./scripts/qualify-local-overlay.sh --characterize
+
   # Gate 13.2. Two child JVMs racing on one cache directory, which the suite
   # cannot do from inside a single JVM. Off pull requests for the same reason as
   # the job above: it builds a fatjar and then generates the 2x2x2 tables twice

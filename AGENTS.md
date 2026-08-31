@@ -36,9 +36,25 @@ released build is actually usable, not only that the library compiles:
 ./flixw examples run cli-tool -- solve R U R' U'
 ```
 
+For **local development** against the working tree before cutting a release,
+use the disposable local package overlay helper:
+
+```sh
+./scripts/run-cli-local.sh -- solve R U R' U'
+./scripts/qualify-local-overlay.sh
+```
+
+`./scripts/run-cli-local.sh` builds a fresh `.fpkg` from the current working tree
+and mounts it into an isolated temporary workspace via `mktemp -d` without
+modifying `examples/cli-tool/flix.toml` or any committed files. This allows
+developing CLI features against in-flight library changes while preserving the
+published-package release gate intact. If Flix gains an official workspace/path
+dependency mechanism, this helper will be retired.
+
 `examples/cli-tool` carries no wrapper of its own and needs a `cubesolve`
-release to resolve against; see `docs/architecture.md` for the full rationale
-and `examples/cli-tool/README.md` for running it directly with `flix run`.
+release to resolve against when run via `flixw examples run`; see
+`docs/architecture.md` for the full rationale and `examples/cli-tool/README.md`
+for running it directly with `flix run`.
 
 `--entrypoint` still reaches a definition under `test/` for the Gate 13.2
 harness, which runs without putting anything in `src/`:
