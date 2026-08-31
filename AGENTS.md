@@ -368,6 +368,13 @@ the API in one release and its consumer in the next.
 Conventional commits, single-purpose, with the type and scope naming the primary
 change.
 
+**Commit locally; do not push by default.** A push to `main` starts the
+repository's expensive CI lanes. If an integration branch named `develop` is
+introduced, a push there has the same cost and the same rule. Push to either
+branch only when the user explicitly instructs it, or when the user explicitly
+authorizes the release procedure below. A completed local commit is the normal
+handoff point for implementation work.
+
 Before every commit, in this order:
 
 ```sh
