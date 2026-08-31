@@ -54,6 +54,12 @@ mod JsonOut {
         });
         "${obj}"
 
+    /// Number or null for optional integers
+    pub def numberOrNull(opt: Option[Int32]): Json = match opt {
+        case Some(n) => num(n)
+        case None    => JNull
+    }
+
     /// Solve response JSON with method and pattern provenance
     pub def solution(
         size: Int32,
@@ -63,6 +69,19 @@ mod JsonOut {
         method: String,
         metric: String,
         patternOpt: Option[(String, String)]
+    ): String =
+        solutionWithStats(size, token, sol, moves, method, metric, patternOpt, None)
+
+    /// Solve response JSON with method, pattern provenance, and optional search outcome stats
+    pub def solutionWithStats(
+        size: Int32,
+        token: String,
+        sol: String,
+        moves: List[String],
+        method: String,
+        metric: String,
+        patternOpt: Option[(String, String)],
+        statsOpt: Option[CubeSolve.Solve.Standard.Outcome]
     ): String =
         let patObj = match patternOpt {
             case Some((name, url)) => JObject(Map#{
@@ -74,7 +93,7 @@ mod JsonOut {
                 "found" => bool(false)
             })
         };
-        let obj = JObject(Map#{
+        let baseMap = Map#{
             "command" => str("solve"),
             "size" => num(size),
             "token" => str(token),
@@ -84,7 +103,30 @@ mod JsonOut {
             "method" => str(method),
             "pattern" => patObj,
             "moves" => strArray(moves)
-        });
+        };
+        let finalMap = match statsOpt {
+            case Some(out) =>
+                let termStr = match out#termination {
+                    case CubeSolve.Solve.Standard.Termination.SolvedImmediately => "solved-immediately"
+                    case CubeSolve.Solve.Standard.Termination.ProbeFloor => "probe-floor"
+                    case CubeSolve.Solve.Standard.Termination.ProbeCap => "probe-cap"
+                    case CubeSolve.Solve.Standard.Termination.ViewsExhausted => "views-exhausted"
+                };
+                let statsObj = JObject(Map#{
+                    "probesSpent" => num(out#probesSpent),
+                    "probeFloor" => num(out#probeFloor),
+                    "probeCap" => num(out#probeCap),
+                    "viewsTried" => num(out#viewsTried),
+                    "viewsAvailable" => num(out#viewsAvailable),
+                    "firstHtm" => numberOrNull(out#firstHtm),
+                    "finalHtm" => numberOrNull(out#finalHtm),
+                    "improvements" => num(out#improvements),
+                    "termination" => str(termStr)
+                });
+                Map.insert("stats", statsObj, baseMap)
+            case None => baseMap
+        };
+        let obj = JObject(finalMap);
         "${obj}"
 
     /// Show response JSON

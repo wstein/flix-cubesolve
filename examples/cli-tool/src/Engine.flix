@@ -19,10 +19,22 @@ mod Engine {
     /// A solution for `c`, with colored net, move count, metric, method, and pattern DB recognition.
     ///
     pub def solveCube(b: Budgets.Budget, size: Int32, c: Cube.Cube): Result[String, String] \ IO =
+        solveCubeDetailed(Verbosity.Level.Quiet, false, b, size, c)
+
+    ///
+    /// A solution for `c` with explicit verbosity level and telemetry options.
+    ///
+    pub def solveCubeDetailed(
+        loud: Verbosity.Level,
+        withStats: Bool,
+        b: Budgets.Budget,
+        size: Int32,
+        c: Cube.Cube
+    ): Result[String, String] \ IO =
         forM (
             netStr <- RenderNet.colouredNet(c);
             tok <- CubeSolve.Model.Facelets.token(c);
-            ms <- movesFor(b, size, c)
+            (ms, outOpt) <- solveDetails(loud, b, size, c)
         ) yield {
             let sol = Move.showAll(ms);
             let len = List.length(ms);
@@ -31,6 +43,19 @@ mod Engine {
                 case Some((name, url)) => "pattern: ${name} (${url})"
                 case None              => "pattern: none (search)"
             };
+            let statsBlock = if (withStats) match outOpt {
+                case Some(out) =>
+                    let termStr = match out#termination {
+                        case Standard.Termination.SolvedImmediately => "cube is already solved"
+                        case Standard.Termination.ProbeFloor => "answer settled at the ${Budgets.nameOf(b)} probe floor"
+                        case Standard.Termination.ProbeCap => "exhausted the ${Budgets.nameOf(b)} probe cap"
+                        case Standard.Termination.ViewsExhausted => "searched all views without further improvement"
+                    };
+                    "${String.lineSeparator()}probes:  ${out#probesSpent} / ${out#probeCap} (floor ${out#probeFloor})"
+                        + "${String.lineSeparator()}views:   ${out#viewsTried} / ${out#viewsAvailable}"
+                        + "${String.lineSeparator()}stopped: ${termStr}"
+                case None => ""
+            } else "";
             "${netStr}${String.lineSeparator()}"
                 + "${sol}${String.lineSeparator()}"
                 + "${len} moves (HTM)${String.lineSeparator()}"
@@ -38,21 +63,35 @@ mod Engine {
                 + "budget:  ${Budgets.nameOf(b)}${budgetNote(size)}${String.lineSeparator()}"
                 + "${patLine}${String.lineSeparator()}"
                 + "orbit64: ${tok}"
+                + "${statsBlock}"
         }
 
     ///
     /// A solution for `c` as structured JSON.
     ///
     pub def solveCubeJson(b: Budgets.Budget, size: Int32, c: Cube.Cube): Result[String, String] \ IO =
+        solveCubeJsonDetailed(Verbosity.Level.Quiet, false, b, size, c)
+
+    ///
+    /// A solution for `c` as structured JSON with explicit verbosity level and telemetry options.
+    ///
+    pub def solveCubeJsonDetailed(
+        loud: Verbosity.Level,
+        withStats: Bool,
+        b: Budgets.Budget,
+        size: Int32,
+        c: Cube.Cube
+    ): Result[String, String] \ IO =
         forM (
             tok <- CubeSolve.Model.Facelets.token(c);
-            ms <- movesFor(b, size, c)
+            (ms, outOpt) <- solveDetails(loud, b, size, c)
         ) yield {
             let sol = Move.showAll(ms);
             let moveStrs = ms |> List.map(Move.show);
             let meth = if (size == 2) "optimal BFS" else "Kociemba two-phase";
             let patOpt = patternFor(size, c);
-            JsonOut.solution(size, tok, sol, moveStrs, meth, "HTM", patOpt)
+            let statsParam = if (withStats) outOpt else None;
+            JsonOut.solutionWithStats(size, tok, sol, moveStrs, meth, "HTM", patOpt, statsParam)
         }
 
     def patternFor(size: Int32, c: Cube.Cube): Option[(String, String)] =
@@ -169,15 +208,25 @@ mod Engine {
     def budgetNote(size: Int32): String =
         if (size == 2) " (ignored: the 2x2x2 answer is already shortest)" else ""
 
-    def movesFor(
+    def solveDetails(
+        loud: Verbosity.Level,
         b: Budgets.Budget,
         size: Int32,
         c: Cube.Cube
-    ): Result[String, List[Move.Move]] \ IO =
+    ): Result[String, (List[Move.Move], Option[Standard.Outcome])] \ IO =
         match CubeSolve.Model.Validate.faultOf(c) {
             case Some(why) => Err(why)
             case None      =>
-                Store.cached(() -> if (size == 2) pocket(c) else standard(b, c))
+                if (size == 2)
+                    Store.cached(() -> pocket(c)) |> Result.map(ms -> (ms, None))
+                else
+                    forM (
+                        pair <- Store.cached(() -> standardOutcome(b, c))
+                    ) yield {
+                        let (ms, out) = pair;
+                        reportOutcome(loud, b, out);
+                        (ms, Some(out))
+                    }
         }
 
     ///
@@ -191,16 +240,66 @@ mod Engine {
         ) yield ms
 
     ///
-    /// A 3x3x3 solution, which is short rather than shortest.
+    /// A 3x3x3 solution, which produces structured Outcome telemetry.
     ///
-    def standard(
+    def standardOutcome(
         b: Budgets.Budget,
         c: Cube.Cube
-    ): Result[String, List[Move.Move]] \ Table.Cache.Store =
+    ): Result[String, (List[Move.Move], Standard.Outcome)] \ Table.Cache.Store =
         forM (
             t <- Standard.cachedTables();
             x <- Sized.standardOf(c);
-            ms <- Standard.solutionWith(t, Budgets.solverBudget(b), x)
-        ) yield ms
+            pair <- {
+                let out = Standard.solveWithOutcome(t, Budgets.solverBudget(b), x);
+                match out#answer {
+                    case Some(ms) => Ok((ms, out))
+                    case None     => Err("no solution found within probe budget")
+                }
+            }
+        ) yield pair
+
+    def reportOutcome(loud: Verbosity.Level, b: Budgets.Budget, out: Standard.Outcome): Unit \ IO = {
+        let budgetName = Budgets.nameOf(b);
+        let firstHtmStr = match out#firstHtm {
+            case Some(h) => "${h}"
+            case None    => "none"
+        };
+        let finalHtmStr = match out#finalHtm {
+            case Some(h) => "${h}"
+            case None    => "none"
+        };
+        Verbosity.say(loud, Verbosity.Level.Verbose,
+            "budget ${budgetName}: ${out#probesSpent}/${out#probeCap} probes, "
+                + "${out#viewsTried}/${out#viewsAvailable} views, "
+                + "first ${firstHtmStr} HTM, final ${finalHtmStr} HTM");
+        let stopMsg = match out#termination {
+            case Standard.Termination.SolvedImmediately => "cube is already solved"
+            case Standard.Termination.ProbeFloor => "answer settled at the ${budgetName} probe floor"
+            case Standard.Termination.ProbeCap => "exhausted the ${budgetName} probe cap"
+            case Standard.Termination.ViewsExhausted => "searched all views without further improvement"
+        };
+        Verbosity.say(loud, Verbosity.Level.Verbose, "stopped: ${stopMsg}");
+        if (Verbosity.says(loud, Verbosity.Level.Debug)) {
+            out#viewStats |> List.forEach(v -> {
+                let axisStr = match v#axis {
+                    case Standard.ViewAxis.UD => "UD"
+                    case Standard.ViewAxis.FB => "FB"
+                    case Standard.ViewAxis.RL => "RL"
+                };
+                let invStr = if (v#inverted) " (inverted)" else "";
+                let candStr = match v#foundMoves {
+                    case Some(m) => "${m} moves"
+                    case None    => "no candidate"
+                };
+                let accStr = if (v#accepted) " (accepted)" else "";
+                Verbosity.say(loud, Verbosity.Level.Debug,
+                    "view ${axisStr}${invStr}: ${v#probesSpent} probes, ${candStr}${accStr}")
+            })
+        };
+        if (Verbosity.says(loud, Verbosity.Level.Trace) and out#improvements > 0) {
+            Verbosity.say(loud, Verbosity.Level.Trace,
+                "improvement: ${firstHtmStr} -> ${finalHtmStr} (${out#improvements} reduction(s))")
+        }
+    }
 
 }

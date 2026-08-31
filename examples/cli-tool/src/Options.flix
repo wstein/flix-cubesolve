@@ -40,6 +40,8 @@ mod Options {
         case Loudness(Verbosity.Level)
         /// `--scramble`: solve a fresh random scramble rather than an argument.
         case Scramble
+        /// `--stats`: report search telemetry.
+        case Stats
     }
 
     ///
@@ -91,8 +93,12 @@ mod Options {
             { optionIds = 's' :: Nil, optionNames = "scramble" :: Nil,
               argDescriptor = NoArg(Flag.Scramble),
               explanation = "solve a fresh random scramble instead of an argument" };
+        let stats =
+            { optionIds = Nil, optionNames = "stats" :: Nil,
+              argDescriptor = NoArg(Flag.Stats),
+              explanation = "report search telemetry" };
         match command {
-            case "solve"    => method :: budget :: size :: scramble :: common
+            case "solve"    => method :: budget :: size :: scramble :: stats :: common
             case "show"     => size :: common
             case "identify" => size :: common
             case "scramble" => size :: common

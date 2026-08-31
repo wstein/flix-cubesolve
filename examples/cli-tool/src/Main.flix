@@ -57,6 +57,7 @@ def dispatch(args: List[String]): Unit \ IO = match args {
 def execute(cmd: String, flags: List[Options.Flag], operands: List[String]): Unit \ IO =
     let isJson = Options.has(flags, Options.Flag.Json);
     let loud = Options.loudness(flags);
+    let withStats = Options.has(flags, Options.Flag.Stats);
     Verbosity.say(loud, Verbosity.Level.Debug, "command '${cmd}', ${List.length(operands)} operand(s)");
     match cmd {
         case "solve" =>
@@ -65,7 +66,7 @@ def execute(cmd: String, flags: List[Options.Flag], operands: List[String]): Uni
                 b <- Budgets.named(Options.budget(flags));
                 size <- Args.sizeFor(Solving, Options.size(flags));
                 given <- scrambleOrOperands(loud, size, Options.has(flags, Options.Flag.Scramble), operands);
-                answer <- solveCommand(isJson, loud, m, b, size, given)
+                answer <- solveCommand(isJson, loud, withStats, m, b, size, given)
             ) yield answer)
         case "show" =>
             report(isJson, Args.sizeFor(Turning, Options.size(flags))
@@ -116,15 +117,12 @@ def scrambleOrOperands(
             }))
 
 ///
-/// `solve [--method name] [--size n] [--budget name] [--json] <scramble>`
-///
-/// The two-phase solver is the default and the only one that answers a cube of
-/// any size. `beginner` cannot solve yet and says so; see `Methods` for why it
-/// refuses rather than answering with something else.
+/// `solve [--size n] [--budget name] [--method name] [--json] [--stats] <scramble>`
 ///
 def solveCommand(
     isJson: Bool,
     loud: Verbosity.Level,
+    withStats: Bool,
     m: Methods.Method,
     b: Budgets.Budget,
     size: Int32,
@@ -137,9 +135,9 @@ def solveCommand(
     Verbosity.timed(loud, Verbosity.Level.Verbose, "solving", () ->
     if (Methods.twoPhase(m))
         if (isJson)
-            Args.onCube(size, rest, (n, c) -> Engine.solveCubeJson(b, n, c))
+            Args.onCube(size, rest, (n, c) -> Engine.solveCubeJsonDetailed(loud, withStats, b, n, c))
         else
-            Args.onCube(size, rest, (n, c) -> Engine.solveCube(b, n, c))
+            Args.onCube(size, rest, (n, c) -> Engine.solveCubeDetailed(loud, withStats, b, n, c))
     else if (isJson)
         Args.onCube(size, rest, (n, c) -> Methods.answerJson(m, b, n, c))
     else
