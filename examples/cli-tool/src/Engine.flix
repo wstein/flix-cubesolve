@@ -34,6 +34,10 @@ mod Engine {
         forM (
             netStr <- RenderNet.colouredNet(c);
             tok <- CubeSolve.Model.Facelets.token(c);
+            _ <- {
+                println(netStr);
+                Ok(())
+            };
             (ms, outOpt) <- solveDetails(loud, b, size, c)
         ) yield {
             let sol = Move.showAll(ms);
@@ -58,8 +62,7 @@ mod Engine {
                         + "${String.lineSeparator()}stopped: ${termStr}"
                 case None => ""
             } else "";
-            "${netStr}${String.lineSeparator()}"
-                + "${sol}${String.lineSeparator()}"
+            "${sol}${String.lineSeparator()}"
                 + "${len} moves (HTM)${String.lineSeparator()}"
                 + "method:  ${meth}${String.lineSeparator()}"
                 + "budget:  ${Budgets.nameOf(b)}${budgetNote(size)}${String.lineSeparator()}"

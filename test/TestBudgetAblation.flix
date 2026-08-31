@@ -16,6 +16,30 @@
 /// CUBESOLVE_ABLATION=1 ./flixw test
 /// ```
 ///
+/// What it measured, over the eight cubes below:
+///
+/// ```text
+///   views x handovers        total HTM   probes
+///   5 views, 300 handovers   158         3378
+///   5 views, 600 handovers   158         4534
+///   6 views, 300 handovers   158         3621
+///   6 views, 600 handovers   155         4826
+/// ```
+///
+/// **Neither knob buys anything on its own.** The sixth view alone costs 7%
+/// more probes and returns the same total; six hundred handovers alone cost 34%
+/// more and return the same total. Only the two together shorten anything, by
+/// three moves over eight cubes for 43% more work.
+///
+/// That is why `deep` moves both, and why `thorough` is the efficient point
+/// rather than a weaker version of `deep`. It also says what an earlier claim
+/// here could not: comparing `thorough` to `deep` shows extra work happened and
+/// not which knob did it, because both change at once.
+///
+/// Eight cubes and a three-move difference is a small sample. It is enough to
+/// say the individual knobs did nothing here and not enough to put a number on
+/// what the pair is worth.
+///
 mod TestBudgetAblation {
 
     use CubeSolve.Model.Holding
