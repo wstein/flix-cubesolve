@@ -96,6 +96,35 @@ mod Args {
     ///
     /// Pull an optional `--size n` from arguments and hand the rest on.
     ///
+    ///
+    /// The size a command should use, given what `--size` carried.
+    ///
+    /// Defaults to 3, and refuses a size the command cannot serve by saying
+    /// which sizes it can. `CubeSolve` is the authority on that and is asked
+    /// rather than repeated, so these refusals stop being true the moment the
+    /// engine grows -- and not before.
+    ///
+    pub def sizeFor(needs: Needs, given: Option[Int32]): Result[String, Int32] =
+        match given {
+            case None    => Ok(3)
+            case Some(n) => match refusal(needs, n) {
+                case Some(why) => Err(why)
+                case None      => Ok(n)
+            }
+        }
+
+    ///
+    /// The profile a command should use, given what `--profile` carried.
+    ///
+    pub def namedProfile(given: Option[String]): Result[String, Profile.Profile] =
+        match given {
+            case None       => Ok(Profile.Profile.SourceFirst)
+            case Some(name) => match Profile.ofName(name) {
+                case Some(p) => Ok(p)
+                case None    => Err("'${name}' is not a profile: there is ${profileNames()}")
+            }
+        }
+
     pub def withSize(
         args: List[String],
         needs: Needs,

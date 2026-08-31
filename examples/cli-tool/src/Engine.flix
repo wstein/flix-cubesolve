@@ -78,6 +78,22 @@ mod Engine {
     /// by a solve done here: `uniform` certifies the scramble by solving it and
     /// reports both bounds. Only the seed is drawn locally.
     ///
+    ///
+    /// A fresh random scramble, as notation and nothing else.
+    ///
+    /// `scramble` describes one for a reader; this returns what a solver can be
+    /// handed, which is what `solve --scramble` needs.
+    ///
+    pub def scrambleNotation(size: Int32): Result[String, String] \ IO =
+        if (size != 3)
+            Err("scrambling is implemented for the 3x3x3 only")
+        else
+            let seed = Random.secureSeed();
+            Store.cached(() ->
+                Standard.cachedTables() |> Result.flatMap(t ->
+                    CubeSolve.Scramble.Standard.uniform(t, Standard.defaultBudget(), seed)))
+                |> Result.map(drawn -> CubeSolve.Scramble.Standard.show(fst(drawn)))
+
     pub def scramble(size: Int32): Result[String, String] \ IO =
         if (size != 3)
             Err("scrambling is implemented for the 3x3x3 only")

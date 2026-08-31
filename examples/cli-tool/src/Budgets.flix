@@ -54,6 +54,22 @@ mod Budgets {
     pub def standard(): Budget = Budget.Standard
 
     ///
+    /// The budget a command should use, given what `--budget` carried.
+    ///
+    /// An unknown name is refused with the ones that exist rather than quietly
+    /// falling back: a caller who misspells a budget should be told, not given
+    /// something else and left to wonder why the answer changed.
+    ///
+    pub def named(given: Option[String]): Result[String, Budget] =
+        match given {
+            case None       => Ok(standard())
+            case Some(name) => match ofName(name) {
+                case Some(b) => Ok(b)
+                case None    => Err("'${name}' is not a budget: there is ${names()}")
+            }
+        }
+
+    ///
     /// Every budget there is, for a caller listing them.
     ///
     pub def all(): Vector[Budget] =
