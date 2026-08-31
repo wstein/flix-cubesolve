@@ -115,7 +115,8 @@ mod CubeSolve.Solve.IdaStar {
         spec = Spec[s],
         path = Array[Int32, r],
         visited = Ref[Int64, r],
-        bound = Int32
+        bound = Int32,
+        maxNodes = Int64
     }
 
     ///
@@ -127,17 +128,42 @@ mod CubeSolve.Solve.IdaStar {
     /// is reported as exhaustion naming the depth reached, so a caller can
     /// raise it deliberately instead of guessing.
     ///
-    pub def search(p: Phase[s], start: s, maxDepth: Int32): Result[String, Found] =
+    /// `maxNodes` is the safety net, and it is what stops a wide search looking
+    /// like a hung program. It is a node count rather than a time limit for two
+    /// reasons: a node count is reproducible, so a search that stops on one
+    /// machine stops in the same place on another, and counting nodes costs one
+    /// comparison against a number the search already keeps, where reading a
+    /// clock in the hot loop would not be free. Pass `unbounded()` to mean no
+    /// limit.
+    ///
+    /// Exhausting the budget is reported with the count reached, so a caller
+    /// can say `F2L exhausted after 5,000,000 nodes` rather than nothing at all.
+    ///
+    pub def search(
+        p: Phase[s],
+        start: s,
+        maxDepth: Int32,
+        maxNodes: Int64
+    ): Result[String, Found] =
         region rc {
             let Phase(spec) = p;
             let pass = {
                 spec = spec,
                 path = Array.repeat(rc, maxDepth + 1, 0),
                 visited = Ref.fresh(rc, 0i64),
-                bound = (spec#heuristic)(start)
+                bound = (spec#heuristic)(start),
+                maxNodes = maxNodes
             };
             deepen(pass, start, maxDepth)
         }
+
+    ///
+    /// No node limit.
+    ///
+    /// For a caller whose search is bounded by something else -- a depth it
+    /// knows to be the diameter, or a budget of its own kept above this one.
+    ///
+    pub def unbounded(): Int64 = Int64.maxValue()
 
     ///
     /// Try one bound, then the next, until the solution is found or `maxDepth`
@@ -153,14 +179,25 @@ mod CubeSolve.Solve.IdaStar {
                 moves = List.take(pass#bound, Array.toList(pass#path)),
                 nodes = Ref.get(pass#visited)
             }))
+        else if (spent(pass))
+            Err("exhausted after ${Ref.get(pass#visited)} nodes at depth "
+                + "${pass#bound}: this state needs a larger node budget, not a "
+                + "retry of the same one")
         else
             deepen(atBound(pass, pass#bound + 1), start, maxDepth)
+
+    ///
+    /// Whether the node budget is used up.
+    ///
+    def spent(pass: Pass[s, r]): Bool \ r =
+        Ref.get(pass#visited) >= pass#maxNodes
 
     ///
     /// The same pass, working to a deeper bound.
     ///
     def atBound(pass: Pass[s, r], bound: Int32): Pass[s, r] =
-        { spec = pass#spec, path = pass#path, visited = pass#visited, bound = bound }
+        { spec = pass#spec, path = pass#path, visited = pass#visited, bound = bound,
+          maxNodes = pass#maxNodes }
 
     ///
     /// Depth-first to the pass's bound, writing moves into the path as it goes.
@@ -172,7 +209,13 @@ mod CubeSolve.Solve.IdaStar {
     def descend(pass: Pass[s, r], state: s, depth: Int32, lastMove: Int32): Bool \ r =
         Ref.put(Ref.get(pass#visited) + 1i64, pass#visited);
         let spec = pass#spec;
-        if (depth + (spec#heuristic)(state) > pass#bound)
+        // One comparison against a counter the search already keeps. A search
+        // that is over budget prunes everything from here, which unwinds to
+        // `deepen`, where the budget is what distinguishes exhaustion from a
+        // bound that simply held no solution.
+        if (spent(pass))
+            false
+        else if (depth + (spec#heuristic)(state) > pass#bound)
             false
         else if ((spec#isGoal)(state))
             depth == pass#bound

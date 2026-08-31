@@ -48,17 +48,25 @@ mod CubeSolve.Solve.Cross {
     ///
     /// A shortest sequence solving `c`'s cross, or why there is none.
     ///
-    pub def solution(t: TableView, c: Cube.Cube): Result[String, List[Move.Move]] =
+    pub def solution(
+        t: TableView,
+        c: Cube.Cube,
+        maxNodes: Int64
+    ): Result[String, List[Move.Move]] =
         forM (
             start <- Cross.encode(c);
-            found <- search(t, start)
+            found <- search(t, start, maxNodes)
         ) yield found
 
     ///
     /// The search itself, from a coordinate.
     ///
-    def search(t: TableView, start: Int32): Result[String, List[Move.Move]] =
-        IdaStar.search(phase(t), start, diameter())
+    def search(
+        t: TableView,
+        start: Int32,
+        maxNodes: Int64
+    ): Result[String, List[Move.Move]] =
+        IdaStar.search(phase(t), start, diameter(), maxNodes)
             |> Result.map(f -> IdaStar.moves(f)
                 |> List.filterMap(i -> Move.ofIndex(i)))
 

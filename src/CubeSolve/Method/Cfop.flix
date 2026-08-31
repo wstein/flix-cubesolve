@@ -68,13 +68,14 @@ mod CubeSolve.Method.Cfop {
     pub def solution(
         t: TwoLayers.Tables,
         p: Profile.Profile,
-        c: Cube.Cube
+        c: Cube.Cube,
+        maxNodes: Int64
     ): Result[String, Plan.Plan] =
         forM (
             crossStep <- Steps.stage("Cross",
-                Cross.solution(crossTableOf(t), c));
+                Cross.solution(crossTableOf(t), c, maxNodes));
             afterCross <- Cube.applyNotation(crossStep#sequence, c);
-            f2lStep <- Steps.stage("F2L", TwoLayers.solution(t, afterCross));
+            f2lStep <- Steps.stage("F2L", TwoLayers.solution(t, afterCross, maxNodes));
             afterF2l <- Cube.applyNotation(f2lStep#sequence, afterCross);
             _ <- reachedTwoLayers(afterF2l);
             lastSteps <- Steps.lastLayer(p, afterF2l);

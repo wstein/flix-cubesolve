@@ -186,7 +186,7 @@ mod CubeSolve.Solve.Phase1 {
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
         stateOf(c) |> Result.flatMap(s ->
-            IdaStar.search(phaseOf(p), s, maxDepth())
+            IdaStar.search(phaseOf(p), s, maxDepth(), IdaStar.unbounded())
                 |> Result.map(f -> IdaStar.moves(f) |> List.map(Standard.moveOfIndex)))
 
 }

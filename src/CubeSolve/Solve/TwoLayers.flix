@@ -98,8 +98,13 @@ mod CubeSolve.Solve.TwoLayers {
     ///
     /// A sequence solving `c`'s first two layers, or why there is none.
     ///
-    pub def solution(t: Tables, c: Cube.Cube): Result[String, List[Move.Move]] =
-        found(t, c) |> Result.map(f -> IdaStar.moves(f) |> List.filterMap(Move.ofIndex))
+    pub def solution(
+        t: Tables,
+        c: Cube.Cube,
+        maxNodes: Int64
+    ): Result[String, List[Move.Move]] =
+        found(t, c, maxNodes)
+            |> Result.map(f -> IdaStar.moves(f) |> List.filterMap(Move.ofIndex))
 
     ///
     /// The search result, node count included.
@@ -107,13 +112,18 @@ mod CubeSolve.Solve.TwoLayers {
     /// Public because the node count is the only honest measure of whether the
     /// heuristic is doing its job, and the corpus measurement needs it.
     ///
-    pub def found(t: Tables, c: Cube.Cube): Result[String, IdaStar.Found] =
+    pub def found(
+        t: Tables,
+        c: Cube.Cube,
+        maxNodes: Int64
+    ): Result[String, IdaStar.Found] =
         forM (
             cross <- Cross.encode(c);
             corners <- FirstLayer.encode(c);
             middles <- MiddleEdges.encode(c);
             _ <- CornerEdgePair.encode(c);
-            f <- IdaStar.search(phase(t), Packed.pack(cross, corners, middles), searchDepth())
+            f <- IdaStar.search(phase(t), Packed.pack(cross, corners, middles),
+                    searchDepth(), maxNodes)
                 |> Result.mapErr(_ ->
                     "no first two layers within ${searchDepth()} moves: this state "
                         + "needs a longer search than this step allows")

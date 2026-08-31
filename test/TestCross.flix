@@ -8,6 +8,7 @@
 ///
 mod TestCross {
 
+
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -76,7 +77,7 @@ mod TestCross {
                     match Random.sampleDeterministic(seed, 3) |> Result.map(fst) {
                         case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
                         case Ok(c)  =>
-                            match (encode(c), Cross.solution(t, c)) {
+                            match (encode(c), Cross.solution(t, c, noNodeLimit())) {
                                 case (Ok(here), Ok(ms)) =>
                                     Assert.assertEqWithMsg(
                                         expected = Table.get(here, t), List.length(ms),
@@ -102,5 +103,16 @@ mod TestCross {
                     }
                 })
         }
+
+
+    ///
+    /// A node budget larger than any search in this module can spend.
+    ///
+    /// A literal rather than `IdaStar.unbounded()` so that this module does not
+    /// name `IdaStar` to say one thing that never changes, and a bound rather
+    /// than no bound because a test that could run forever is not a test.
+    /// These searches are thousands of nodes; this is half a billion.
+    ///
+    def noNodeLimit(): Int64 = 500_000_000i64
 
 }

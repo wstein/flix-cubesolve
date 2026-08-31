@@ -14,6 +14,7 @@
 ///
 mod TestFirstLayer {
 
+
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -68,7 +69,7 @@ mod TestFirstLayer {
     /// One scramble: solved, replayed, and within the recorded bound.
     ///
     def check(t: Tables, seed: Int64, c: Cube.Cube): Unit \ Assert =
-        match CubeSolve.Solve.FirstLayer.solution(t, c) {
+        match CubeSolve.Solve.FirstLayer.solution(t, c, noNodeLimit()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
             case Ok(ms) =>
                 Assert.assertTrueWithMsg(List.length(ms) <= 11,
@@ -86,5 +87,16 @@ mod TestFirstLayer {
                             "seed ${seed}: the answer does not reach the FirstLayer rung")
                 }
         }
+
+
+    ///
+    /// A node budget larger than any search in this module can spend.
+    ///
+    /// A literal rather than `IdaStar.unbounded()` so that this module does not
+    /// name `IdaStar` to say one thing that never changes, and a bound rather
+    /// than no bound because a test that could run forever is not a test.
+    /// These searches are thousands of nodes; this is half a billion.
+    ///
+    def noNodeLimit(): Int64 = 500_000_000i64
 
 }

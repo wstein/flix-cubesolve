@@ -15,6 +15,8 @@
 ///
 mod TestTwoLayers {
 
+    use CubeSolve.Solve.IdaStar
+
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Holding
@@ -77,7 +79,7 @@ mod TestTwoLayers {
         ceiling: Int64,
         begun: Cube.Cube
     ): Unit \ Assert =
-        match TwoLayers.found(tl, begun) {
+        match TwoLayers.found(tl, begun, IdaStar.unbounded()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "token ${token}")
             case Ok(f)  =>
                 Assert.assertTrueWithMsg(TwoLayers.nodesOf(f) <= ceiling,

@@ -67,21 +67,27 @@ mod CubeSolve.Solve.FirstLayer {
     ///
     /// A short sequence solving `c`'s first layer, or why there is none.
     ///
-    pub def solution(t: Tables, c: Cube.Cube): Result[String, List[Move.Move]] =
+    pub def solution(
+        t: Tables,
+        c: Cube.Cube,
+        maxNodes: Int64
+    ): Result[String, List[Move.Move]] =
         forM (
             cross <- Cross.encode(c);
             corners <- FirstLayer.encode(c);
-            found <- search(t, pack(cross, corners))
+            found <- search(t, pack(cross, corners), maxNodes)
         ) yield found
 
     ///
     /// The search itself, from a packed pair.
     ///
-    def search(t: Tables, start: Int64): Result[String, List[Move.Move]] =
-        IdaStar.search(phase(t), start, searchDepth())
-            |> Result.mapErr(_ ->
-                "no first layer within ${searchDepth()} moves: this state needs a "
-                    + "longer search than this step allows")
+    def search(
+        t: Tables,
+        start: Int64,
+        maxNodes: Int64
+    ): Result[String, List[Move.Move]] =
+        IdaStar.search(phase(t), start, searchDepth(), maxNodes)
+            |> Result.mapErr(why -> "no first layer: ${why}")
             |> Result.map(f -> IdaStar.moves(f) |> List.filterMap(Move.ofIndex))
 
     ///

@@ -57,7 +57,8 @@ mod TestDominoBound {
                         let state = Domino.packPhase2(cperm, eperm, mperm);
                         let bound = Domino.lowerBoundOf(p, state);
                         match IdaStar.search(Domino.phase2Of(p), state,
-                                             Domino.maxPhase2Depth()) {
+                                             Domino.maxPhase2Depth(),
+                                             IdaStar.unbounded()) {
                             case Err(e) =>
                                 Assert.assertEqWithMsg(expected = "", e,
                                     "phase two should solve '${alg}'")

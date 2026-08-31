@@ -8,6 +8,8 @@
 ///
 mod TestBeginnerSolution {
 
+    use CubeSolve.Solve.IdaStar
+
     use CubeSolve.Method.Beginner
     use CubeSolve.Method.Plan
     use CubeSolve.Method.Profile.Profile.SourceFirst
@@ -90,7 +92,7 @@ mod TestBeginnerSolution {
     /// One cube: solved in stages, replayed, and judged.
     ///
     def check(t: Beginner.Tables, token: String, c: Cube.Cube): Unit \ Assert =
-        match Beginner.solution(t, SourceFirst, c) {
+        match Beginner.solution(t, SourceFirst, c, IdaStar.unbounded()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "token ${token}")
             case Ok(p)  =>
                 let labels = p#steps |> List.map(s -> s#label);
@@ -119,7 +121,7 @@ mod TestBeginnerSolution {
     def eachStageLeavesTheCubeAtItsOwnRung(t: Beginner.Tables): Unit \ Assert =
                 match Holding.ofToken(3, "AJmiz2F3jagE") {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "decoding")
-                    case Ok(c)  => match Beginner.solution(t, SourceFirst, c) {
+                    case Ok(c)  => match Beginner.solution(t, SourceFirst, c, IdaStar.unbounded()) {
                         case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solving")
                         case Ok(p)  => walk(c, p#steps,
                             Beginner.Stage.Cross :: Beginner.Stage.FirstLayer
@@ -156,7 +158,7 @@ mod TestBeginnerSolution {
     def anAlreadySolvedTwoLayersCostsNothing(t: Beginner.Tables): Unit \ Assert =
                 match Cube.solved(3) {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
-                    case Ok(c)  => match Beginner.solution(t, SourceFirst, c) {
+                    case Ok(c)  => match Beginner.solution(t, SourceFirst, c, IdaStar.unbounded()) {
                         case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solving")
                         case Ok(p)  =>
                             Assert.assertEqWithMsg(expected = 0, Plan.layerTurns(p),

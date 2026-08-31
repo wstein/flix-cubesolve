@@ -133,7 +133,7 @@ mod CubeSolve.Solve.Pocket {
     /// A shortest solution for the state with coordinate `state`.
     ///
     pub def solutionForState(t: Pocket.Tables, state: Int32): Result[String, List[Move.Move]] =
-        IdaStar.search(phaseOf(t), state, diameter())
+        IdaStar.search(phaseOf(t), state, diameter(), IdaStar.unbounded())
             |> Result.map(f -> IdaStar.moves(f) |> List.map(Pocket.moveOfIndex))
 
 }

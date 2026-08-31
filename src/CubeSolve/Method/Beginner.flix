@@ -220,18 +220,19 @@ mod CubeSolve.Method.Beginner {
     pub def solution(
         t: Tables,
         p: Profile.Profile,
-        c: Cube.Cube
+        c: Cube.Cube,
+        maxNodes: Int64
     ): Result[String, Plan.Plan] =
         let Tables.Tables(two) = t;
         let first = TwoLayers.firstLayerTables(two);
         forM (
-            crossStep <- Steps.stage("Cross", Cross.solution(crossTableOf(first), c));
+            crossStep <- Steps.stage("Cross", Cross.solution(crossTableOf(first), c, maxNodes));
             afterCross <- Cube.applyNotation(crossStep#sequence, c);
             layerStep <- Steps.stage("First layer",
-                FirstLayer.solution(first, afterCross));
+                FirstLayer.solution(first, afterCross, maxNodes));
             afterLayer <- Cube.applyNotation(layerStep#sequence, afterCross);
             middleStep <- Steps.stage("Middle edges",
-                TwoLayers.solution(two, afterLayer));
+                TwoLayers.solution(two, afterLayer, maxNodes));
             afterMiddles <- Cube.applyNotation(middleStep#sequence, afterLayer);
             _ <- reachedTwoLayers(afterMiddles);
             lastSteps <- Steps.lastLayer(p, afterMiddles);

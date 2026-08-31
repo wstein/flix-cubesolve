@@ -678,7 +678,7 @@ mod CubeSolve.Solve.Standard {
     def finishFrom(attempt: Attempt, state: Int64, room: Int32): Option[List[Move.Move]] =
         let search = Domino.phase2Of(attempt#phase2);
         let ceiling = Domino.maxPhase2Depth();
-        IdaStar.search(search, state, Int32.min(room, ceiling))
+        IdaStar.search(search, state, Int32.min(room, ceiling), IdaStar.unbounded())
             |> Result.map(f -> IdaStar.moves(f) |> List.map(Domino.moveOfIndex))
             |> Result.toOption
 

@@ -9,6 +9,8 @@
 ///
 mod TestCfopSolution {
 
+    use CubeSolve.Solve.IdaStar
+
     use CubeSolve.Method.Beginner
     use CubeSolve.Method.Cfop
     use CubeSolve.Method.Plan
@@ -52,7 +54,7 @@ mod TestCfopSolution {
         t: TwoLayers.Tables,
         c: Cube.Cube
     ): Unit \ Assert =
-        match Cfop.solution(t, SourceFirst, c) {
+        match Cfop.solution(t, SourceFirst, c, IdaStar.unbounded()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "token ${scramble()}")
             case Ok(p)  =>
                 let labels = p#steps |> List.map(s -> s#label);
@@ -83,7 +85,7 @@ mod TestCfopSolution {
         t: TwoLayers.Tables,
         c: Cube.Cube
     ): Unit \ Assert =
-        match Cfop.solution(t, SourceFirst, c) {
+        match Cfop.solution(t, SourceFirst, c, IdaStar.unbounded()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "token ${scramble()}")
             case Ok(p)  =>
                 let searched = p#steps |> List.take(2) |> List.map(s -> s#sequence);
