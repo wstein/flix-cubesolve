@@ -42,6 +42,8 @@ mod Options {
         case Scramble
         /// `--stats`: report search telemetry.
         case Stats
+        /// `--no-net`: suppress the starting cube net visualization.
+        case NoNet
     }
 
     ///
@@ -97,8 +99,12 @@ mod Options {
             { optionIds = Nil, optionNames = "stats" :: Nil,
               argDescriptor = NoArg(Flag.Stats),
               explanation = "report search telemetry" };
+        let noNet =
+            { optionIds = Nil, optionNames = "no-net" :: Nil,
+              argDescriptor = NoArg(Flag.NoNet),
+              explanation = "suppress the initial cube net visualization" };
         match command {
-            case "solve"    => method :: budget :: size :: scramble :: stats :: common
+            case "solve"    => method :: budget :: size :: scramble :: stats :: noNet :: common
             case "show"     => size :: common
             case "identify" => size :: common
             case "scramble" => size :: common

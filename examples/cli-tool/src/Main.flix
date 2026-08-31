@@ -58,6 +58,7 @@ def execute(cmd: String, flags: List[Options.Flag], operands: List[String]): Uni
     let isJson = Options.has(flags, Options.Flag.Json);
     let loud = Options.loudness(flags);
     let withStats = Options.has(flags, Options.Flag.Stats);
+    let showNet = not Options.has(flags, Options.Flag.NoNet) and loud != Verbosity.Level.Quiet;
     Verbosity.say(loud, Verbosity.Level.Debug, "command '${cmd}', ${List.length(operands)} operand(s)");
     match cmd {
         case "solve" =>
@@ -66,7 +67,7 @@ def execute(cmd: String, flags: List[Options.Flag], operands: List[String]): Uni
                 b <- Budgets.named(Options.budget(flags));
                 size <- Args.sizeFor(Solving, Options.size(flags));
                 given <- scrambleOrOperands(loud, size, Options.has(flags, Options.Flag.Scramble), operands);
-                answer <- solveCommand(isJson, loud, withStats, m, b, size, given)
+                answer <- solveCommand(isJson, showNet, loud, withStats, m, b, size, given)
             ) yield answer)
         case "show" =>
             report(isJson, Args.sizeFor(Turning, Options.size(flags))
@@ -121,6 +122,7 @@ def scrambleOrOperands(
 ///
 def solveCommand(
     isJson: Bool,
+    showNet: Bool,
     loud: Verbosity.Level,
     withStats: Bool,
     m: Methods.Method,
@@ -129,7 +131,7 @@ def solveCommand(
     rest: List[String]
 ): Result[String, String] \ IO =
     Args.onCube(size, rest, (n, c) -> {
-        if (not isJson) {
+        if (not isJson and showNet) {
             match RenderNet.colouredNet(c) {
                 case Ok(netStr) => println(netStr)
                 case Err(_)     => ()

@@ -156,4 +156,16 @@ mod TestArgs {
                 "${Budgets.nameOf(b)} should round-trip"))
     }
 
+    /// `--no-net` is parsed for the solve command.
+    @Test
+    def noNetOptionIsParsed(): Unit \ Assert = {
+        match Options.parse("solve", "--no-net" :: "R" :: Nil) {
+            case Ok(r) =>
+                Assert.assertTrue(Options.has(r#flags, Options.Flag.NoNet));
+                Assert.assertEq(expected = "R" :: Nil, r#operands)
+            case Err(why) =>
+                Assert.assertTrueWithMsg(false, "failed to parse --no-net: ${why}")
+        }
+    }
+
 }
