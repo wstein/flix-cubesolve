@@ -1,7 +1,6 @@
 mod TestOutcome {
 
     use CubeSolve.Model.Cube
-    use CubeSolve.Model.Holding
     use CubeSolve.Model.Move
     use CubeSolve.Model.Sized
     use CubeSolve.Solve.Standard
@@ -49,7 +48,49 @@ mod TestOutcome {
         assertProbeCap(t);
         assertViewsExhausted(t);
         assertCountersReconcile(t);
-        assertSolutionWithMatchesOutcome(t)
+        assertSolutionWithMatchesOutcome(t);
+        assertQualityOnASmokeCorpus(t)
+
+    ///
+    /// A few patterns whose documented bound the default budget must still meet.
+    ///
+    /// **Solution quality, in the pass that runs locally.** A
+    /// `CUBESOLVE_FAST=1` run proves the solver is correct and says nothing
+    /// about how long its answers are: the 27-pattern gate that does lives in
+    /// the slow tier. A scheduler change once made `default` answer `Black
+    /// mamba` in eighteen moves against a documented sixteen, and several hours
+    /// of green local runs went by without seeing it.
+    ///
+    /// Three patterns, not the collection -- this rides the table build already
+    /// done above and must stay cheap enough to keep. It is a smoke test for
+    /// breadth, not the gate; `TestPatternBoundsFast` is the gate.
+    ///
+    /// **Built from each pattern's recorded notation**, which is what the
+    /// documented count describes. Building from a canonical token instead
+    /// gives the pattern re-held, and the two-phase views are named in the frame
+    /// they are given, so that is a different search with a different answer.
+    ///
+    def assertQualityOnASmokeCorpus(t: Standard.Tables): Unit \ Assert =
+        let named = "Black mamba" :: "Cube in the cube" :: "4 T" :: Nil;
+        named |> List.forEach(name ->
+            match CubeSolve.Patterns.Standard.all()
+                    |> Vector.findLeft(p -> CubeSolve.Patterns.Standard.name(p) == name) {
+                case None =>
+                    Assert.assertTrueWithMsg(false,
+                        "'${name}' is not in the collection, so this corpus is stale")
+                case Some(p) =>
+                    let documented = List.length(
+                        Move.parse(CubeSolve.Patterns.Standard.faceTurns(p))
+                            |> Result.getWithDefault(Nil));
+                    let c = scrambled(CubeSolve.Patterns.Standard.notation(p));
+                    match Standard.solutionWith(t, Standard.defaultBudget(), c) {
+                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${name}'")
+                        case Ok(ms) =>
+                            Assert.assertTrueWithMsg(List.length(ms) <= documented,
+                                "'${name}' is documented at ${documented} moves and "
+                                    + "default took ${List.length(ms)}")
+                    }
+            })
 
     def assertSolvedImmediately(t: Standard.Tables): Unit \ Assert =
         let c = scrambled("");
@@ -155,32 +196,33 @@ mod TestOutcome {
         else
             match Standard.buildTables() {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables")
-                case Ok(t)  => match Holding.ofToken(3, "AD44qcBJiFJM")
-                        |> Result.flatMap(Sized.standardOf) {
-                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the token")
-                    case Ok(c)  =>
-                        let b = Standard.budget({
+                case Ok(t)  => {
+                    // Any well-mixed cube will do: this is about the counters
+                    // adding up, not about one state. Built from notation so
+                    // this module needs no token decoder of its own.
+                    let c = scrambled("R U R' U' F2 L D B' R2 U' L2 F R' D2 B");
+                    let b = Standard.budget({
                             minViews = 6, probeFloor = 0, probeMax = 4000,
-                            maxDepth = 25, handovers = 600,
-                            phase1Depth = 12
-                        });
-                        let out = Standard.solveWithOutcome(t, b, c);
-                        out#viewStats |> List.forEach(v -> {
-                            let seen = v#handoversUnreachable + v#handoversPruned
-                                + v#phaseTwoAttempts + v#handoversUnexamined;
-                            Assert.assertEqWithMsg(
-                                expected = v#handoversSelected, seen,
-                                "a view selected ${v#handoversSelected} endings "
-                                    + "and accounted for ${seen}");
-                            Assert.assertEqWithMsg(expected = v#probesSpent,
-                                v#phaseTwoAttempts,
-                                "a probe is a phase-two attempt, so the two counts "
-                                    + "are the same number")
-                        });
-                        let attempts = out#viewStats
-                            |> List.foldLeft((a, v) -> a + v#phaseTwoAttempts, 0);
-                        Assert.assertEqWithMsg(expected = out#probesSpent, attempts,
-                            "the views' attempts should sum to the probes spent")
+                        maxDepth = 25, handovers = 600,
+                        phase1Depth = 12
+                    });
+                    let out = Standard.solveWithOutcome(t, b, c);
+                    out#viewStats |> List.forEach(v -> {
+                        let seen = v#handoversUnreachable + v#handoversPruned
+                            + v#phaseTwoAttempts + v#handoversUnexamined;
+                        Assert.assertEqWithMsg(
+                            expected = v#handoversSelected, seen,
+                            "a view selected ${v#handoversSelected} endings "
+                                + "and accounted for ${seen}");
+                        Assert.assertEqWithMsg(expected = v#probesSpent,
+                            v#phaseTwoAttempts,
+                            "a probe is a phase-two attempt, so the two counts "
+                                + "are the same number")
+                    });
+                    let attempts = out#viewStats
+                        |> List.foldLeft((a, v) -> a + v#phaseTwoAttempts, 0);
+                    Assert.assertEqWithMsg(expected = out#probesSpent, attempts,
+                        "the views' attempts should sum to the probes spent")
                 }
             }
 
