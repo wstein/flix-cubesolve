@@ -25,6 +25,7 @@ mod CubeSolve.Table.Cross {
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
     use CubeSolve.Table
+    use CubeSolve.Table.Cache
     use CubeSolve.Table.TableView
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
@@ -210,5 +211,15 @@ mod CubeSolve.Table.Cross {
         Table.distancesFrom(
             { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 4 },
             successor)
+
+    ///
+    /// The same table, read from the cache when one is there.
+    ///
+    /// Distances over the four `D` edges, placed and flipped. Building it is
+    /// seconds to over a minute; reading it is milliseconds, and a caller that
+    /// solves one cube per process pays the build every time without this.
+    ///
+    pub def cached(): Result[String, TableView] \ Cache.Store =
+        Table.keep("crossEdges", () -> build())
 
 }

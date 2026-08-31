@@ -152,6 +152,7 @@ mod TestCache {
     ///
     /// Counted rather than timed: the second run must write nothing, which is
     /// only true if every one of the five was found and accepted.
+
     @Test
     def theRealTablesAreCachedAndNotRebuilt(): Unit \ Assert = region rc {
         let kept = Ref.fresh(rc, Map#{});

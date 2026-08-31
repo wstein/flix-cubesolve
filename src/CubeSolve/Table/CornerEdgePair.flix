@@ -25,6 +25,7 @@ mod CubeSolve.Table.CornerEdgePair {
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Table
+    use CubeSolve.Table.Cache
     use CubeSolve.Table.FirstLayer
     use CubeSolve.Table.TableView
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
@@ -142,5 +143,15 @@ mod CubeSolve.Table.CornerEdgePair {
         Table.distancesFrom(
             { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8 },
             successor)
+
+    ///
+    /// The same table, read from the cache when one is there.
+    ///
+    /// Distances over one `D` corner and the middle edge it pairs with. Building it is
+    /// seconds to over a minute; reading it is milliseconds, and a caller that
+    /// solves one cube per process pays the build every time without this.
+    ///
+    pub def cached(): Result[String, TableView] \ Cache.Store =
+        Table.keep("cornerEdgePair", () -> build())
 
 }

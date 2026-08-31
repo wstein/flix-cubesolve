@@ -31,6 +31,7 @@ mod CubeSolve.Solve.TwoLayers {
     use CubeSolve.Table
     use CubeSolve.Solve.TwoLayers.Packed
     use CubeSolve.Table.CornerEdgePair
+    use CubeSolve.Table.Cache
     use CubeSolve.Table.Cross
     use CubeSolve.Table.FirstLayer
     use CubeSolve.Table.MiddleEdges
@@ -62,6 +63,24 @@ mod CubeSolve.Solve.TwoLayers {
             corners <- FirstLayer.build();
             middles <- MiddleEdges.build();
             paired <- CornerEdgePair.build()
+        ) yield Tables.Tables(cross, corners, middles, paired)
+
+    ///
+    /// The same four tables, read from the cache where they are there.
+    ///
+    /// **Prefer this to `build`.** These four are 3.8 million states between
+    /// them and take a minute or two to construct; `build` pays that on every
+    /// call. A command line that solves one cube per process and calls `build`
+    /// is not slow once, it is slow every time -- which is exactly what
+    /// happened to `--method cfop` and `--method beginner` in v0.4.0 and
+    /// v0.4.1, at about a hundred seconds per invocation, warm or cold.
+    ///
+    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
+        forM (
+            cross <- Cross.cached();
+            corners <- FirstLayer.cached();
+            middles <- MiddleEdges.cached();
+            paired <- CornerEdgePair.cached()
         ) yield Tables.Tables(cross, corners, middles, paired)
 
     ///

@@ -24,6 +24,8 @@
 mod CubeSolve.Table {
 
     use CubeSolve.Table.TableView.TableView
+    use CubeSolve.Table.Cache
+    use CubeSolve.Table.Codec
 
     ///
     /// A read-only table of small non-negative integers.
@@ -427,5 +429,25 @@ mod CubeSolve.Table {
                 eachState(i + 1, eachMove(0, written))
             };
         eachState(0, 0)
+
+    ///
+    /// One table, from the cache or freshly built and kept.
+    ///
+    /// Every table in this project goes through here, so a table is cached under
+    /// exactly the header that decides whether a cached copy may be used: the
+    /// key, the convention it was built under, and the generator that built it.
+    /// A build that skips this is not slower once -- it is slower *every time*,
+    /// which is how the first-two-layer tables came to be rebuilt on every
+    /// invocation of the command line.
+    ///
+    pub def keep(
+        key: String,
+        build: Unit -> Result[String, TableView]
+    ): Result[String, TableView] \ Cache.Store =
+        Cache.table(key, Codec.header({
+            table = key,
+            convention = CubeSolve.convention(),
+            generator = CubeSolve.generator()
+        }), build)
 
 }
