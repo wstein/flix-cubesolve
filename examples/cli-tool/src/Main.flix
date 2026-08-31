@@ -119,9 +119,8 @@ def scrambleOrOperands(
 /// `solve [--method name] [--size n] [--budget name] [--json] <scramble>`
 ///
 /// The two-phase solver is the default and the only one that answers a cube of
-/// any size. `cfop` and `beginner` answer in named steps, 3x3x3 only, and are
-/// searches as well -- see `Methods`. Both honour `--json`, which gives the
-/// steps as data rather than as the rendered document.
+/// any size. `beginner` cannot solve yet and says so; see `Methods` for why it
+/// refuses rather than answering with something else.
 ///
 def solveCommand(
     isJson: Bool,

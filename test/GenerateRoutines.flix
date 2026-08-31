@@ -11,6 +11,7 @@ mod GenerateRoutines {
     use CubeSolve.Method.Facts
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
+    use CubeSolve.Method.Beginner.Spec.Situation
 
     def alphabet(letters: List[String]): Vector[Move.Move] \ Assert =
         letters
@@ -27,10 +28,10 @@ mod GenerateRoutines {
         ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
             and ok(Facts.allHome(c, Vector#{5, 6, 7}, true))
 
-    def caseGoal(t: Int32): Cube.Cube -> Bool =
+    def caseGoal(slot: Int32, t: Int32): Cube.Cube -> Bool =
         c ->
             restIsSolved(c) and (match Facts.findCorner(c, 4) {
-                case Ok(p)  => p#slot == 0 and p#turn == t
+                case Ok(p)  => p#slot == slot and p#turn == t
                 case Err(_) => false
             })
 
@@ -74,9 +75,8 @@ mod GenerateRoutines {
                                 let routine = Move.inverseOf(setup);
                                 println("        { name = "
                                     + "\"middle-insert-slot-${slot}-flip-${f}\",");
-                                println("          alphabet = \"${letters}\",");
-                                println("          goal = \"the FR edge is home and unflipped\",");
-                                println("          preserves = \"first layer; edges FL, BL, BR\",");
+                                println("          situation = "
+                                    + "Situation.MiddleInsert(${slot}, ${f}), // ${letters}");
                                 println("          setup = \"${Move.showAll(setup)}\",");
                                 println("          sequence = \"${Move.showAll(routine)}\",");
                                 println("          length = ${List.length(routine)} } ::")
@@ -92,19 +92,21 @@ mod GenerateRoutines {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) =>
                 println("=== BEGIN GENERATED ===");
-                Vector.range(0, 3) |> Vector.forEach(t ->
-                    match Derive.shortest(solved, caseGoal(t), ru, 8) {
-                        case None => println("        // twist ${t}: none within eight")
+                Vector.range(0, 4) |> Vector.forEach(slot ->
+                    Vector.range(0, 3) |> Vector.forEach(t ->
+                    match Derive.shortest(solved, caseGoal(slot, t), ru, 8) {
+                        case None =>
+                            println("        // slot ${slot} twist ${t}: none found")
                         case Some(setup) =>
                             let routine = Move.inverseOf(setup);
-                            println("        { name = \"corner-insert-right-twist-${t}\",");
-                            println("          alphabet = \"R U\",");
-                            println("          goal = \"the DFR corner is home and untwisted\",");
-                            println("          preserves = \"cross; corners DLF, DBL, DRB\",");
+                            println("        { name = "
+                                + "\"corner-insert-right-slot-${slot}-twist-${t}\",");
+                            println("          situation = "
+                                + "Situation.CornerInsertRight(${slot}, ${t}),");
                             println("          setup = \"${Move.showAll(setup)}\",");
                             println("          sequence = \"${Move.showAll(routine)}\",");
                             println("          length = ${List.length(routine)} } ::")
-                    });
+                    }));
                 println("=== END GENERATED ===")
         }
 }

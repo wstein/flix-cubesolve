@@ -536,68 +536,43 @@ rules make it safe to hand around:
 `CubeSolve.Model.Notation` stays strict and flat and knows nothing about any of
 this: it parses algorithms, `Plan` parses documents.
 
-**Two whole-cube methods, and they differ only in the middle.**
-`Method.Beginner.solution` runs five stages — cross, first layer, middle edges,
-OLL, PLL — and `Method.Cfop.solution` runs four: cross, F2L, OLL, PLL. Each
-threads one stage's result into the next and returns them as a labelled `Plan`.
-Both check from the ladder that they really got where they claim, rather than
-from any solver's own coordinate.
+**There is one complete solver, and it is `Solve.Standard`.** The human methods
+are being built and the engine says so rather than answering with something
+else.
 
-The shared tail — turning a search result or a last-layer case into a named
-step, and the steps into a plan — is `Method.Steps`, for the reason
-`Method.LastLayer` exists: two copies would be free to drift, and two methods
-labelling the same stage differently would be a difference with nothing behind
-it.
+`Method.Cfop` was deleted, and `Method.Beginner`'s searched execution with it.
+Both solved cubes; both described what they did falsely. CFOP's `F2L` step was a
+global search over the first two layers, and reaching "the first two layers are
+solved" is not executing four corner-edge pair insertions — every caller, test
+and document that saw the name would have been entitled to assume it was. The
+beginner method ran three global searches and a full 57-case OLL and 21-case
+PLL, which is not what any beginner is taught.
 
-**Where they differ is one searched step against two.** The beginner method
-places the bottom corners and then the middle edges, with a named state between
-them; CFOP solves both layers as a single `Solve.TwoLayers` search. Both arrive
-at the same rung, and the shared ladder is what says so.
+The distinction worth keeping is between **solving** and **method**. A search
+that reaches a state is solver infrastructure and is correctly named where it
+lives: `Solve.Cross`, `Solve.FirstLayer` and `Solve.TwoLayers` remain, with
+their tables, their coordinate tests and their node budgets. What was removed is
+those searches standing behind an API that claimed a person's procedure.
 
-**Neither is the textbook article, and both say which part is not.** The
-beginner method uses the full 57 OLL and 21 PLL cases rather than the smaller
-vocabulary a beginner is taught. CFOP's F2L step is not pair-by-pair insertion:
-it searches the first two layers as one goal, which finds shorter sequences than
-inserting four pairs and teaches nothing about pairs. The step is called `F2L`
-because that is the state it reaches, not because it is a demonstration of how
-to do F2L.
+What survives of the beginner method is everything that was not a search: the
+eight-rung `Stage` ladder and its decoded-state predicates, `Method.Facts` — the
+one decoder for what a person can see — the derived routine corpus in
+`Method.Beginner.Routines`, its typed meaning in `Method.Beginner.Spec`, and the
+annotated `Plan`.
 
-**Both methods are searches, and that is where the time goes.** Cross, the
-first layer and the first two layers are each IDA* over their own tables; the
-last-layer steps are a table lookup and cost nothing beside them. Calling these
-"human methods" describes the shape of the answer, not the work behind it — a
-distinction worth keeping, because the cost of a step method is the cost of its
-searches and nothing else.
+**The routines are derived here, not transcribed.** `Method.Derive` searches for
+a sequence reaching a goal stated as a predicate on decoded state, over the two
+or three faces the routine is allowed. That alphabet is what makes it tractable
+— over all eighteen moves it does not finish at depth six — and it is also what
+makes it faithful, since a person inserting a corner turns two faces. The corpus
+is committed as generated source with each record's situation, setup, sequence
+and derived length, and `TestRoutines` regenerates every one of them and refuses
+a record that has drifted.
 
-**CFOP enters the widest handoff of the two.** The first-two-layer search has
-been measured at over thirteen million nodes from a state whose first layer is
-already solved, and CFOP reaches it with only the cross done. The beginner
-method solves the first layer first and hands the search a narrower problem.
-That is why CFOP can take materially longer than beginner on the same cube,
-which is the reverse of what the move counts suggest.
-
-**The methods solve the `D` cross, and in this scheme `D` is yellow.** Every
-beginner guide starts with the *white* cross, so what these methods produce is
-the mirror image of what a person is reading. Fixing that is not a matter of
-turning the cube first, and the reason is worth recording because the obvious
-attempt fails.
-
-A whole-cube rotation changes only `Cube.orientation`, the reference frame; the
-orbit data is untouched. The coordinate encoders — `Cross.encode` and the rest —
-read that orbit data in the canonical frame and ignore orientation, so a rotated
-cube encodes to the same coordinate and the search targets the same physical
-pieces. Meanwhile `Cube.applyNotation` *does* reframe each move by the
-orientation. So rotating before solving leaves the search planning in one frame
-and the moves landing in another: the plan stops solving. Measured, not
-supposed — it was tried, and both whole-cube method tests failed while the other
-272 passed.
-
-Doing it properly means conjugating the *state* into the canonical frame so the
-white pieces occupy the `D` slots — `CubeSolve.Model.Holding` already conjugates
-a 3×3×3 state over all 24 rotations — solving there, and conjugating the answer
-back so each move names the face the person will be looking at after their own
-`x2`. The test that would hold it honest asserts that the bottom shows face 0
-after the inspection step, not merely that the plan replays.
+`beginner` returns when all seven stages run as observation, selection and
+replay: cross, first-layer corners, middle edges, top cross, top-edge placement,
+top-corner placement, top-corner twist. `cfop` returns when it can run cross,
+four pair insertions, OLL and PLL as separate observable steps.
 
 **A step keeps its notation, not a list of layer turns.** Several published OLL
 and PLL algorithms rotate the whole cube partway through, and `Notation.layersOnly`

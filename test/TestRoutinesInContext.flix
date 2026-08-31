@@ -108,7 +108,7 @@ mod TestRoutinesInContext {
         // Each of these inserts the piece correctly and then lifts a bottom
         // corner out of the layer with `L U L'`, which the `L` layer reaches and
         // the target piece does not.
-        wrongOne("corner", Spec.Situation.CornerInsertRight(1), "R U' R'",
+        wrongOne("corner", Spec.Situation.CornerInsertRight(0, 1), "R U' R'",
             "R U R' L U L'");
         wrongOne("middle", Spec.Situation.MiddleInsert(3, 0),
             "R U R' U' F' U' F", "F' U F U R U' R' L U L'")

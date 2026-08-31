@@ -33,8 +33,12 @@ mod CubeSolve.Method.Beginner.Spec {
     /// saying which one.
     ///
     pub enum Situation with Eq, ToString {
-        /// The `DFR` corner is at `URF`, twisted by the given thirds.
-        case CornerInsertRight(Int32)
+        /// The `DFR` corner is in the given top slot, twisted by the given
+        /// thirds. The slot is part of the case rather than something a
+        /// separate aligning rule fixes first, because the alphabet includes
+        /// `U`: the turn that brings the corner over its slot is part of the
+        /// routine, which keeps stage selection self-contained.
+        case CornerInsertRight(Int32, Int32)
         /// The `FR` edge is in the given top slot, with the given flip.
         case MiddleInsert(Int32, Int32)
     }
@@ -43,7 +47,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// The family a situation belongs to, for grouping and for messages.
     ///
     pub def family(s: Situation): String = match s {
-        case Situation.CornerInsertRight(_) => "corner-insert-right"
+        case Situation.CornerInsertRight(_, _) => "corner-insert-right"
         case Situation.MiddleInsert(_, _)   => "middle-insert"
     }
 
@@ -51,9 +55,9 @@ mod CubeSolve.Method.Beginner.Spec {
     /// What must hold before the routine is played.
     ///
     pub def caseHolds(s: Situation): Cube.Cube -> Bool = match s {
-        case Situation.CornerInsertRight(twist) =>
+        case Situation.CornerInsertRight(slot, twist) =>
             c -> preserves(s)(c) and (match Facts.findCorner(c, 4) {
-                case Ok(p)  => p#slot == 0 and p#turn == twist
+                case Ok(p)  => p#slot == slot and p#turn == twist
                 case Err(_) => false
             })
         case Situation.MiddleInsert(slot, flip) =>
@@ -67,7 +71,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// The rung the routine establishes, and nothing stronger.
     ///
     pub def achieves(s: Situation): Cube.Cube -> Bool = match s {
-        case Situation.CornerInsertRight(_) =>
+        case Situation.CornerInsertRight(_, _) =>
             c -> ok(Facts.cornerHome(c, 4))
         case Situation.MiddleInsert(_, _) =>
             c -> ok(Facts.edgeHome(c, 8))
@@ -82,7 +86,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// which is what the later stages are for.
     ///
     pub def preserves(s: Situation): Cube.Cube -> Bool = match s {
-        case Situation.CornerInsertRight(_) =>
+        case Situation.CornerInsertRight(_, _) =>
             c -> ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
                 and ok(Facts.allHome(c, Vector#{5, 6, 7}, true))
         case Situation.MiddleInsert(_, _) =>
@@ -95,7 +99,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// What the routine must leave alone, in words, for a plan to print.
     ///
     pub def preservesWritten(s: Situation): String = match s {
-        case Situation.CornerInsertRight(_) => "cross; corners DLF, DBL, DRB"
+        case Situation.CornerInsertRight(_, _) => "cross; corners DLF, DBL, DRB"
         case Situation.MiddleInsert(_, _)   => "first layer; edges FL, BL, BR"
     }
 
@@ -103,7 +107,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// What the routine is for, in words, for a plan to print.
     ///
     pub def achievesWritten(s: Situation): String = match s {
-        case Situation.CornerInsertRight(_) => "the DFR corner is home and untwisted"
+        case Situation.CornerInsertRight(_, _) => "the DFR corner is home and untwisted"
         case Situation.MiddleInsert(_, _)   => "the FR edge is home and unflipped"
     }
 
@@ -115,7 +119,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// back.
     ///
     pub def alphabetWritten(s: Situation): String = match s {
-        case Situation.CornerInsertRight(_) => "R U"
+        case Situation.CornerInsertRight(_, _) => "R U"
         case Situation.MiddleInsert(_, _)   => "R U F"
     }
 
@@ -137,7 +141,7 @@ mod CubeSolve.Method.Beginner.Spec {
     /// than every caller guessing one.
     ///
     pub def maxDepth(s: Situation): Int32 = match s {
-        case Situation.CornerInsertRight(_) => 8
+        case Situation.CornerInsertRight(_, _) => 8
         case Situation.MiddleInsert(_, _)   => 8
     }
 

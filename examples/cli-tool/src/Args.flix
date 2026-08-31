@@ -74,8 +74,8 @@ mod Args {
     ///
     /// An unknown name is refused by listing the methods rather than falling
     /// back to the default, for the reason `--budget` gives: somebody who asked
-    /// for `cfop` and silently got a searched answer would be misled about what
-    /// they were reading.
+    /// for one method and silently got another would be misled about what they
+    /// were reading.
     ///
     pub def withMethod(
         args: List[String],

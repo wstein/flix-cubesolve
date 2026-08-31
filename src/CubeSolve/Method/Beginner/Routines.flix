@@ -71,14 +71,14 @@ mod CubeSolve.Method.Beginner.Routines {
     /// Putting a first-layer corner in from the top, by how it is twisted.
     ///
     pub def cornerInsertions(): List[Routine] =
-        { name = "corner-insert-right-twist-0",
-          situation = Situation.CornerInsertRight(0),
+        { name = "corner-insert-right-slot-0-twist-0",
+          situation = Situation.CornerInsertRight(0, 0),
           setup = "R2 U R2 U' R2", sequence = "R2 U R2 U' R2", length = 5 } ::
-        { name = "corner-insert-right-twist-1",
-          situation = Situation.CornerInsertRight(1),
+        { name = "corner-insert-right-slot-0-twist-1",
+          situation = Situation.CornerInsertRight(0, 1),
           setup = "R U' R'", sequence = "R U R'", length = 3 } ::
-        { name = "corner-insert-right-twist-2",
-          situation = Situation.CornerInsertRight(2),
+        { name = "corner-insert-right-slot-0-twist-2",
+          situation = Situation.CornerInsertRight(0, 2),
           setup = "R U R' U'", sequence = "U R U' R'", length = 4 } ::
         Nil
 

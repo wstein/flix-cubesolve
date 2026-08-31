@@ -21,16 +21,8 @@ mod CubeSolve.Method.Beginner {
 
     use CubeSolve.Method.Beginner.Stage.{Nothing, Cross, FirstLayer, TwoLayers,
         TopCross, TopEdgesPlaced, TopCornersPlaced, Solved}
-    use CubeSolve.Method
     use CubeSolve.Method.LastLayer
-    use CubeSolve.Method.Plan
-    use CubeSolve.Method.Profile
-    use CubeSolve.Method.Steps
     use CubeSolve.Model.Cube
-    use CubeSolve.Solve.Cross
-    use CubeSolve.Table.Cache
-    use CubeSolve.Solve.FirstLayer
-    use CubeSolve.Solve.TwoLayers
     use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
@@ -170,93 +162,12 @@ mod CubeSolve.Method.Beginner {
     def home(start: Int32, stop: Int32, perm: Vector[Int32]): Bool =
         Vector.range(start, stop) |> Vector.forAll(i -> Vector.get(i, perm) == i)
 
-    ///
-    /// Everything the method needs to answer with.
-    ///
-    /// Built once and handed to `solution`, because the tables behind these
-    /// take about eighty seconds to construct and a caller solving more than one
-    /// cube should pay that once.
-    ///
-    pub enum Tables with Eq {
-        case Tables(TwoLayers.Tables)
-    }
-
-    ///
-    /// Build what the method needs.
-    ///
-    /// One set, not two. The two-layer tables already contain the cross and
-    /// corner projections the first-layer search uses, so building both
-    /// separately would construct the same 326,160 states twice and cost
-    /// another twenty seconds to learn nothing.
-    ///
-    pub def build(): Result[String, Tables] =
-        TwoLayers.build() |> Result.map(Tables.Tables)
-
-    ///
-    /// The same tables, read from the cache where they are there.
-    ///
-    /// **Prefer this to `build`.** A program that solves one cube per process
-    /// and calls `build` rebuilds 3.8 million states every time it runs.
-    ///
-    pub def cachedTables(): Result[String, Tables] \ Cache.Store =
-        TwoLayers.cachedTables() |> Result.map(Tables.Tables)
-
-    ///
-    /// Solve `c` the way a person would, in named steps.
-    ///
-    /// **Five stages: cross, first layer, middle edges, OLL, PLL.** The first
-    /// three are searched and the last two are recognised and played back. The
-    /// ladder above lists eight rungs; these five reach all of them, because
-    /// OLL covers `TopCross` and PLL covers the three above it at once.
-    ///
-    /// The last layer uses the *full* OLL and PLL sets rather than the smaller
-    /// vocabulary a beginner is taught. The stages say `OLL` and `PLL` so that
-    /// is visible rather than implied.
-    ///
-    /// **Nothing here is optimal.** Each step is short for its own goal, and
-    /// five short steps are not a short solution; `CubeSolve.Solve.Standard`
-    /// answers a whole cube in about the moves this spends on two layers.
-    ///
-    pub def solution(
-        t: Tables,
-        p: Profile.Profile,
-        c: Cube.Cube,
-        maxNodes: Int64
-    ): Result[String, Plan.Plan] =
-        let Tables.Tables(two) = t;
-        let first = TwoLayers.firstLayerTables(two);
-        forM (
-            crossStep <- Steps.stage("Cross", Cross.solution(crossTableOf(first), c, maxNodes));
-            afterCross <- Cube.applyNotation(crossStep#sequence, c);
-            layerStep <- Steps.stage("First layer",
-                FirstLayer.solution(first, afterCross, maxNodes));
-            afterLayer <- Cube.applyNotation(layerStep#sequence, afterCross);
-            middleStep <- Steps.stage("Middle edges",
-                TwoLayers.solution(two, afterLayer, maxNodes));
-            afterMiddles <- Cube.applyNotation(middleStep#sequence, afterLayer);
-            _ <- reachedTwoLayers(afterMiddles);
-            lastSteps <- Steps.lastLayer(p, afterMiddles);
-            plan <- Steps.plan(List.append(crossStep :: layerStep :: middleStep :: Nil,
-                lastSteps))
-        ) yield plan
 
 
-    def crossTableOf(t: FirstLayer.Tables): CubeSolve.Table.TableView =
-        let FirstLayer.Tables.Tables(cross, _) = t;
-        cross
 
-    ///
-    /// That the method really got where it says it did.
-    ///
-    /// Read from the ladder rather than from any solver's own coordinate, so a
-    /// step that satisfied its own encoders and not the cube is caught here.
-    ///
-    def reachedTwoLayers(c: Cube.Cube): Result[String, Unit] =
-        if (isComplete(TwoLayers, c))
-            Ok(())
-        else
-            Err("the searched steps ran but the cube is only at ${reached(c)}: "
-                + "this is a fault in the method, not in the cube")
+
+
+
 
     ///
     /// What is left to do at each stage, in words.

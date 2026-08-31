@@ -91,10 +91,11 @@ mod Budgets {
     ///
     /// How many search nodes a step method's stage may spend.
     ///
-    /// `--budget` used to mean nothing to `cfop` and `beginner`, on the wrong
-    /// belief that they were not searches. They are, and this is what the flag
-    /// buys them: a bound that fails with a count reached rather than running
-    /// on indefinitely.
+    /// The step methods search too, so a budget means something to them: a
+    /// bound that fails with a count reached rather than running on
+    /// indefinitely. Nothing consumes this until the routine executor exists,
+    /// and it is kept because the bound is a property of the search, not of
+    /// whichever method happens to call it.
     ///
     /// **The bound is per stage, not per solve.** Cross, the first layer and
     /// the first two layers are separate searches with separate budgets, so a
