@@ -23,19 +23,50 @@ mod QualifyCacheRace {
     use CubeSolve.Table.Cache.Disk
     use CubeSolve.Table.Pocket
 
+    import java.io.File
+    import java.lang.Thread
+
     ///
     /// `child <dir>` generates into `dir`; `verify <dir>` reads back what is
     /// there. Exit status is the result: 0 for what was asked, 1 otherwise.
+    /// An optional `<barrier-dir> <child-id>` synchronizes multiple child processes
+    /// to start generating simultaneously after JVM initialization.
     ///
     pub def qualify(): Unit \ IO =
         Sys.Exit.runWithIO(_ ->
             Sys.Env.runWithIO(_ -> match Sys.Env.getArgs() {
                 case "child" :: dir :: Nil  => finish(generate(dir))
+                case "child" :: dir :: barrierDir :: childId :: Nil =>
+                    finish(generateWithBarrier(dir, barrierDir, childId))
                 case "verify" :: dir :: Nil => finish(readBack(dir))
                 case _                      =>
-                    println("usage: child <dir> | verify <dir>");
+                    println("usage: child <dir> [<barrier-dir> <child-id>] | verify <dir>");
                     Sys.Exit.exit(2)
             }))
+
+    ///
+    /// Synchronize on a barrier before generating: signal ready, wait for release ('go').
+    ///
+    def generateWithBarrier(
+        dir: String,
+        barrierDir: String,
+        childId: String
+    ): Result[String, String] \ IO = {
+        let readyFile = new File("${barrierDir}/ready_${childId}");
+        let goFile = new File("${barrierDir}/go");
+        let _ = readyFile.createNewFile();
+        waitGo(goFile);
+        generate(dir)
+    }
+
+    def waitGo(goFile: File): Unit \ IO = {
+        if (goFile.exists())
+            ()
+        else {
+            Thread.sleep(2i64);
+            waitGo(goFile)
+        }
+    }
 
     ///
     /// Report `outcome` and exit with its verdict.
