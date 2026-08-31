@@ -101,7 +101,7 @@ mod ProbeDepthCost {
         handovers: Int32
     ): Unit \ IO =
         let b = Standard.budget({
-            minViews = 6, probeMax = 400000, maxDepth = 25,
+            minViews = 6, probeFloor = 0, probeMax = 400000, maxDepth = 25,
             handovers = handovers, phase1Depth = depth
         });
         let started = Time.Clock.runWithIO(_ -> Time.Clock.now());

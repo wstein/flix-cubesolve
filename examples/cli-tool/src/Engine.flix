@@ -54,6 +54,7 @@ mod Engine {
                     "${String.lineSeparator()}views:   ${out#viewsTried} / ${out#viewsAvailable}"
                         + " (target ${out#viewTarget})"
                         + "${String.lineSeparator()}probes:  ${out#probesSpent} / ${out#probeCap}"
+                        + " (floor ${out#probeFloor})"
                         + "${String.lineSeparator()}stopped: ${termStr}"
                 case None => ""
             } else "";

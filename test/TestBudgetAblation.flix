@@ -100,7 +100,7 @@ mod TestBudgetAblation {
                 println("  views x handovers          total HTM   probes   solved");
                 combinations() |> List.forEach(match (name, views, handovers) -> {
                     let b = Standard.budget({
-                        minViews = views, probeMax = 4000,
+                        minViews = views, probeFloor = 0, probeMax = 4000,
                         maxDepth = 25, handovers = handovers, phase1Depth = 12
                     });
                     let (htm, probes, solved) = overCorpus(t, b);
@@ -144,7 +144,7 @@ mod TestBudgetAblation {
                 case Ok(t)  =>
                     combinations() |> List.forEach(match (name, views, handovers) -> {
                         let b = Standard.budget({
-                            minViews = views, probeMax = 4000,
+                            minViews = views, probeFloor = 0, probeMax = 4000,
                             maxDepth = 25, handovers = handovers, phase1Depth = 12
                         });
                         let (_, _, solved) = overCorpus(t, b);

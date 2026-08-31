@@ -115,6 +115,7 @@ mod JsonOut {
                 let statsObj = JObject(Map#{
                     "probesSpent" => num(out#probesSpent),
                     "viewTarget" => num(out#viewTarget),
+                    "probeFloor" => num(out#probeFloor),
                     "probeCap" => num(out#probeCap),
                     "viewsTried" => num(out#viewsTried),
                     "viewsAvailable" => num(out#viewsAvailable),

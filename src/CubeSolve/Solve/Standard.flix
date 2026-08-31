@@ -63,13 +63,17 @@ mod CubeSolve.Solve.Standard {
         case SolvedImmediately
         /// The search reached the probe cap (`probeMax`).
         case ProbeCap
-        /// The search has an answer and has completed `minViews` whole views.
+        /// The search has an answer, has completed `minViews` whole views, and
+        /// has spent at least `probeFloor` probes.
         ///
-        /// The ordinary way a bounded search ends. It is a count of views
-        /// rather than of probes because a view runs atomically: a floor
-        /// expressed in probes is crossed wholesale by whichever view happens
-        /// to span it, which made two presets that differed only in that floor
-        /// behave identically.
+        /// **Three conditions, and each is there for a different failure.**
+        /// The view count stops one expensive first view from ending a tier on
+        /// its own. The probe floor restores breadth when views are cheap: with
+        /// only a view count, a search whose views cost forty probes each would
+        /// settle after two and never reach the sixth, where the short answer
+        /// sometimes is. And requiring an answer at all stops either of those
+        /// from settling on nothing.
+        ///
         case Settled
         /// Every orientation and inversion view was searched to completion.
         case ViewsExhausted
@@ -101,6 +105,7 @@ mod CubeSolve.Solve.Standard {
         handoversUnreachable = Int32,
         handoversPruned = Int32,
         phaseTwoAttempts = Int32,
+        handoversUnexamined = Int32,
         handoverLimitReached = Bool,
         enumerationNodes = Int64,
         deepestPhaseOne = Int32
@@ -126,6 +131,7 @@ mod CubeSolve.Solve.Standard {
         unreachable = Int32,
         pruned = Int32,
         attempts = Int32,
+        unexamined = Int32,
         limitReached = Bool,
         nodes = Int64,
         deepest = Int32
@@ -135,8 +141,8 @@ mod CubeSolve.Solve.Standard {
     /// No endings seen yet.
     ///
     def noCounts(): Counts =
-        { selected = 0, unreachable = 0, pruned = 0, attempts = 0, limitReached = false,
-          nodes = 0i64, deepest = 0 }
+        { selected = 0, unreachable = 0, pruned = 0, attempts = 0, unexamined = 0,
+          limitReached = false, nodes = 0i64, deepest = 0 }
 
     ///
     /// Two tallies added.
@@ -146,6 +152,7 @@ mod CubeSolve.Solve.Standard {
         unreachable = a#unreachable + b#unreachable,
         pruned = a#pruned + b#pruned,
         attempts = a#attempts + b#attempts,
+        unexamined = a#unexamined + b#unexamined,
         limitReached = a#limitReached or b#limitReached,
         nodes = a#nodes + b#nodes,
         deepest = Int32.max(a#deepest, b#deepest)
@@ -158,6 +165,7 @@ mod CubeSolve.Solve.Standard {
         answer = Option[List[Move.Move]],
         probesSpent = Int32,
         viewTarget = Int32,
+        probeFloor = Int32,
         probeCap = Int32,
         viewsTried = Int32,
         viewsAvailable = Int32,
@@ -200,8 +208,8 @@ mod CubeSolve.Solve.Standard {
     /// answer everywhere.
     ///
     pub enum Budget {
-        case Budget({ minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 })
+        case Budget({ minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 })
     }
 
     ///
@@ -218,8 +226,8 @@ mod CubeSolve.Solve.Standard {
     /// the relaxed end of both.
     ///
     pub def fastBudget(): Budget =
-        Budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 150,
-            phase1Depth = Phase1.maxDepth() })
+        Budget({ minViews = 1, probeFloor = 30, probeMax = 500, maxDepth = 25,
+            handovers = 150, phase1Depth = Phase1.maxDepth() })
 
     ///
     /// The budget to use when nothing else is stated.
@@ -228,8 +236,8 @@ mod CubeSolve.Solve.Standard {
     /// stated as a multiple of this one.
     ///
     pub def defaultBudget(): Budget =
-        Budget({ minViews = 2, probeMax = 500, maxDepth = 25, handovers = 300,
-            phase1Depth = Phase1.maxDepth() })
+        Budget({ minViews = 2, probeFloor = 120, probeMax = 500, maxDepth = 25,
+            handovers = 300, phase1Depth = Phase1.maxDepth() })
 
     ///
     /// Five of the six views, at the standard handovers.
@@ -243,8 +251,8 @@ mod CubeSolve.Solve.Standard {
     /// the defect this ladder was rebuilt to remove.
     ///
     pub def deepBudget(): Budget =
-        Budget({ minViews = 5, probeMax = 1200, maxDepth = 25, handovers = 300,
-            phase1Depth = Phase1.maxDepth() })
+        Budget({ minViews = 5, probeFloor = 600, probeMax = 1200, maxDepth = 25,
+            handovers = 300, phase1Depth = Phase1.maxDepth() })
 
     ///
     /// All six views, with double the handovers and double the probe cap.
@@ -258,8 +266,8 @@ mod CubeSolve.Solve.Standard {
     /// handovers does anything on its own -- see `TestBudgetAblation`.
     ///
     pub def maxBudget(): Budget =
-        Budget({ minViews = 6, probeMax = 2400, maxDepth = 25, handovers = 600,
-            phase1Depth = Phase1.maxDepth() })
+        Budget({ minViews = 6, probeFloor = 1200, probeMax = 2400, maxDepth = 25,
+            handovers = 600, phase1Depth = Phase1.maxDepth() })
 
     ///
     /// Deprecated name for `deepBudget`.
@@ -270,8 +278,8 @@ mod CubeSolve.Solve.Standard {
     /// A budget, from its parts.
     ///
     pub def budget(
-        parts: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 }
+        parts: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 }
     ): Budget = Budget(parts)
 
     ///
@@ -560,6 +568,7 @@ mod CubeSolve.Solve.Standard {
             handoversUnreachable = tally#unreachable,
             handoversPruned = tally#pruned,
             phaseTwoAttempts = tally#attempts,
+            handoversUnexamined = tally#unexamined,
             handoverLimitReached = tally#limitReached,
             enumerationNodes = tally#nodes,
             deepestPhaseOne = tally#deepest
@@ -590,13 +599,17 @@ mod CubeSolve.Solve.Standard {
     /// a view either improves on the answer or gives up quickly.
     ///
     def shareFor(
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 },
+        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 },
         spent: Int32,
         best: Option[List[Move.Move]]
     ): Budget =
         Budget({
             minViews = 1,
+            // A view has no floor of its own: the floor is a property of the
+            // whole search, and applying it here would make one view keep
+            // looking when the next view is the cheaper place to look.
+            probeFloor = 0,
             // The view inherits the caller's phase-one depth. Substituting the
             // default here would silently discard a deeper search that was
             // asked for, which is what it did when this field was introduced.
@@ -632,12 +645,13 @@ mod CubeSolve.Solve.Standard {
             searchOutcome(p1, p2, budget, limits, c)
 
     def solvedOutcome(
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 }
+        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 }
     ): Outcome = {
         answer = Some(Nil),
         probesSpent = 0,
         viewTarget = limits#minViews,
+        probeFloor = limits#probeFloor,
         probeCap = limits#probeMax,
         viewsTried = 0,
         viewsAvailable = List.length(allViews()),
@@ -652,21 +666,22 @@ mod CubeSolve.Solve.Standard {
         p1: Phase1.Tables,
         p2: Domino.Tables,
         budget: Budget,
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 },
+        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 },
         c: Sized.Standard
     ): Outcome = {
         let settled = runToSettled(start(Tables.Tables(p1, p2), budget, c));
         let Search.Search(f) = settled;
         let term =
             if (f#spent >= limits#probeMax) Termination.ProbeCap
-            else if (hasSettled(f#best, List.length(f#viewStats), limits))
+            else if (hasSettled(f#best, List.length(f#viewStats), f#spent, limits))
                 Termination.Settled
             else Termination.ViewsExhausted;
         {
             answer = f#best,
             probesSpent = f#spent,
             viewTarget = limits#minViews,
+            probeFloor = limits#probeFloor,
             probeCap = limits#probeMax,
             viewsTried = List.length(f#viewStats),
             viewsAvailable = List.length(allViews()),
@@ -694,7 +709,7 @@ mod CubeSolve.Solve.Standard {
         let Search.Search(f) = s;
         let Budget(limits) = f#budget;
         if (f#spent >= limits#probeMax
-                or hasSettled(f#best, List.length(f#viewStats), limits))
+                or hasSettled(f#best, List.length(f#viewStats), f#spent, limits))
             s
         else
             match stepOnce(s) {
@@ -816,8 +831,8 @@ mod CubeSolve.Solve.Standard {
     type alias Attempt = {
         phase1 = Phase1.Tables,
         phase2 = Domino.Tables,
-        limits = { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 },
+        limits = { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 },
         cube = Sized.Standard
     }
 
@@ -834,20 +849,26 @@ mod CubeSolve.Solve.Standard {
         let best = carried#best;
         let tally = carried#tally;
         let limits = attempt#limits;
-        // A view runs to its own end. The tier counts whole views, so stopping
-        // one part-way would make "a view" mean different amounts of work
-        // depending on where the probe count happened to land -- which is how
-        // two presets that differed only in a probe floor came to behave
-        // identically.
+        // A view stops once it has an answer of its own.
+        //
+        // `best` here is this view's own best -- each starts from `None` -- so
+        // this is "keep looking until something is found, then hand back". A
+        // view that ran to its own end instead would spend the whole budget
+        // before the later orientations were tried, and the later orientations
+        // are where the short answers often are: `Black mamba` is eighteen
+        // moves in five views and sixteen in the sixth, for sixty-seven probes.
+        //
+        // Breadth across views, depth only where nothing has been found. The
+        // scheduler above decides how many views that is.
         let spent = probes >= limits#probeMax;
-        if (depth > limits#phase1Depth or spent)
+        if (depth > limits#phase1Depth or spent or not Option.isEmpty(best))
             (best, probes, tally)
         else {
             let (handovers, looked) = IdaStar.enumerateCounted(
                 Phase1.phaseOf(attempt#phase1), start, depth, limits#handovers);
             let offered = List.length(handovers);
             let seen = plus(tally, { selected = offered, unreachable = 0,
-                pruned = 0, attempts = 0,
+                pruned = 0, attempts = 0, unexamined = 0,
                 limitReached = offered >= limits#handovers,
                 nodes = looked, deepest = depth });
             let (probed, improved, counted) =
@@ -863,10 +884,13 @@ mod CubeSolve.Solve.Standard {
     def hasSettled(
         best: Option[List[Move.Move]],
         viewsDone: Int32,
-        limits: { minViews = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32,
-          phase1Depth = Int32 }
+        probes: Int32,
+        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
+          handovers = Int32, phase1Depth = Int32 }
     ): Bool =
-        Option.isEmpty(best) == false and viewsDone >= limits#minViews
+        Option.isEmpty(best) == false
+            and viewsDone >= limits#minViews
+            and probes >= limits#probeFloor
 
     ///
     /// A handover phase one is offering: the moves, the state they leave, and
@@ -918,27 +942,52 @@ mod CubeSolve.Solve.Standard {
             case first :: rest =>
                 let limits = attempt#limits;
                 if (probes >= limits#probeMax)
-                    (probes, best, tally)
+                    (probes, best,
+                        { unexamined = tally#unexamined + 1 + List.length(rest) | tally })
+                else if (not Option.isEmpty(best))
+                    // This view has its answer. Anything further belongs to the
+                    // next view, which looks at the cube another way -- and the
+                    // endings left behind are counted, so the accounting stays
+                    // exact rather than merely plausible.
+                    (probes, best,
+                        { unexamined = tally#unexamined + 1 + List.length(rest) | tally })
                 else
-                    match describe(attempt, first) {
-                        case None =>
-                            // Never reaches the domino group, so phase two has
-                            // nothing to finish and this is not a probe.
-                            tryHandovers(attempt, rest, probes, best,
-                                { unreachable = tally#unreachable + 1 | tally })
-                        case Some(h) =>
-                            let room =
-                                shorterThanBest(best, limits#maxDepth) - List.length(h#prefix);
-                            if (h#bound > room)
-                                // Proven unable to beat the answer in hand, so it
-                                // is not attempted and is not a probe.
-                                tryHandovers(attempt, rest, probes, best,
-                                    { pruned = tally#pruned + 1 | tally })
-                            else
-                                tryHandovers(attempt, rest, probes + 1,
-                                    tryOne(attempt, h, best),
-                                    { attempts = tally#attempts + 1 | tally })
-                    }
+                    afterOne(attempt, { first = first, rest = rest },
+                        probes, best, tally)
+        }
+
+    ///
+    /// One ending considered, and the rest of the list after it.
+    ///
+    /// Three outcomes, and each is counted: it never reaches the domino group,
+    /// so phase two has nothing to finish; its lower bound already proves it
+    /// cannot beat the answer in hand, so it is not attempted and is not a
+    /// probe; or it is worth a probe.
+    ///
+    def afterOne(
+        attempt: Attempt,
+        endings: { first = List[Int32], rest = List[List[Int32]] },
+        probes: Int32,
+        best: Option[List[Move.Move]],
+        tally: Counts
+    ): (Int32, Option[List[Move.Move]], Counts) =
+        let limits = attempt#limits;
+        let first = endings#first;
+        let rest = endings#rest;
+        match describe(attempt, first) {
+            case None =>
+                tryHandovers(attempt, rest, probes, best,
+                    { unreachable = tally#unreachable + 1 | tally })
+            case Some(h) =>
+                let room =
+                    shorterThanBest(best, limits#maxDepth) - List.length(h#prefix);
+                if (h#bound > room)
+                    tryHandovers(attempt, rest, probes, best,
+                        { pruned = tally#pruned + 1 | tally })
+                else
+                    tryHandovers(attempt, rest, probes + 1,
+                        tryOne(attempt, h, best),
+                        { attempts = tally#attempts + 1 | tally })
         }
 
     ///

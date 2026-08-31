@@ -99,7 +99,7 @@ mod TestTwoPhase {
             };
 
             let starved = Standard.budget(
-                { minViews = 1, probeMax = 1, maxDepth = 4, handovers = 300,
+                { minViews = 1, probeFloor = 0, probeMax = 1, maxDepth = 4, handovers = 300,
                             phase1Depth = 12 });
             let hard = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
             match Standard.solutionWith(t, starved, hard) {
@@ -112,10 +112,10 @@ mod TestTwoPhase {
             };
 
             let quick = Standard.budget(
-                { minViews = 1, probeMax = 40, maxDepth = 25, handovers = 300,
+                { minViews = 1, probeFloor = 0, probeMax = 40, maxDepth = 25, handovers = 300,
                             phase1Depth = 12 });
             let patient = Standard.budget(
-                { minViews = 4, probeMax = 400, maxDepth = 25, handovers = 300,
+                { minViews = 4, probeFloor = 0, probeMax = 400, maxDepth = 25, handovers = 300,
                             phase1Depth = 12 });
             // Three of the corpus rather than all six: this solves each scramble
             // twice, and the property is about the budget rather than about any

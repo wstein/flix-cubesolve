@@ -136,7 +136,7 @@ mod TestResumableSearch {
     def aStarvedBudgetExplainsItself(t: Standard.Tables): Unit \ Assert =
         let c = scrambled(t, 90100i64);
         let starved = Standard.budget({
-            minViews = 1, probeMax = 1, maxDepth = 25, handovers = 1,
+            minViews = 1, probeFloor = 0, probeMax = 1, maxDepth = 25, handovers = 1,
                             phase1Depth = 12
         });
         // One probe cannot be spread over six views, so this ends out of probes
@@ -173,7 +173,7 @@ mod TestResumableSearch {
     def continuingUnderALargerBudgetNeverLosesGround(t: Standard.Tables): Unit \ Assert =
         let c = scrambled(t, 90102i64);
         let small = Standard.budget({
-            minViews = 1, probeMax = 3, maxDepth = 25, handovers = 300,
+            minViews = 1, probeFloor = 0, probeMax = 3, maxDepth = 25, handovers = 300,
                             phase1Depth = 12
         });
         match drain(Standard.start(t, small, c)) {

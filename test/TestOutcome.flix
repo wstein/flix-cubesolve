@@ -63,7 +63,8 @@ mod TestOutcome {
 
     def assertSettled(t: Standard.Tables): Unit \ Assert =
         let c = scrambled("R U R' U'");
-        let b = Standard.budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 300,
+        let b = Standard.budget({ minViews = 1, probeFloor = 0, probeMax = 500,
+            maxDepth = 25, handovers = 300,
                             phase1Depth = 12 });
         let out = Standard.solveWithOutcome(t, b, c);
         Assert.assertEq(expected = Termination.Settled, out#termination);
@@ -77,7 +78,8 @@ mod TestOutcome {
         // maxDepth=20 allows handovers to be probed (bound <= room) while keeping
         // phase two from reaching its full distance, yielding exactly 2 probes and no answer
         let c = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        let b = Standard.budget({ minViews = 6, probeMax = 2, maxDepth = 20, handovers = 1,
+        let b = Standard.budget({ minViews = 6, probeFloor = 0, probeMax = 2,
+            maxDepth = 20, handovers = 1,
                             phase1Depth = 12 });
         let out = Standard.solveWithOutcome(t, b, c);
         let sumProbes = out#viewStats |> List.map(v -> v#probesSpent) |> List.sum;
@@ -89,7 +91,8 @@ mod TestOutcome {
     def assertViewsExhausted(t: Standard.Tables): Unit \ Assert =
         // A 20-move scramble with maxDepth=3 and ample probes exhausts all 6 views
         let c = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
-        let b = Standard.budget({ minViews = 6, probeMax = 500, maxDepth = 3, handovers = 50,
+        let b = Standard.budget({ minViews = 6, probeFloor = 0, probeMax = 500,
+            maxDepth = 3, handovers = 50,
                             phase1Depth = 12 });
         let out = Standard.solveWithOutcome(t, b, c);
         Assert.assertEq(expected = Termination.ViewsExhausted, out#termination);
@@ -135,7 +138,8 @@ mod TestOutcome {
     /// The counters exist to say *why* a budget's handover limit mattered, so
     /// they are only worth reading if they add up. Three properties, per view:
     ///
-    /// - every selected ending was unreachable, pruned, or attempted;
+    /// - every selected ending was unreachable, pruned, attempted, or left
+    ///   unexamined when the view stopped at its first answer;
     /// - the attempts are the probes, since a probe is a phase-two attempt;
     /// - nothing claims more endings than the limit allowed, per depth, which
     ///   shows up as the total never exceeding the limit times the depths tried.
@@ -156,17 +160,16 @@ mod TestOutcome {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the token")
                     case Ok(c)  =>
                         let b = Standard.budget({
-                            minViews = 6, probeMax = 4000, maxDepth = 25, handovers = 600,
+                            minViews = 6, probeFloor = 0, probeMax = 4000,
+                            maxDepth = 25, handovers = 600,
                             phase1Depth = 12
                         });
                         let out = Standard.solveWithOutcome(t, b, c);
                         out#viewStats |> List.forEach(v -> {
+                            let seen = v#handoversUnreachable + v#handoversPruned
+                                + v#phaseTwoAttempts + v#handoversUnexamined;
                             Assert.assertEqWithMsg(
-                                expected = v#handoversSelected,
-                                v#handoversUnreachable + v#handoversPruned
-                                    + v#phaseTwoAttempts,
-                                let seen = v#handoversUnreachable + v#handoversPruned
-                                    + v#phaseTwoAttempts;
+                                expected = v#handoversSelected, seen,
                                 "a view selected ${v#handoversSelected} endings "
                                     + "and accounted for ${seen}");
                             Assert.assertEqWithMsg(expected = v#probesSpent,
