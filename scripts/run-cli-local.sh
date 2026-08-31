@@ -58,10 +58,17 @@ cp "${ROOT_DIR}/examples/cli-tool/flix.toml" "${TMP_DIR}/"
 cp -r "${ROOT_DIR}/.flixw" "${TMP_DIR}/"
 cp "${ROOT_DIR}/flixw" "${TMP_DIR}/"
 
-# Re-use cached external dependencies if available to avoid unnecessary downloads
+# Copy resolver-verified dependencies into the disposable cache. `build-pkg`
+# above has already resolved these for the root package; copying them does not
+# change the example's manifest or let the local checkout replace its own
+# package by accident. The fresh cubesolve artifact below is seeded explicitly.
 if [ -d "${ROOT_DIR}/examples/cli-tool/lib" ]; then
     mkdir -p "${TMP_DIR}/lib"
     cp -r "${ROOT_DIR}/examples/cli-tool/lib/"* "${TMP_DIR}/lib/" 2>/dev/null || true
+fi
+if [ -d "${ROOT_DIR}/lib/github" ]; then
+    mkdir -p "${TMP_DIR}/lib"
+    cp -r "${ROOT_DIR}/lib/github" "${TMP_DIR}/lib/"
 fi
 
 # Seed the local package into the consumer resolver cache

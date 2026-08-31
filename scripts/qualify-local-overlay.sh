@@ -52,6 +52,14 @@ echo "==> Qualify overlay with cubesolve ${VERSION} (${COMMIT}, sha256: ${DIGEST
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cubesolve-qualify-overlay.XXXXXXXX")"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
+seed_root_resolver_cache() {
+    local target="$1"
+    if [ -d "${ROOT_DIR}/lib/github" ]; then
+        mkdir -p "${target}/lib"
+        cp -r "${ROOT_DIR}/lib/github" "${target}/lib/"
+    fi
+}
+
 # Populate test workspace
 cp -r "${ROOT_DIR}/examples/cli-tool/src" "${TMP_DIR}/"
 if [ -d "${ROOT_DIR}/examples/cli-tool/test" ]; then
@@ -64,6 +72,12 @@ cp "${ROOT_DIR}/flixw" "${TMP_DIR}/"
 if [ -d "${ROOT_DIR}/examples/cli-tool/lib" ]; then
     mkdir -p "${TMP_DIR}/lib"
     cp -r "${ROOT_DIR}/examples/cli-tool/lib/"* "${TMP_DIR}/lib/" 2>/dev/null || true
+fi
+seed_root_resolver_cache "${TMP_DIR}"
+if [ -d "${ROOT_DIR}/lib/github/wstein/flix-orbit64" ] \
+    && [ ! -d "${TMP_DIR}/lib/github/wstein/flix-orbit64" ]; then
+    echo "FAIL: Overlay did not receive the warmed Orbit64 resolver cache" >&2
+    exit 1
 fi
 
 # Seed the local package into the resolver cache
@@ -99,6 +113,10 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
         cp "${ROOT_DIR}/flixw" "${target}/"
     }
 
+    consulted_cubesolve_dependency() {
+        grep -Eq 'wstein/flix-cubesolve|project wstein/flix-cubesolve'
+    }
+
     # Case 1: Declared GitHub dependency only (without local artifact or cache)
     echo "--- Case 1: Declared GitHub dependency only ---"
     C1="${CHAR_BASE}/case1"
@@ -106,6 +124,10 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
     cp "${ROOT_DIR}/examples/cli-tool/flix.toml" "${C1}/"
     # Run check -- should reach out to resolve or succeed if cached in global lock
     C1_OUT="$(cd "${C1}" && ./flixw check 2>&1 || true)"
+    if ! echo "${C1_OUT}" | consulted_cubesolve_dependency; then
+        echo "FAIL: Case 1 did not consult the manifest-declared cubesolve dependency" >&2
+        exit 1
+    fi
     echo "ok: Case 1 handled with manifest-declared dependency"
 
     # Case 2: Declared GitHub dependency + fresh root .fpkg in top-level lib/ (not in resolver cache)
@@ -115,6 +137,10 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
     cp "${ROOT_DIR}/examples/cli-tool/flix.toml" "${C2}/"
     cp "${FPKG}" "${C2}/lib/flix-cubesolve.fpkg"
     C2_OUT="$(cd "${C2}" && ./flixw check 2>&1 || true)"
+    if ! echo "${C2_OUT}" | consulted_cubesolve_dependency; then
+        echo "FAIL: Case 2 did not consult the manifest-declared cubesolve dependency" >&2
+        exit 1
+    fi
     # Proves Flix ignores top-level lib/*.fpkg and still downloads/checks GitHub cache
     echo "ok: Case 2 verified (Flix package resolver relies on manifest/cache structure, not top-level lib/*.fpkg)"
 
@@ -155,13 +181,15 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
     C5="${CHAR_BASE}/case5"
     setup_bare "${C5}"
     cp "${ROOT_DIR}/examples/cli-tool/flix.toml" "${C5}/"
+    seed_root_resolver_cache "${C5}"
     mkdir -p "${C5}/lib/github/wstein/flix-cubesolve/${VERSION}"
     cp "${FPKG}" "${C5}/lib/github/wstein/flix-cubesolve/${VERSION}/flix-cubesolve-${VERSION}.fpkg"
     cp "${ROOT_DIR}/flix.toml" "${C5}/lib/github/wstein/flix-cubesolve/${VERSION}/flix-cubesolve-${VERSION}.toml"
-    if (cd "${C5}" && ./flixw check >/dev/null 2>&1); then
+    if C5_OUT="$(cd "${C5}" && ./flixw check 2>&1)"; then
         echo "ok: Case 5 confirmed: Local overlay satisfies manifest security context and compiles cleanly"
     else
         echo "FAIL: Case 5 failed to compile with resolver-cache overlay" >&2
+        echo "${C5_OUT}" >&2
         exit 1
     fi
 fi
