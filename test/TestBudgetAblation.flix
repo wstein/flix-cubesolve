@@ -19,12 +19,24 @@
 /// What it measured, over the eight cubes below:
 ///
 /// ```text
-///   views x handovers        total HTM   probes
-///   5 views, 300 handovers   158         3378
+///   preset / combination     total HTM   probes
+///   fast: 1 view, 150        169         1136
+///   default: 2 views, 300    164         1985
+///   deep: 5 views, 300       158         3378
 ///   5 views, 600 handovers   158         4534
 ///   6 views, 300 handovers   158         3621
-///   6 views, 600 handovers   155         4826
+///   exhaustive: 6/600        155         4826
 /// ```
+///
+/// The four presets are monotone in quality and each buys something: 169, 164,
+/// 158, 155. `deep` is six moves better than `default` at seventy per cent of
+/// `exhaustive`'s probes, so it is a real intermediate rather than a weaker
+/// `exhaustive`.
+///
+/// **A single command-line run cannot show that.** Starting a JVM and loading
+/// the tables costs more than the search, so `deep` and `exhaustive` take
+/// visibly the same time there while differing by 43% in probes. The probes are
+/// what a caller solving many cubes in one process pays.
 ///
 /// **Neither knob buys anything on its own.** The sixth view alone costs 7%
 /// more probes and returns the same total; six hundred handovers alone cost 34%
@@ -62,7 +74,9 @@ mod TestBudgetAblation {
     /// The four combinations, named for what they are.
     ///
     def combinations(): List[(String, Int32, Int32)] =
-        ("5 views, 300 handovers", 5, 300)
+        ("fast: 1 view, 150", 1, 150)
+            :: ("default: 2 views, 300", 2, 300)
+            :: ("5 views, 300 handovers", 5, 300)
             :: ("5 views, 600 handovers", 5, 600)
             :: ("6 views, 300 handovers", 6, 300)
             :: ("6 views, 600 handovers", 6, 600)
