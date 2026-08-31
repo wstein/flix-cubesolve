@@ -16,17 +16,40 @@
 /// CUBESOLVE_ABLATION=1 ./flixw test
 /// ```
 ///
-/// What it measured, over the eight cubes below:
+/// What it measured, over the eight cubes below, under the breadth scheduler:
 ///
 /// ```text
-///   preset / combination     total HTM   probes
-///   fast: 1 view, 150        169         1136
-///   default: 2 views, 300    164         1985
-///   deep: 5 views, 300       158         3378
-///   5 views, 600 handovers   158         4534
-///   6 views, 300 handovers   158         3621
-///   exhaustive: 6/600        155         4826
+///   budget          HTM   probes  views  selected  pruned  tried  unexamined
+///   fast            165   542     25     2814      1860    542    412
+///   default         164   993     32     8076      6477    993    606
+///   deep            159   1866    48     17098     14353   1866   879
+///   max             157   2693    48     28376     24233   2693   1450
+///   5 views, 300 h  159   1616    40     12186     9691    1616   879
+///   5 views, 600 h  159   2395    40     20362     17088   2395   879
+///   6 views, 300 h  159   1866    48     17098     14353   1866   879
+///   6 views, 600 h  157   2693    48     28376     24233   2693   1450
 /// ```
+///
+/// **The ladder is monotone and every tier earns its place**: 165, 164, 159,
+/// 157. `max` is two moves shorter than `deep` over the corpus for 44% more
+/// probes.
+///
+/// **Neither knob buys anything alone, and this is now the second scheduler it
+/// has been true under.** The sixth view on its own is 159 for 15% more probes;
+/// six hundred handovers on their own are 159 for 48% more. Only the pair
+/// reaches 157. Holding under two different stopping rules makes it a property
+/// of the search rather than of when the search stops.
+///
+/// **`deep`'s view target does nothing.** Its row is identical to six views at
+/// three hundred handovers, and forty-eight views over eight cubes is six
+/// apiece: the probe floor of six hundred takes it to every view before the
+/// target of five is ever reached. `deep` and `max` differ only in handovers.
+///
+/// **Most endings are rejected rather than tried.** At `max`, 24,233 of 28,376
+/// selected are pruned by the lower bound before phase two -- 85% -- and 1,450
+/// are left unexamined when a view stops at its answer. The handover limit
+/// mostly buys candidates that are proved worthless.
+///
 ///
 /// The four presets are monotone in quality and each buys something: 169, 164,
 /// 158, 155. `deep` is six moves better than `default` at seventy per cent of
