@@ -203,7 +203,8 @@ of the suite's runtime, and consolidating those tests to fix it saved nothing
 measurable. Time a test before restructuring it:
 
 ```sh
-./flixw test 2>&1 | grep " PASS "     # each test prints its own elapsed time
+CUBESOLVE_FAST=1 ./flixw test 2>&1 | grep " PASS "
+                                          # each test prints its own elapsed time
 ```
 
 If the suite has to come down, the lever is the solver-driven tests: stratify
@@ -214,8 +215,14 @@ chosen by stated rules and runs everywhere; `TestPatternBoundsExhaustive` checks
 all 110 and is **off unless `CUBESOLVE_EXHAUSTIVE=1`**:
 
 ```sh
-CUBESOLVE_EXHAUSTIVE=1 ./flixw test    # what CI runs on main and nightly
+CUBESOLVE_FAST=1 ./flixw test          # the only local test lane
 ```
+
+**Never run `CUBESOLVE_EXHAUSTIVE=1 ./flixw test` locally.** The exhaustive
+lane belongs to CI after integration on `main`; if this project gains a
+`develop` integration branch, it belongs there too. CI reports the result, and
+a reported failure is a defect to fix -- do not reproduce the whole lane on a
+workstation as a substitute for fixing it. Local work uses the fast lane above.
 
 Two rules if you do this again. **Name the split** — two modules, not a quietly
 shortened list. And **make the skip loud**: the exhaustive test prints that it
@@ -265,7 +272,7 @@ Then, in order:
 ./flixw format
 ./flixw validate                     # wrapper, lock and flix.toml agree
 ./flixw build                        # redundancy checks `check` does not run
-CUBESOLVE_EXHAUSTIVE=1 ./flixw test
+CUBESOLVE_FAST=1 ./flixw test         # exhaustive qualification is CI-owned
 ./flixw metrics --format md
 ./scripts/qualify-cache-race.sh      # Gate 13.2
 git commit                           # the version bump
@@ -273,13 +280,14 @@ git push origin main
 git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z
 ```
 
-**A release publishes as a prerelease and is promoted when the long gate
-passes.** `release` runs only the fast subset -- about a minute -- then packages
-and publishes with `--prerelease`, so the artefact exists within a couple of
-minutes of the tag rather than twenty-three. `full-suite` then runs everything
-against the same commit, including every pattern and the cache race, and
-`promote` marks the release latest only when that and `qualify-example` are both
-green.
+**A release publishes as a prerelease and is promoted automatically when the CI
+long gate passes.** `release` runs only the fast subset -- about a minute --
+then packages and publishes with `--prerelease`, so the artefact exists within a
+couple of minutes of the tag rather than twenty-three. CI's `full-suite` then
+runs `CUBESOLVE_EXHAUSTIVE=1 ./flixw test` against the same commit, including
+every pattern and the cache race. `promote` marks the release latest only when
+that and `qualify-example` are green. Any CI failure must be fixed; it is not an
+invitation to run the exhaustive lane locally.
 
 Nothing is skipped by this; it is reordered. A `github:` dependency resolves a
 prerelease by exact version, so the withheld thing is the recommendation, not
@@ -349,6 +357,7 @@ Before every commit, in this order:
 ```sh
 ./flixw format                  # no check-only mode, so this must run first
 ./flixw check                   # type-check; a minute, not five
+CUBESOLVE_FAST=1 ./flixw test   # the local behavioural gate
 ./flixw metrics --format md     # code smells; fix them, do not carry them
 ```
 
@@ -364,19 +373,20 @@ Run the tests yourself when you have changed something the type-checker cannot
 judge: a search, a table, a predicate, an algorithm corpus. The nightly is the
 floor, not the ceiling.
 
-**Use the fast subset for that.** The whole suite is about seventeen minutes and
-almost all of it is twenty tests that build a large table or run the solver over
-many states. `CUBESOLVE_FAST=1` leaves those out:
+**Use only the fast subset locally.** The whole suite is about seventeen minutes
+and almost all of it is twenty tests that build a large table or run the solver
+over many states. `CUBESOLVE_FAST=1` leaves those out:
 
 ```sh
 CUBESOLVE_FAST=1 ./flixw test     # about a minute, for working
-./flixw test                      # everything, about seventeen minutes
 ```
 
 Expect fifty seconds warm and about eighty on the first run after a generator
 bump, when the cache has nothing to offer. Every skip prints what it left out
 and how to run it, because a fast subset that quietly became the only thing
-anyone ran would be the worst of both.
+anyone ran would be the worst of both. The exhaustive lane remains CI-owned on
+`main` and, if introduced, the `develop` integration branch; releases stay
+prereleases until that lane passes and CI promotes them.
 
 **This trade expires the moment someone depends on this being stable.** The
 honest signal for putting the suite back on every push is the first release
