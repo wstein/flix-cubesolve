@@ -562,6 +562,28 @@ inserting four pairs and teaches nothing about pairs. The step is called `F2L`
 because that is the state it reaches, not because it is a demonstration of how
 to do F2L.
 
+**Both methods are searches, and that is where the time goes.** Cross, the
+first layer and the first two layers are each IDA* over their own tables; the
+last-layer steps are a table lookup and cost nothing beside them. Calling these
+"human methods" describes the shape of the answer, not the work behind it — a
+distinction worth keeping, because the cost of a step method is the cost of its
+searches and nothing else.
+
+**CFOP enters the widest handoff of the two.** The first-two-layer search has
+been measured at over thirteen million nodes from a state whose first layer is
+already solved, and CFOP reaches it with only the cross done. The beginner
+method solves the first layer first and hands the search a narrower problem.
+That is why CFOP can take materially longer than beginner on the same cube,
+which is the reverse of what the move counts suggest.
+
+**A step keeps its notation, not a list of layer turns.** Several published OLL
+and PLL algorithms rotate the whole cube partway through, and `Notation.layersOnly`
+drops frame rotations — right for comparing against a solver's output, wrong for
+replaying an algorithm, because every letter after a dropped rotation names a
+different face. `Method.Steps` therefore carries what it was given. Adjacent
+turns of one face are composed by `Notation.compact`, which treats a rotation or
+a wide move as a barrier for the same reason.
+
 **Nothing here is optimal, and the gap is large.** Four or five steps each short
 for its own goal do not make a short solution; `Solve.Standard` answers a whole
 cube in about the moves either method spends before the last layer.

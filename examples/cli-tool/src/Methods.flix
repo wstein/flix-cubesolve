@@ -1,13 +1,20 @@
 ///
 /// Which method `solve` answers with.
 ///
-/// Three, and they are different products rather than three settings of one:
+/// Three, and they differ in what they search, not in whether they do:
 ///
-/// - `kociemba` searches. It is the default, it takes a `--budget`, and it is
+/// - `kociemba` is two-phase IDA* over the whole cube. It is the default and
 ///   the only one that answers a cube of any size this engine solves.
-/// - `cfop` and `beginner` work the way a person does, in named steps, and
-///   answer 3x3x3 only. They ignore `--budget`: nothing about them is a search
-///   with a time limit, so honouring it would be pretending.
+/// - `cfop` and `beginner` answer 3x3x3 in named steps. **They are searches
+///   too.** Cross, the first layer and the first two layers are each IDA* over
+///   their own tables, and they are what the runtime is spent on -- the
+///   last-layer steps are a table lookup and cost nothing by comparison.
+///
+/// An earlier version of this file said these methods were not searches and so
+/// ignored `--budget`. That was wrong, and it hid the operation that dominates
+/// the wait: the first-two-layer search has been measured at over thirteen
+/// million nodes from a state with the first layer already solved, and CFOP
+/// enters it with only the cross done.
 ///
 /// A method answer is much longer than a searched one. That is the point of it
 /// -- it says which step, which case and which moves -- and it is not offered
@@ -72,9 +79,44 @@ mod Methods {
     pub def standard(): Method = Method.Kociemba
 
     ///
-    /// Whether this method searches, and so whether `--budget` means anything.
+    /// The method a command should use, given what `--method` carried.
     ///
-    pub def searches(m: Method): Bool = match m {
+    pub def named(given: Option[String]): Result[String, Method] =
+        match given {
+            case None       => Ok(standard())
+            case Some(name) => match ofName(name) {
+                case Some(m) => Ok(m)
+                case None    => Err("'${name}' is not a method: there is ${names()}")
+            }
+        }
+
+    ///
+    /// What this method will cost before it answers, in words.
+    ///
+    /// Said at `--verbose` because the step methods build over three million
+    /// states, and a long silence is indistinguishable from a hang.
+    ///
+    pub def cost(m: Method): String = match m {
+        case Method.Kociemba =>
+            "two-phase search; the tables are cached after the first run"
+        case Method.Cfop =>
+            "searches the first two layers as one goal, entered with only the "
+                + "cross solved, which is the widest handoff here and can take "
+                + "minutes; tables are cached after the first build"
+        case Method.Beginner =>
+            "searches the cross, the first layer and the middle edges in turn; "
+                + "tables are cached after the first build"
+    }
+
+    ///
+    /// Whether this method answers through `CubeSolve.Solve.Standard`.
+    ///
+    /// **Not "whether it searches" -- all three do.** This says which entry
+    /// point the command line calls, because the two-phase solver takes a
+    /// budget as an argument and the step methods carry their own search
+    /// depths inside each stage.
+    ///
+    pub def twoPhase(m: Method): Bool = match m {
         case Method.Kociemba => true
         case Method.Cfop     => false
         case Method.Beginner => false

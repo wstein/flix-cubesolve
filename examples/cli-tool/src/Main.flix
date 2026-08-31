@@ -26,58 +26,117 @@ def main(): Unit \ IO =
 ///
 /// One invocation.
 ///
-def dispatch(args: List[String]): Unit \ IO =
-    Args.withJson(args, (isJson, cmdArgs) -> match cmdArgs {
-        case "solve" :: rest    =>
-            report(isJson, Args.withMethod(rest, (m, afterMethod) ->
-                Args.withBudget(afterMethod, (b, afterBudget) ->
-                    Args.withSize(afterBudget, Solving, (size, more) ->
-                        solveCommand(isJson, m, b, size, more)))))
-        case "show" :: rest     =>
-            report(isJson, Args.withSize(rest, Turning, (size, more) ->
-                showCommand(isJson, size, more)))
-        case "identify" :: rest =>
-            report(isJson, Args.withSize(rest, Corpus, (size, more) ->
-                identifyCommand(isJson, size, more)))
-        case "pll" :: rest      =>
-            report(isJson, Args.withProfile(rest, (p, more) ->
-                methodCommand(isJson, c -> Method.pll(p, c), c -> Method.pllJson(p, c), more)))
-        case "oll" :: rest      =>
-            report(isJson, Args.withProfile(rest, (p, more) ->
-                methodCommand(isJson, c -> Method.oll(p, c), c -> Method.ollJson(p, c), more)))
-        case "scramble" :: rest =>
-            report(isJson, Args.withSize(rest, Solving, (n, _) ->
-                if (isJson) Engine.scrambleJson(n) else Engine.scramble(n)))
-        case "patterns" :: rest =>
-            report(isJson, Args.withSize(rest, Corpus, (n, more) ->
-                if (isJson) Ok(Corpus.patternsJson(n)) else Corpus.queryOrList(n, List.join(" ", more))))
-        case "help" :: _        => println(Usage.text())
-        case Nil                => println(Usage.text())
-        case other :: _         =>
-            if (isJson)
-                report(true, Err("no such command '${other}'"))
-            else {
-                println("cubesolve: no such command '${other}'");
-                println(Usage.text())
+/// Every command parses its own options, so `--budget` on `show` is refused
+/// rather than ignored, and `--help` works everywhere rather than only as its
+/// own command.
+///
+def dispatch(args: List[String]): Unit \ IO = match args {
+    case Nil         => println(Usage.text())
+    case "help" :: _ => println(Usage.text())
+    case cmd :: rest =>
+        if (Usage.isCommand(cmd))
+            match Options.parse(cmd, rest) {
+                case Err(why) => report(false, Err(why))
+                case Ok(p)    =>
+                    let flags = p#flags;
+                    if (Options.has(flags, Options.Flag.Help))
+                        println(Options.help(cmd))
+                    else
+                        execute(cmd, flags, p#operands)
             }
-    })
+        else {
+            Sys.Console.runWithIO(_ -> Sys.Console.eprintln("cubesolve: no such command '${cmd}'"));
+            println(Usage.text());
+            Sys.Exit.runWithIO(_ -> Sys.Exit.exit(1))
+        }
+}
+
+///
+/// A command, its options already parsed.
+///
+def execute(cmd: String, flags: List[Options.Flag], operands: List[String]): Unit \ IO =
+    let isJson = Options.has(flags, Options.Flag.Json);
+    let loud = Options.loudness(flags);
+    Verbosity.say(loud, Verbosity.Level.Debug, "command '${cmd}', ${List.length(operands)} operand(s)");
+    match cmd {
+        case "solve" =>
+            report(isJson, forM (
+                m <- Methods.named(Options.method(flags));
+                b <- Budgets.named(Options.budget(flags));
+                size <- Args.sizeFor(Solving, Options.size(flags));
+                given <- scrambleOrOperands(loud, size, Options.has(flags, Options.Flag.Scramble), operands);
+                answer <- solveCommand(isJson, loud, m, b, size, given)
+            ) yield answer)
+        case "show" =>
+            report(isJson, Args.sizeFor(Turning, Options.size(flags))
+                |> Result.flatMap(n -> showCommand(isJson, n, operands)))
+        case "identify" =>
+            report(isJson, Args.sizeFor(Corpus, Options.size(flags))
+                |> Result.flatMap(n -> identifyCommand(isJson, n, operands)))
+        case "scramble" =>
+            report(isJson, Args.sizeFor(Solving, Options.size(flags))
+                |> Result.flatMap(n ->
+                    Verbosity.timed(loud, Verbosity.Level.Verbose, "scrambling", () ->
+                        if (isJson) Engine.scrambleJson(n) else Engine.scramble(n))))
+        case "patterns" =>
+            report(isJson, Args.sizeFor(Corpus, Options.size(flags))
+                |> Result.flatMap(n ->
+                    if (isJson) Ok(Corpus.patternsJson(n))
+                    else Corpus.queryOrList(n, List.join(" ", operands))))
+        case "oll" =>
+            report(isJson, Args.namedProfile(Options.profile(flags))
+                |> Result.flatMap(pr ->
+                    methodCommand(isJson, c -> Method.oll(pr, c), c -> Method.ollJson(pr, c), operands)))
+        case "pll" =>
+            report(isJson, Args.namedProfile(Options.profile(flags))
+                |> Result.flatMap(pr ->
+                    methodCommand(isJson, c -> Method.pll(pr, c), c -> Method.pllJson(pr, c), operands)))
+        case _ => report(isJson, Err("no such command '${cmd}'"))
+    }
+
+///
+/// What to solve: a fresh random scramble, or what was on the command line.
+///
+/// `--scramble` prints the scramble it drew before solving it, because an
+/// answer to a cube nobody can see is not reproducible.
+///
+def scrambleOrOperands(
+    loud: Verbosity.Level,
+    size: Int32,
+    wanted: Bool,
+    operands: List[String]
+): Result[String, List[String]] \ IO =
+    if (not wanted)
+        Ok(operands)
+    else
+        Verbosity.timed(loud, Verbosity.Level.Verbose, "scrambling", () ->
+            Engine.scrambleNotation(size) |> Result.map(text -> {
+                Verbosity.say(loud, Verbosity.Level.Normal, "scramble ${text}");
+                text :: Nil
+            }))
 
 ///
 /// `solve [--method name] [--size n] [--budget name] [--json] <scramble>`
 ///
-/// The searching solver is the default and the only one that answers a cube of
-/// any size. `cfop` and `beginner` answer in named steps, 3x3x3 only. Both
-/// honour `--json`, which gives the steps as data rather than as the rendered
-/// document.
+/// The two-phase solver is the default and the only one that answers a cube of
+/// any size. `cfop` and `beginner` answer in named steps, 3x3x3 only, and are
+/// searches as well -- see `Methods`. Both honour `--json`, which gives the
+/// steps as data rather than as the rendered document.
 ///
 def solveCommand(
     isJson: Bool,
+    loud: Verbosity.Level,
     m: Methods.Method,
     b: Budgets.Budget,
     size: Int32,
     rest: List[String]
 ): Result[String, String] \ IO =
-    if (Methods.searches(m))
+    Verbosity.say(loud, Verbosity.Level.Verbose,
+        "solving a ${size}x${size}x${size} by ${Methods.nameOf(m)}"
+            + (if (Methods.twoPhase(m)) ", budget ${Budgets.nameOf(b)}" else ""));
+    Verbosity.say(loud, Verbosity.Level.Verbose, Methods.cost(m));
+    Verbosity.timed(loud, Verbosity.Level.Verbose, "solving", () ->
+    if (Methods.twoPhase(m))
         if (isJson)
             Args.onCube(size, rest, (n, c) -> Engine.solveCubeJson(b, n, c))
         else
@@ -85,7 +144,7 @@ def solveCommand(
     else if (isJson)
         Args.onCube(size, rest, (n, c) -> Methods.answerJson(m, n, c))
     else
-        Args.onCube(size, rest, (n, c) -> Methods.answer(m, n, c))
+        Args.onCube(size, rest, (n, c) -> Methods.answer(m, n, c)))
 
 ///
 /// `show [--size n] [--json] <scramble>`

@@ -29,10 +29,28 @@ mod Usage {
                 + "draws ${Args.written(CubeSolve.turnableSizes())}."
             :: "Tables are cached after the first run."
             :: "solve takes --budget: ${Budgets.names()} (probes, not seconds)."
-            :: "solve takes --method: ${Methods.names()}. kociemba searches and"
-            :: "  answers any size; cfop and beginner answer 3x3x3 in named steps,"
-            :: "  are much longer, and ignore --budget."
+            :: "solve takes --method: ${Methods.names()}. kociemba answers any"
+            :: "  size and takes --budget; cfop and beginner answer 3x3x3 in named"
+            :: "  steps, are much longer, and search their own stages."
+            :: "Every command takes ${Verbosity.names()}."
             :: "oll and pll take --profile: ${Args.profileNames()}."
             :: Nil)
+
+
+    ///
+    /// The commands, named once.
+    ///
+    /// `dispatch` asks this rather than carrying its own list, so a command
+    /// that appears in the help and not in the dispatch -- or the reverse -- is
+    /// not possible.
+    ///
+    pub def commands(): List[String] =
+        "solve" :: "show" :: "identify" :: "scramble" :: "patterns"
+            :: "oll" :: "pll" :: "help" :: Nil
+
+    ///
+    /// Whether `name` is one of them.
+    ///
+    pub def isCommand(name: String): Bool = List.memberOf(name, commands())
 
 }
