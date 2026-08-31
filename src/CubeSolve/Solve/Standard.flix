@@ -160,30 +160,35 @@ mod CubeSolve.Solve.Standard {
     /// inverted -- and `minViews` is how many of those it must finish before it
     /// settles. One, here: the first view that yields an answer is accepted.
     ///
+    /// It also offers phase one half as many handovers as the default. Views
+    /// and handovers are the two things that make a search wider, and this is
+    /// the relaxed end of both.
+    ///
     pub def fastBudget(): Budget =
-        Budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 300 })
+        Budget({ minViews = 1, probeMax = 500, maxDepth = 25, handovers = 150 })
 
     ///
     /// The budget to use when nothing else is stated.
     ///
-    /// Measured mean **20.8** moves. Costs roughly four times the probes of
-    /// `fastBudget` for a tenth of a move, which is the shape of the whole
-    /// curve here: the views are there, and buying more of them is the only
-    /// thing that shortens the answer.
+    /// Two views and the standard three hundred handovers. Everything else is
+    /// stated as a multiple of this one.
     ///
     pub def defaultBudget(): Budget =
         Budget({ minViews = 2, probeMax = 500, maxDepth = 25, handovers = 300 })
 
     ///
-    /// A budget that spends until every view has had its turn.
+    /// Five of the six views, at the standard handovers.
     ///
-    /// Measured mean **20.6** moves, which is min2phase's own average. Two to
-    /// three times the work of `defaultBudget`, and the point at which more
-    /// probes stop paying: what is left after this is the gap between a
-    /// two-phase solver and an optimal one, and no budget closes that.
+    /// Measured mean **20.6** moves, which is min2phase's own average. What is
+    /// left after this is the gap between a two-phase solver and an optimal
+    /// one, and no budget closes that.
+    ///
+    /// Five rather than six so that it stays distinguishable from a budget that
+    /// takes every view: a tier nobody can tell apart from the one above it is
+    /// the defect this ladder was rebuilt to remove.
     ///
     pub def thoroughBudget(): Budget =
-        Budget({ minViews = 4, probeMax = 1200, maxDepth = 25, handovers = 300 })
+        Budget({ minViews = 5, probeMax = 1200, maxDepth = 25, handovers = 300 })
 
     ///
     /// A budget, from its parts.
