@@ -2,44 +2,46 @@
 /// The routines the beginner method plays back, one record each.
 ///
 /// **Generated source.** Every sequence here was derived by
-/// `CubeSolve.Method.Derive` under the policy `beginner-routines@1`: a goal
-/// stated as a predicate on decoded model state, a restricted alphabet, and the
-/// shortest sequence the search finds. Nothing is transcribed from any guide.
+/// `CubeSolve.Method.Derive` under the policy `beginner-routines@1`: the goal
+/// and the alphabet come from `CubeSolve.Method.Beginner.Spec`, and the
+/// sequence is the shortest the search found. Nothing is transcribed from any
+/// guide.
 ///
 /// It is committed rather than derived at run time on purpose. These sequences
 /// are part of what the method teaches, so a change to one belongs in a diff
-/// somebody can read -- `corner-insert-right-twist-1` becoming something other
-/// than `R U R'` is a fact about the product, not an implementation detail that
-/// may vary with a tie-break. Deriving them costs milliseconds; that is not the
-/// reason they are here.
+/// somebody can read -- the twist-1 insertion ceasing to be `R U R'` is a fact
+/// about the product, not an implementation detail free to vary with a
+/// tie-break. Deriving them costs milliseconds; that is not why they are here.
 ///
-/// **`CubeSolve.Method.Derive` remains the authority.** `TestRoutines`
-/// regenerates each record under its stated alphabet and goal, checks it equals
-/// what is written here, replays it from its own setup, and checks every
-/// preservation the record claims. A record that drifts from the search fails
-/// rather than being believed.
+/// **What each record means is in `Spec`, not here.** A record names a
+/// `Situation` and nothing else about its intent, so the case it answers, the
+/// rung it establishes, what it must leave alone and how it was derived are one
+/// definition rather than a sentence per record that could disagree with its
+/// neighbours.
+///
+/// `CubeSolve.Method.Derive` remains the authority: `TestRoutines` regenerates
+/// every record under its situation's own alphabet and bound, checks it equals
+/// what is written here, and replays it.
 ///
 /// This is not `CubeSolve.Patterns`. That module holds externally published
 /// states and carries their provenance; these are derived here and carry ours.
 ///
 mod CubeSolve.Method.Beginner.Routines {
 
+    use CubeSolve.Method.Beginner.Spec.Situation
+
     ///
     /// One routine, and everything needed to check it again.
     ///
-    /// - `alphabet` -- the faces the search was allowed, as letters.
-    /// - `goal` -- what the routine is for, in the words the predicate means.
-    /// - `preserves` -- what must be as it was afterwards, and is checked to be.
-    /// - `setup` -- a sequence from solved that reaches the case this answers.
-    ///   The routine is its inverse, so the two together are a round trip.
-    /// - `length` -- the derived move count, recorded so a longer replacement
-    ///   cannot arrive unnoticed.
+    /// - `situation` -- what it answers. `Spec` says what that means.
+    /// - `setup` -- a sequence from solved reaching a state where the situation
+    ///   holds. The routine is its inverse, so the two are a round trip.
+    /// - `length` -- the derived move count, recorded so that a longer
+    ///   replacement cannot arrive unnoticed.
     ///
     pub type alias Routine = {
         name = String,
-        alphabet = String,
-        goal = String,
-        preserves = String,
+        situation = Situation,
         setup = String,
         sequence = String,
         length = Int32
@@ -48,9 +50,8 @@ mod CubeSolve.Method.Beginner.Routines {
     ///
     /// The policy the corpus was derived under.
     ///
-    /// Recorded so that a regenerated corpus can be told from this one. Bump it
-    /// when the alphabet, the goal predicates or the search change in a way that
-    /// could produce different sequences.
+    /// Bump it when the alphabets, the predicates in `Spec` or the search change
+    /// in a way that could produce different sequences.
     ///
     pub def policy(): String = "beginner-routines@1"
 
@@ -61,9 +62,6 @@ mod CubeSolve.Method.Beginner.Routines {
         "derived by CubeSolve.Method.Derive under ${policy()}"
 
     ///
-    /// Every routine.
-    ///
-    ///
     /// Every routine, in the order the method works through them.
     ///
     pub def all(): List[Routine] =
@@ -72,17 +70,15 @@ mod CubeSolve.Method.Beginner.Routines {
     ///
     /// Putting a first-layer corner in from the top, by how it is twisted.
     ///
-    /// The right-hand insertion: two faces, which is what a person uses.
-    ///
     pub def cornerInsertions(): List[Routine] =
-        { name = "corner-insert-right-twist-0", alphabet = "R U",
-          goal = cornerGoal(), preserves = cornerPreserves(),
+        { name = "corner-insert-right-twist-0",
+          situation = Situation.CornerInsertRight(0),
           setup = "R2 U R2 U' R2", sequence = "R2 U R2 U' R2", length = 5 } ::
-        { name = "corner-insert-right-twist-1", alphabet = "R U",
-          goal = cornerGoal(), preserves = cornerPreserves(),
+        { name = "corner-insert-right-twist-1",
+          situation = Situation.CornerInsertRight(1),
           setup = "R U' R'", sequence = "R U R'", length = 3 } ::
-        { name = "corner-insert-right-twist-2", alphabet = "R U",
-          goal = cornerGoal(), preserves = cornerPreserves(),
+        { name = "corner-insert-right-twist-2",
+          situation = Situation.CornerInsertRight(2),
           setup = "R U R' U'", sequence = "U R U' R'", length = 4 } ::
         Nil
 
@@ -95,50 +91,44 @@ mod CubeSolve.Method.Beginner.Routines {
     /// needs no separate aligning step.
     ///
     pub def middleInsertions(): List[Routine] =
-        { name = "middle-insert-slot-0-flip-0", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-0-flip-0",
+          situation = Situation.MiddleInsert(0, 0),
           setup = "R U R' U' F' U' F U", sequence = "U' F' U F U R U' R'", length = 8 } ::
-        { name = "middle-insert-slot-0-flip-1", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-0-flip-1",
+          situation = Situation.MiddleInsert(0, 1),
           setup = "F' U F U2 R U2 R'", sequence = "R U2 R' U2 F' U' F", length = 7 } ::
-        { name = "middle-insert-slot-1-flip-0", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-1-flip-0",
+          situation = Situation.MiddleInsert(1, 0),
           setup = "R U' R' U2 F' U2 F", sequence = "F' U2 F U2 R U R'", length = 7 } ::
-        { name = "middle-insert-slot-1-flip-1", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-1-flip-1",
+          situation = Situation.MiddleInsert(1, 1),
           setup = "R F' U' F U F R' F'", sequence = "F R F' U' F' U F R'", length = 8 } ::
-        { name = "middle-insert-slot-2-flip-0", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-2-flip-0",
+          situation = Situation.MiddleInsert(2, 0),
           setup = "R U R' U' F' U' F U'", sequence = "U F' U F U R U' R'", length = 8 } ::
-        { name = "middle-insert-slot-2-flip-1", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-2-flip-1",
+          situation = Situation.MiddleInsert(2, 1),
           setup = "R' F R F' R U R'", sequence = "R U' R' F R' F' R", length = 7 } ::
-        { name = "middle-insert-slot-3-flip-0", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-3-flip-0",
+          situation = Situation.MiddleInsert(3, 0),
           setup = "R U R' U' F' U' F", sequence = "F' U F U R U' R'", length = 7 } ::
-        { name = "middle-insert-slot-3-flip-1", alphabet = "R U F",
-          goal = middleGoal(), preserves = middlePreserves(),
+        { name = "middle-insert-slot-3-flip-1",
+          situation = Situation.MiddleInsert(3, 1),
           setup = "R' F R F' R U R' U", sequence = "U' R U' R' F R' F' R", length = 8 } ::
         Nil
-
-    ///
-    /// What each family aims at, and what it must leave alone.
-    ///
-    /// Written once rather than repeated in every record: they are properties of
-    /// the family, and a record that disagreed with its neighbours about what
-    /// "the first layer" means would be a bug that reads as data.
-    ///
-    def cornerGoal(): String = "the DFR corner is home and untwisted"
-
-    def cornerPreserves(): String = "cross; corners DLF, DBL, DRB"
-
-    def middleGoal(): String = "the FR edge is home and unflipped"
-
-    def middlePreserves(): String = "first layer; edges FL, BL, BR"
 
     ///
     /// The routine of that name, if there is one.
     ///
     pub def named(name: String): Option[Routine] =
         all() |> List.findLeft(r -> r#name == name)
+
+    ///
+    /// The routine for a situation, if the corpus has one.
+    ///
+    /// This is how the method chooses: it observes a situation and asks for the
+    /// routine that answers it, rather than matching on a name it built itself.
+    ///
+    pub def forSituation(s: Situation): Option[Routine] =
+        all() |> List.findLeft(r -> r#situation == s)
 }
