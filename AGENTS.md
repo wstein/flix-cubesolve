@@ -273,6 +273,20 @@ git push origin main
 git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z
 ```
 
+**A release publishes as a prerelease and is promoted when the long gate
+passes.** `release` runs only the fast subset -- about a minute -- then packages
+and publishes with `--prerelease`, so the artefact exists within a couple of
+minutes of the tag rather than twenty-three. `full-suite` then runs everything
+against the same commit, including every pattern and the cache race, and
+`promote` marks the release latest only when that and `qualify-example` are both
+green.
+
+Nothing is skipped by this; it is reordered. A `github:` dependency resolves a
+prerelease by exact version, so the withheld thing is the recommendation, not
+the package. A prerelease that never gets promoted is a version that is
+installable and not recommended, and the workflow says so out loud rather than
+leaving it to be noticed.
+
 **The example cannot be qualified before the tag**, because it resolves through
 release assets rather than the working tree. That is the point of it — it sees
 only the public surface, under Flix's dependency security context, exactly as
@@ -346,9 +360,23 @@ every pattern, the two-process cache race — at 03:30 nightly and on request.
 A type error is caught in a minute; a behavioural regression is caught within a
 day.
 
-Run `./flixw test` yourself when you have changed something the type-checker
-cannot judge: a search, a table, a predicate, an algorithm corpus. The nightly is
-the floor, not the ceiling.
+Run the tests yourself when you have changed something the type-checker cannot
+judge: a search, a table, a predicate, an algorithm corpus. The nightly is the
+floor, not the ceiling.
+
+**Use the fast subset for that.** The whole suite is about seventeen minutes and
+almost all of it is twenty tests that build a large table or run the solver over
+many states. `CUBESOLVE_FAST=1` leaves those out:
+
+```sh
+CUBESOLVE_FAST=1 ./flixw test     # about a minute, for working
+./flixw test                      # everything, about seventeen minutes
+```
+
+Expect fifty seconds warm and about eighty on the first run after a generator
+bump, when the cache has nothing to offer. Every skip prints what it left out
+and how to run it, because a fast subset that quietly became the only thing
+anyone ran would be the worst of both.
 
 **This trade expires the moment someone depends on this being stable.** The
 honest signal for putting the suite back on every push is the first release
@@ -357,3 +385,17 @@ somebody builds against.
 `metrics` reports against a working tree, so a run with uncommitted changes
 describes a state no commit contains — it says so itself. Fix the findings and
 re-run rather than reasoning about which ones the commit will keep.
+
+**Two findings are carried deliberately**, and this is the record of why.
+`TestIdaStar` and `TestScramble` each depend on thirteen modules where the
+threshold is twelve, and the thirteenth in both is `Slow` — the fast-mode gate.
+The gate is a cross-cutting test concern rather than a design fault in those
+modules, and the two ways out are both worse: no dependency in either module is
+removable, and splitting them would fragment a cohesive module and duplicate its
+fixture helper to satisfy a heuristic aimed at production coupling. Four other
+modules crossed the same line for the same reason and were genuinely improved by
+splitting — `TestFirstLayerSolutions` and `TestStandardTables` came out of that,
+and they are better files. These two are not that case.
+
+If a third module joins them, reconsider: at that point the gate is worth a
+different shape, not another exception.

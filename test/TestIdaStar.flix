@@ -3,7 +3,6 @@ mod TestIdaStar {
     use CubeSolve.Model.Cube
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Table
-    use CubeSolve.Table.Pocket
 
     /// Every 2x2x2 table.
     def tables(): Table.Pocket.Tables \ Assert =
@@ -65,25 +64,30 @@ mod TestIdaStar {
     /// Every solution is also replayed through the model, so a length that
     /// matches the oracle but does not actually solve the cube fails here.
     @Test
-    def theStratifiedSampleIsSolvedOptimally(): Unit \ Assert =
-        let t = tables();
-        let d = Table.Pocket.distanceTable(t);
-        let shallow = Vector.range(0, Table.Pocket.stateCount())
-            |> Vector.filter(i -> Table.get(i, d) <= 4);
-        Assert.assertEqWithMsg(expected = 2232, Vector.length(shallow),
-            "the classes within four moves should hold 2,232 states");
-        shallow |> Vector.forEach(s -> assertOptimal(t, s));
+    def theStratifiedSampleIsSolvedOptimally(): Unit \ Assert + IO =
+        if (Slow.skip("TestIdaStar.theStratifiedSampleIsSolvedOptimally",
+                "solves a stratified sample optimally"))
+            ()
+        else {
+            let t = tables();
+            let d = Table.Pocket.distanceTable(t);
+            let shallow = Vector.range(0, Table.Pocket.stateCount())
+                |> Vector.filter(i -> Table.get(i, d) <= 4);
+            Assert.assertEqWithMsg(expected = 2232, Vector.length(shallow),
+                "the classes within four moves should hold 2,232 states");
+            shallow |> Vector.forEach(s -> assertOptimal(t, s));
 
-        let stride = 3673;
-        Vector.range(0, 600) |> Vector.forEach(step ->
-            assertOptimal(t, Int32.modulo(step * stride + 7, Table.Pocket.stateCount())));
+            let stride = 3673;
+            Vector.range(0, 600) |> Vector.forEach(step ->
+                assertOptimal(t, Int32.modulo(step * stride + 7, Table.Pocket.stateCount())));
 
-        let deepest = deepestStates(t);
-        Assert.assertEqWithMsg(expected = 2644, Vector.length(deepest),
-            "there should be 2,644 states at distance 11");
-        deepest |> Vector.take(60) |> Vector.forEach(s -> assertOptimal(t, s))
+            let deepest = deepestStates(t);
+            Assert.assertEqWithMsg(expected = 2644, Vector.length(deepest),
+                "there should be 2,644 states at distance 11");
+            deepest |> Vector.take(60) |> Vector.forEach(s -> assertOptimal(t, s))
 
-    // ---------- what the pruning and the second heuristic are worth ----------
+        // ---------- what the pruning and the second heuristic are worth ----------
+        }
 
     /// Both of the search's economies cut work without changing an answer.
     ///

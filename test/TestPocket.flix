@@ -142,76 +142,81 @@ mod TestPocket {
     /// - **Both projections admissible**, over every state, with the maxima
     ///   that make the case for using them together.
     @Test
-    def theOracleIsExhaustiveConsistentAndAdmissible(): Unit \ Assert =
-        let t = tables();
-        let d = Pocket.distanceTable(t);
-        let pm = Pocket.permMoveTable(t);
-        let om = Pocket.oriMoveTable(t);
-        let oriD = Pocket.oriDistanceTable(t);
-        let permD = Pocket.permDistanceTable(t);
-        let n = Pocket.oriCount();
-        let k = Pocket.moveCount();
-        Assert.assertEq(expected = Pocket.stateCount(), Table.entries(d));
+    def theOracleIsExhaustiveConsistentAndAdmissible(): Unit \ Assert + IO =
+        if (Slow.skip("TestPocket.theOracleIsExhaustiveConsistentAndAdmissible",
+                "builds the whole 2x2x2 oracle"))
+            ()
+        else {
+            let t = tables();
+            let d = Pocket.distanceTable(t);
+            let pm = Pocket.permMoveTable(t);
+            let om = Pocket.oriMoveTable(t);
+            let oriD = Pocket.oriDistanceTable(t);
+            let permD = Pocket.permDistanceTable(t);
+            let n = Pocket.oriCount();
+            let k = Pocket.moveCount();
+            Assert.assertEq(expected = Pocket.stateCount(), Table.entries(d));
 
-        let report = region rc {
-            let histogram = Array.repeat(rc, 16, 0);
-            // 0: a move changed the distance by more than one
-            // 1: an unsolved state had no neighbour closer to solved
-            // 2: the orientation heuristic overestimated
-            // 3: the permutation heuristic overestimated
-            // 4: the largest value the two heuristics jointly take
-            let faults = Array.repeat(rc, 5, -1);
-            Array.put(0, 4, faults);
-            Vector.range(0, Pocket.stateCount()) |> Vector.forEach(s -> {
-                let here = Table.get(s, d);
-                Array.put(Array.get(here, histogram) + 1, here, histogram);
-                let pi = s / n;
-                let oi = Int32.modulo(s, n);
-                let closer = Vector.range(0, k) |> Vector.count(m -> {
-                    let perm = Table.get(pi * k + m, pm);
-                    let to = perm * n + Table.get(oi * k + m, om);
-                    let there = Table.get(to, d);
-                    if (Int32.abs(here - there) > 1) Array.put(s, 0, faults) else ();
-                    there == here - 1
+            let report = region rc {
+                let histogram = Array.repeat(rc, 16, 0);
+                // 0: a move changed the distance by more than one
+                // 1: an unsolved state had no neighbour closer to solved
+                // 2: the orientation heuristic overestimated
+                // 3: the permutation heuristic overestimated
+                // 4: the largest value the two heuristics jointly take
+                let faults = Array.repeat(rc, 5, -1);
+                Array.put(0, 4, faults);
+                Vector.range(0, Pocket.stateCount()) |> Vector.forEach(s -> {
+                    let here = Table.get(s, d);
+                    Array.put(Array.get(here, histogram) + 1, here, histogram);
+                    let pi = s / n;
+                    let oi = Int32.modulo(s, n);
+                    let closer = Vector.range(0, k) |> Vector.count(m -> {
+                        let perm = Table.get(pi * k + m, pm);
+                        let to = perm * n + Table.get(oi * k + m, om);
+                        let there = Table.get(to, d);
+                        if (Int32.abs(here - there) > 1) Array.put(s, 0, faults) else ();
+                        there == here - 1
+                    });
+                    if (here > 0 and closer == 0) Array.put(s, 1, faults) else ();
+                    let ho = Table.get(oi, oriD);
+                    let hp = Table.get(pi, permD);
+                    if (ho > here) Array.put(s, 2, faults) else ();
+                    if (hp > here) Array.put(s, 3, faults) else ();
+                    let best = Int32.max(ho, hp);
+                    if (best > Array.get(4, faults)) Array.put(best, 4, faults) else ()
                 });
-                if (here > 0 and closer == 0) Array.put(s, 1, faults) else ();
-                let ho = Table.get(oi, oriD);
-                let hp = Table.get(pi, permD);
-                if (ho > here) Array.put(s, 2, faults) else ();
-                if (hp > here) Array.put(s, 3, faults) else ();
-                let best = Int32.max(ho, hp);
-                if (best > Array.get(4, faults)) Array.put(best, 4, faults) else ()
-            });
-            (Array.toVector(histogram), Array.toVector(faults))
-        };
-        let (counts, faults) = report;
+                (Array.toVector(histogram), Array.toVector(faults))
+            };
+            let (counts, faults) = report;
 
-        // The histogram, computed independently before any of this was written.
-        let expected = Vector#{
-            1, 9, 54, 321, 1847, 9992, 50136, 227536, 870072, 1887748, 623800, 2644
-        };
-        Vector.range(0, 12) |> Vector.forEach(i ->
-            Assert.assertEqWithMsg(
-                expected = Vector.get(i, expected), Vector.get(i, counts),
-                "states at distance ${i}"));
-        Vector.range(12, 16) |> Vector.forEach(i ->
-            Assert.assertEqWithMsg(
-                expected = 0, Vector.get(i, counts),
-                "nothing should sit at distance ${i}, including the unvisited marker"));
-        Assert.assertEq(expected = 0, Table.get(Pocket.solvedIndex(), d));
+            // The histogram, computed independently before any of this was written.
+            let expected = Vector#{
+                1, 9, 54, 321, 1847, 9992, 50136, 227536, 870072, 1887748, 623800, 2644
+            };
+            Vector.range(0, 12) |> Vector.forEach(i ->
+                Assert.assertEqWithMsg(
+                    expected = Vector.get(i, expected), Vector.get(i, counts),
+                    "states at distance ${i}"));
+            Vector.range(12, 16) |> Vector.forEach(i ->
+                Assert.assertEqWithMsg(
+                    expected = 0, Vector.get(i, counts),
+                    "nothing should sit at distance ${i}, including the unvisited marker"));
+            Assert.assertEq(expected = 0, Table.get(Pocket.solvedIndex(), d));
 
-        Assert.assertEqWithMsg(expected = -1, Vector.get(0, faults),
-            "a move changed the distance by more than one");
-        Assert.assertEqWithMsg(expected = -1, Vector.get(1, faults),
-            "an unsolved state had no neighbour closer to solved");
-        Assert.assertEqWithMsg(expected = -1, Vector.get(2, faults),
-            "the orientation heuristic overestimated some state");
-        Assert.assertEqWithMsg(expected = -1, Vector.get(3, faults),
-            "the permutation heuristic overestimated some state");
-        // Measured independently: orientation tops out at 6 and permutation at
-        // 7, against a diameter of 11. That gap is why both are used.
-        Assert.assertEqWithMsg(expected = 7, Vector.get(4, faults),
-            "the two heuristics together should reach 7 and no further")
+            Assert.assertEqWithMsg(expected = -1, Vector.get(0, faults),
+                "a move changed the distance by more than one");
+            Assert.assertEqWithMsg(expected = -1, Vector.get(1, faults),
+                "an unsolved state had no neighbour closer to solved");
+            Assert.assertEqWithMsg(expected = -1, Vector.get(2, faults),
+                "the orientation heuristic overestimated some state");
+            Assert.assertEqWithMsg(expected = -1, Vector.get(3, faults),
+                "the permutation heuristic overestimated some state");
+            // Measured independently: orientation tops out at 6 and permutation at
+            // 7, against a diameter of 11. That gap is why both are used.
+            Assert.assertEqWithMsg(expected = 7, Vector.get(4, faults),
+                "the two heuristics together should reach 7 and no further")
+        }
 
     /// The projections are genuinely coarser than the full space, so the
     /// heuristics are not secretly the oracle and a search still has work to do.

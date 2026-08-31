@@ -71,7 +71,8 @@ mod TestPocketPatternOptimality {
                     Assert.assertTrueWithMsg(published >= shortest,
                         "'${name}' is published in ${published} moves, shorter than the "
                             + "${shortest} an exact solver needs -- one of them is wrong");
-                    if (published > shortest) (looser + 1, Int32.max(most, published - shortest))
+                    if (published > shortest)
+                        (looser + 1, Int32.max(most, published - shortest))
                     else (looser, most)
                 }, (0, 0));
                 let (looser, most) = slack;

@@ -100,44 +100,59 @@ mod TestRevengeReduction {
 
     /// Reduced scrambled 4x4 is solved back to identity through 3x3 reduction.
     @Test
-    def reducedScrambledFourByFourIsSolvedBackToIdentity(): Unit \ Assert =
-        CubeSolve.Table.Cache.withoutCache(() -> {
-            let c = made(4, "R U F2 D' L' B2");
-            match CubeSolve.Solve.Revenge.solution(c) {
-                case Err(why) => Assert.assertEqWithMsg(expected = "", why, "failed to solve")
-                case Ok(ops) =>
-                    let step = (acc, op) -> Result.flatMap(x -> Cube.applyOp(op, x), acc);
-                    let solved = List.foldLeft(step, Ok(c), ops) |> Result.getWithDefault(c);
-                    Assert.assertTrue(Cube.isSolved(solved))
-            }
-        })
+    def reducedScrambledFourByFourIsSolvedBackToIdentity(): Unit \ Assert + IO =
+        if (Slow.skip("TestRevengeReduction.reducedScrambledFourByFourIsSolvedBackToIdentity",
+                "reduces and solves a 4x4x4"))
+            ()
+        else {
+            CubeSolve.Table.Cache.withoutCache(() -> {
+                let c = made(4, "R U F2 D' L' B2");
+                match CubeSolve.Solve.Revenge.solution(c) {
+                    case Err(why) => Assert.assertEqWithMsg(expected = "", why, "failed to solve")
+                    case Ok(ops) =>
+                        let step = (acc, op) -> Result.flatMap(x -> Cube.applyOp(op, x), acc);
+                        let solved = List.foldLeft(step, Ok(c), ops) |> Result.getWithDefault(c);
+                        Assert.assertTrue(Cube.isSolved(solved))
+                }
+            })
+        }
 
     /// Reduced 4x4 with OLL wing parity is solved back to identity.
     @Test
-    def reducedWithOllParityIsSolvedBackToIdentity(): Unit \ Assert =
-        CubeSolve.Table.Cache.withoutCache(() -> {
-            let c = made(4, "R U " + Revenge.ollParity() + " U' R'");
-            match CubeSolve.Solve.Revenge.solution(c) {
-                case Err(why) => Assert.assertEqWithMsg(expected = "", why, "failed to solve")
-                case Ok(ops) =>
-                    let step = (acc, op) -> Result.flatMap(x -> Cube.applyOp(op, x), acc);
-                    let solved = List.foldLeft(step, Ok(c), ops) |> Result.getWithDefault(c);
-                    Assert.assertTrue(Cube.isSolved(solved))
-            }
-        })
+    def reducedWithOllParityIsSolvedBackToIdentity(): Unit \ Assert + IO =
+        if (Slow.skip("TestRevengeReduction.reducedWithOllParityIsSolvedBackToIdentity",
+                "reduces and solves a 4x4x4"))
+            ()
+        else {
+            CubeSolve.Table.Cache.withoutCache(() -> {
+                let c = made(4, "R U " + Revenge.ollParity() + " U' R'");
+                match CubeSolve.Solve.Revenge.solution(c) {
+                    case Err(why) => Assert.assertEqWithMsg(expected = "", why, "failed to solve")
+                    case Ok(ops) =>
+                        let step = (acc, op) -> Result.flatMap(x -> Cube.applyOp(op, x), acc);
+                        let solved = List.foldLeft(step, Ok(c), ops) |> Result.getWithDefault(c);
+                        Assert.assertTrue(Cube.isSolved(solved))
+                }
+            })
+        }
 
     /// Reduced 4x4 with PLL corner/edge parity is solved back to identity.
     @Test
-    def reducedWithPllParityIsSolvedBackToIdentity(): Unit \ Assert =
-        CubeSolve.Table.Cache.withoutCache(() -> {
-            let c = made(4, "R2 U2 " + Revenge.pllParity() + " U2 R2");
-            match CubeSolve.Solve.Revenge.solution(c) {
-                case Err(why) => Assert.assertEqWithMsg(expected = "", why, "failed to solve")
-                case Ok(ops) =>
-                    let step = (acc, op) -> Result.flatMap(x -> Cube.applyOp(op, x), acc);
-                    let solved = List.foldLeft(step, Ok(c), ops) |> Result.getWithDefault(c);
-                    Assert.assertTrue(Cube.isSolved(solved))
-            }
-        })
+    def reducedWithPllParityIsSolvedBackToIdentity(): Unit \ Assert + IO =
+        if (Slow.skip("TestRevengeReduction.reducedWithPllParityIsSolvedBackToIdentity",
+                "reduces and solves a 4x4x4"))
+            ()
+        else {
+            CubeSolve.Table.Cache.withoutCache(() -> {
+                let c = made(4, "R2 U2 " + Revenge.pllParity() + " U2 R2");
+                match CubeSolve.Solve.Revenge.solution(c) {
+                    case Err(why) => Assert.assertEqWithMsg(expected = "", why, "failed to solve")
+                    case Ok(ops) =>
+                        let step = (acc, op) -> Result.flatMap(x -> Cube.applyOp(op, x), acc);
+                        let solved = List.foldLeft(step, Ok(c), ops) |> Result.getWithDefault(c);
+                        Assert.assertTrue(Cube.isSolved(solved))
+                }
+            })
 
-}
+    }
+        }

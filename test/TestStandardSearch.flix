@@ -57,34 +57,39 @@ mod TestStandardSearch {
     /// The solutions are also replayed through the model, so a sequence that
     /// reached the goal in coordinates but not on the cube fails here.
     @Test
-    def phaseOneSolutionsReachTheSubgroupOnTheRealCube(): Unit \ Assert =
-        let p = phase1();
-        List.forEach(alg -> {
-            let cube = scrambled(alg);
-            match Phase1.phase1Solution(p, cube) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
-                case Ok(ms) =>
-                    Assert.assertTrueWithMsg(
-                        List.length(ms) <= Phase1.maxDepth(),
-                        "'${alg}' needed ${List.length(ms)} moves, over the bound");
-                    let after = Cube.applyAll(ms, Sized.cubeOfStandard(cube));
-                    match after {
-                        case Err(e) =>
-                            Assert.assertEqWithMsg(expected = "", e, "replay of '${alg}'")
-                        case Ok(c)  =>
-                            Assert.assertTrueWithMsg(
-                                CubeSolve.Table.Standard.isPhase1Solved(c),
-                                "'${alg}' plus its phase-one solution did not "
-                                    + "reach the subgroup: "
-                                    + Move.showAll(ms))
-                    }
-            }
-        },
-        "R" :: "R U F" :: "R U2 F' L D B2 R' U" :: "F U R2 B' L D2 F' U' R"
-            :: "U2 D2 R2 L2 F2 B2" :: ""
-            // The superflip: solved in permutation, every edge flipped. A good
-            // case because the goal test must be "inside the subgroup" and not
-            // "solved" -- a cube can be one without being the other.
-            :: "R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U" :: Nil)
+    def phaseOneSolutionsReachTheSubgroupOnTheRealCube(): Unit \ Assert + IO =
+        if (Slow.skip("TestStandardSearch.phaseOneSolutionsReachTheSubgroupOnTheRealCube",
+                "builds the phase-one tables and searches"))
+            ()
+        else {
+            let p = phase1();
+            List.forEach(alg -> {
+                let cube = scrambled(alg);
+                match Phase1.phase1Solution(p, cube) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
+                    case Ok(ms) =>
+                        Assert.assertTrueWithMsg(
+                            List.length(ms) <= Phase1.maxDepth(),
+                            "'${alg}' needed ${List.length(ms)} moves, over the bound");
+                        let after = Cube.applyAll(ms, Sized.cubeOfStandard(cube));
+                        match after {
+                            case Err(e) =>
+                                Assert.assertEqWithMsg(expected = "", e, "replay of '${alg}'")
+                            case Ok(c)  =>
+                                Assert.assertTrueWithMsg(
+                                    CubeSolve.Table.Standard.isPhase1Solved(c),
+                                    "'${alg}' plus its phase-one solution did not "
+                                        + "reach the subgroup: "
+                                        + Move.showAll(ms))
+                        }
+                }
+            },
+            "R" :: "R U F" :: "R U2 F' L D B2 R' U" :: "F U R2 B' L D2 F' U' R"
+                :: "U2 D2 R2 L2 F2 B2" :: ""
+                // The superflip: solved in permutation, every edge flipped. A good
+                // case because the goal test must be "inside the subgroup" and not
+                // "solved" -- a cube can be one without being the other.
+                :: "R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U" :: Nil)
 
-}
+    }
+        }

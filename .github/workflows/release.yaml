@@ -93,12 +93,18 @@ jobs:
       - name: Validate the wrapper
         run: ./flixw validate
 
-      # Build and Test has already run this on three platforms for the commit
-      # the tag names. It runs again because a release is the one artefact
-      # nobody re-checks afterwards, and a green tick on a parent commit is not
-      # the same claim as a green tick on what is being published.
-      - name: Test
+      # The fast subset only -- about a minute. The whole suite is seventeen,
+      # and running it here put twenty-three minutes between a tag and anything
+      # anyone could install, which is too long to leave a release in the air.
+      #
+      # The full suite still runs against exactly this artefact, in `full-suite`
+      # below, and the release stays a prerelease until it passes. So nothing is
+      # skipped -- it is reordered, and the reordering is what lets the package
+      # exist while the long gate runs.
+      - name: Test (fast subset)
         run: ./flixw test
+        env:
+          CUBESOLVE_FAST: '1'
 
       - name: Package
         run: ./flixw build-pkg
@@ -107,6 +113,11 @@ jobs:
       # both: it reads the manifest to learn what the package needs before it
       # downloads the package itself. A release carrying only the `.fpkg` looks
       # complete and still fails to resolve.
+      # Published as a prerelease, and promoted by `promote` once the full
+      # suite and the example have both passed against it. A `github:`
+      # dependency resolves a prerelease by exact version, so anyone who names
+      # this version can already have it; what the flag withholds is "latest",
+      # which is the recommendation rather than the artefact.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -116,8 +127,10 @@ jobs:
             --title "${GITHUB_REF_NAME#v}" \
             --verify-tag \
             --generate-notes \
+            --prerelease \
             artifact/flix-cubesolve.fpkg \
             artifact/flix.toml
+          echo "published ${GITHUB_REF_NAME} as a prerelease; the full suite decides whether it is promoted"
 
   # The library is qualified before the tag; this is the half that cannot be.
   #
@@ -191,3 +204,72 @@ jobs:
                "build against it. A published version must not change under" \
                "anyone who has resolved it, so fix forward with a corrective" \
                "patch release rather than retagging."
+
+  # The long gate, moved off the path between a tag and a package.
+  #
+  # This runs the whole suite -- every pattern included -- against the commit
+  # the tag names, which is the same source the artefact above was built from.
+  # It takes about twenty minutes, and until it passes the release stays a
+  # prerelease.
+  full-suite:
+    name: The whole suite against ${{ github.ref_name }}
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # No CUBESOLVE_FAST, and CUBESOLVE_EXHAUSTIVE on: everything the project
+      # has. This is the gate the fast subset in `release` is a subset of.
+      - name: Test, including every pattern
+        run: ./flixw test
+        env:
+          CUBESOLVE_EXHAUSTIVE: '1'
+
+      - name: Race two processes onto one cache
+        run: ./scripts/qualify-cache-race.sh
+        env:
+          CUBESOLVE_RACE_ROUNDS: '5'
+
+  # Prerelease to latest, and only with both gates green.
+  #
+  # Separate from the jobs it waits on so that "is this version recommended" is
+  # one decision in one place, rather than something each gate might do half of.
+  promote:
+    name: Promote ${{ github.ref_name }} to latest
+    needs: [full-suite, qualify-example]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Mark it latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release edit "$GITHUB_REF_NAME" --prerelease=false --latest
+          echo "${GITHUB_REF_NAME} is now the latest release"
+
+      # A prerelease that never got promoted is the failure mode worth naming:
+      # it is installable by exact version and is not recommended, which is
+      # correct but easy to miss if nobody says it out loud.
+      - name: Say what a failure here means
+        if: failure()
+        run: |
+          echo "::error::${GITHUB_REF_NAME} stays a prerelease. It is published" \
+               "and resolvable by exact version, but it is not recommended and" \
+               "not 'latest'. Fix forward with a corrective patch release; do" \
+               "not retag a published version."

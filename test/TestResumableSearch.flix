@@ -45,13 +45,18 @@ mod TestResumableSearch {
     ///   `drivingByHandIsNoWorseThanAskingOutright`
     ///
     @Test
-    def theAnytimeInterfaceKeepsItsPromises(): Unit \ Assert =
-        let t = tables();
-        eachSolutionIsStrictlyShorterAndStillSolves(t);
-        aStarvedBudgetExplainsItself(t);
-        aSearchOutOfViewsSaysSo(t);
-        continuingUnderALargerBudgetNeverLosesGround(t);
-        drivingByHandIsNoWorseThanAskingOutright(t)
+    def theAnytimeInterfaceKeepsItsPromises(): Unit \ Assert + IO =
+        if (Slow.skip("TestResumableSearch.theAnytimeInterfaceKeepsItsPromises",
+                "runs the anytime search to exhaustion"))
+            ()
+        else {
+            let t = tables();
+            eachSolutionIsStrictlyShorterAndStillSolves(t);
+            aStarvedBudgetExplainsItself(t);
+            aSearchOutOfViewsSaysSo(t);
+            continuingUnderALargerBudgetNeverLosesGround(t);
+            drivingByHandIsNoWorseThanAskingOutright(t)
+        }
 
     def tables(): Standard.Tables \ Assert =
         match Standard.buildTables() {

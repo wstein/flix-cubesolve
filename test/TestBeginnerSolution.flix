@@ -56,14 +56,19 @@ mod TestBeginnerSolution {
     /// three times and cost the suite six minutes to prove the same things.
     /// Each property is its own function below and names itself when it fails.
     @Test
-    def theBeginnerMethodKeepsItsPromises(): Unit \ Assert =
-        match Beginner.build() {
-            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables should build")
-            case Ok(t)  =>
-                stagesComposeAndLeaveTheCubeTwoLayersSolved(t);
-                everyWrittenScrambleIsSolvedWholly(t);
-                eachStageLeavesTheCubeAtItsOwnRung(t);
-                anAlreadySolvedTwoLayersCostsNothing(t)
+    def theBeginnerMethodKeepsItsPromises(): Unit \ Assert + IO =
+        if (Slow.skip("TestBeginnerSolution.theBeginnerMethodKeepsItsPromises",
+                "builds the first-two-layer tables and solves whole cubes"))
+            ()
+        else {
+            match Beginner.build() {
+                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables should build")
+                case Ok(t)  =>
+                    stagesComposeAndLeaveTheCubeTwoLayersSolved(t);
+                    everyWrittenScrambleIsSolvedWholly(t);
+                    eachStageLeavesTheCubeAtItsOwnRung(t);
+                    anAlreadySolvedTwoLayersCostsNothing(t)
+            }
         }
 
     ///

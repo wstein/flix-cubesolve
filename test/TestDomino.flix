@@ -99,39 +99,44 @@ mod TestDomino {
     /// - **Nothing is left unreached**, so every domino state really is within
     ///   those depths.
     @Test
-    def thePhaseTwoTablesAreClosedAndReachTheKnownDepths(): Unit \ Assert =
-        let p = phase2();
-        let k = Domino.moveCount();
+    def thePhaseTwoTablesAreClosedAndReachTheKnownDepths(): Unit \ Assert + IO =
+        if (Slow.skip("TestDomino.thePhaseTwoTablesAreClosedAndReachTheKnownDepths",
+                "builds and closes the phase-two tables"))
+            ()
+        else {
+            let p = phase2();
+            let k = Domino.moveCount();
 
-        let checkClosed = (table, count, what) ->
-            Vector.range(0, count) |> Vector.forEach(r ->
-                Vector.range(0, k) |> Vector.forEach(m -> {
-                    let there = Table.get(r * k + m, table);
-                    Assert.assertTrueWithMsg(there >= 0 and there < count,
-                        "${what} ${r} under move ${m} left the range")
-                }));
-        checkClosed(Domino.cornerPermTable(p), Domino.cornerPermCount(), "corner perm");
-        checkClosed(Domino.edgePermTable(p), Domino.edgePermCount(), "edge perm");
-        checkClosed(Domino.slicePermTable(p), Domino.slicePermCount(), "slice perm");
-        checkClosed(Domino.combTable(p), Domino.combCount(), "CComb");
+            let checkClosed = (table, count, what) ->
+                Vector.range(0, count) |> Vector.forEach(r ->
+                    Vector.range(0, k) |> Vector.forEach(m -> {
+                        let there = Table.get(r * k + m, table);
+                        Assert.assertTrueWithMsg(there >= 0 and there < count,
+                            "${what} ${r} under move ${m} left the range")
+                    }));
+            checkClosed(Domino.cornerPermTable(p), Domino.cornerPermCount(), "corner perm");
+            checkClosed(Domino.edgePermTable(p), Domino.edgePermCount(), "edge perm");
+            checkClosed(Domino.slicePermTable(p), Domino.slicePermCount(), "slice perm");
+            checkClosed(Domino.combTable(p), Domino.combCount(), "CComb");
 
-        let checkPruning = (table, count, depth, what) -> {
-            let worst = Vector.range(0, count)
-                |> Vector.foldLeft((acc, i) -> Int32.max(acc, Table.get(i, table)), 0);
-            Assert.assertEqWithMsg(expected = depth, worst,
-                "${what} should reach depth ${depth} exactly, not ${worst}");
-            Assert.assertEqWithMsg(expected = 0, Table.get(0, table),
-                "${what} should be zero at the goal");
-            let unreached = Vector.range(0, count)
-                |> Vector.count(i -> Table.get(i, table) == Table.widest(8));
-            Assert.assertEqWithMsg(expected = 0, unreached,
-                "${what} left ${unreached} states unreached")
-        };
-        checkPruning(
-            Domino.cornerSliceTable(p),
-            Domino.cornerPermCount() * Domino.slicePermCount(), 14, "CPerm x MPerm");
-        checkPruning(
-            Domino.edgeCombTable(p),
-            Domino.edgePermCount() * Domino.combCount(), 13, "EPerm x CComb")
+            let checkPruning = (table, count, depth, what) -> {
+                let worst = Vector.range(0, count)
+                    |> Vector.foldLeft((acc, i) -> Int32.max(acc, Table.get(i, table)), 0);
+                Assert.assertEqWithMsg(expected = depth, worst,
+                    "${what} should reach depth ${depth} exactly, not ${worst}");
+                Assert.assertEqWithMsg(expected = 0, Table.get(0, table),
+                    "${what} should be zero at the goal");
+                let unreached = Vector.range(0, count)
+                    |> Vector.count(i -> Table.get(i, table) == Table.widest(8));
+                Assert.assertEqWithMsg(expected = 0, unreached,
+                    "${what} left ${unreached} states unreached")
+            };
+            checkPruning(
+                Domino.cornerSliceTable(p),
+                Domino.cornerPermCount() * Domino.slicePermCount(), 14, "CPerm x MPerm");
+            checkPruning(
+                Domino.edgeCombTable(p),
+                Domino.edgePermCount() * Domino.combCount(), 13, "EPerm x CComb")
 
-}
+    }
+        }

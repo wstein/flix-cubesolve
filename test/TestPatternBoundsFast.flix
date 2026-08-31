@@ -23,32 +23,37 @@ mod TestPatternBoundsFast {
     /// collection's figures. The exhaustive gate holds those.
     ///
     @Test
-    def theStratumStaysWithinTheDocumentedMoveCount(): Unit \ Assert =
-        let stratum = PatternBoundCheck.stratum();
-        Assert.assertEqWithMsg(expected = 27, Vector.length(stratum),
-            "the fast stratum should name 27 patterns");
-        Assert.assertEqWithMsg(
-            expected = Vector.length(stratum),
-            List.length(List.distinct(Vector.toList(stratum))),
-            "the fast stratum names a pattern twice");
+    def theStratumStaysWithinTheDocumentedMoveCount(): Unit \ Assert + IO =
+        if (Slow.skip("TestPatternBoundsFast.theStratumStaysWithinTheDocumentedMoveCount",
+                "solves 27 published patterns"))
+            ()
+        else {
+            let stratum = PatternBoundCheck.stratum();
+            Assert.assertEqWithMsg(expected = 27, Vector.length(stratum),
+                "the fast stratum should name 27 patterns");
+            Assert.assertEqWithMsg(
+                expected = Vector.length(stratum),
+                List.length(List.distinct(Vector.toList(stratum))),
+                "the fast stratum names a pattern twice");
 
-        let (comparable, longer, worst) =
-            PatternBoundCheck.check(
-                PatternBoundCheck.tables(), Standard.defaultBudget(), stratum);
+            let (comparable, longer, worst) =
+                PatternBoundCheck.check(
+                    PatternBoundCheck.tables(), Standard.defaultBudget(), stratum);
 
-        // every named pattern was found; a typo in the list would show as a
-        // short count rather than as a silently smaller gate
-        Assert.assertEqWithMsg(expected = 24, comparable,
-            "24 of the 27 are published in face turns and so document a count");
-        // 11 of the 24, far above the collection's 29-in-102 rate, and that is
-        // the point: the stratum deliberately takes every pattern the solver
-        // already loses badly, so it is dense in exactly the cases a regression
-        // would touch.
-        Assert.assertTrueWithMsg(longer <= 11,
-            "the solver is longer than the publication on ${longer} of the "
-                + "stratum, up from the recorded 11");
-        Assert.assertTrueWithMsg(worst <= 7,
-            "the solver's worst excess over the stratum is ${worst} moves, over "
-                + "the recorded 7")
+            // every named pattern was found; a typo in the list would show as a
+            // short count rather than as a silently smaller gate
+            Assert.assertEqWithMsg(expected = 24, comparable,
+                "24 of the 27 are published in face turns and so document a count");
+            // 11 of the 24, far above the collection's 29-in-102 rate, and that is
+            // the point: the stratum deliberately takes every pattern the solver
+            // already loses badly, so it is dense in exactly the cases a regression
+            // would touch.
+            Assert.assertTrueWithMsg(longer <= 11,
+                "the solver is longer than the publication on ${longer} of the "
+                    + "stratum, up from the recorded 11");
+            Assert.assertTrueWithMsg(worst <= 7,
+                "the solver's worst excess over the stratum is ${worst} moves, over "
+                    + "the recorded 7")
 
-}
+    }
+        }

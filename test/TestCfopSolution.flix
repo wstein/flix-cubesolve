@@ -36,15 +36,20 @@ mod TestCfopSolution {
     /// functions.
     ///
     @Test
-    def cfopKeepsItsPromises(): Unit \ Assert =
-        match (Cfop.build(), Holding.ofToken(3, scramble())) {
-            case (Err(e), _) =>
-                Assert.assertEqWithMsg(expected = "", e, "the tables should build")
-            case (_, Err(e)) =>
-                Assert.assertEqWithMsg(expected = "", e, "the scramble should decode")
-            case (Ok(t), Ok(c)) =>
-                fourStagesComposeAndSolveTheCube(t, c);
-                f2lReachesTheSameRungTheBeginnerMethodDoes(t, c)
+    def cfopKeepsItsPromises(): Unit \ Assert + IO =
+        if (Slow.skip("TestCfopSolution.cfopKeepsItsPromises",
+                "builds the first-two-layer tables and solves whole cubes"))
+            ()
+        else {
+            match (Cfop.build(), Holding.ofToken(3, scramble())) {
+                case (Err(e), _) =>
+                    Assert.assertEqWithMsg(expected = "", e, "the tables should build")
+                case (_, Err(e)) =>
+                    Assert.assertEqWithMsg(expected = "", e, "the scramble should decode")
+                case (Ok(t), Ok(c)) =>
+                    fourStagesComposeAndSolveTheCube(t, c);
+                    f2lReachesTheSameRungTheBeginnerMethodDoes(t, c)
+            }
         }
 
     ///

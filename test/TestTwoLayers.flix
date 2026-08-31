@@ -48,13 +48,18 @@ mod TestTwoLayers {
     /// to build and nothing shares them across `@Test` functions.
     ///
     @Test
-    def everyRecordedHandoffReachesTheTwoLayersRung(): Unit \ Assert =
-        match TwoLayers.build() {
-            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables should build")
-            case Ok(tl) =>
-                corpus() |> Vector.forEach(match (token, ceiling) ->
-                    check(tl, token, ceiling));
-                pairTableIsClosed(tl)
+    def everyRecordedHandoffReachesTheTwoLayersRung(): Unit \ Assert + IO =
+        if (Slow.skip("TestTwoLayers.everyRecordedHandoffReachesTheTwoLayersRung",
+                "builds the 3.2M-state pair table and solves the handoff corpus"))
+            ()
+        else {
+            match TwoLayers.build() {
+                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables should build")
+                case Ok(tl) =>
+                    corpus() |> Vector.forEach(match (token, ceiling) ->
+                        check(tl, token, ceiling));
+                    pairTableIsClosed(tl)
+            }
         }
 
     ///

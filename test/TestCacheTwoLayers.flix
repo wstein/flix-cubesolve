@@ -24,7 +24,14 @@ mod TestCacheTwoLayers {
     /// build that writes nothing is the actual claim.
     ///
     @Test
-    def theTwoLayerTablesAreCachedAndNotRebuilt(): Unit \ Assert = region rc {
+    def theTwoLayerTablesAreCachedAndNotRebuilt(): Unit \ Assert + IO =
+        if (Slow.skip("TestCacheTwoLayers.theTwoLayerTablesAreCachedAndNotRebuilt",
+                "builds all four first-two-layer tables twice"))
+            ()
+        else
+            checkIt()
+
+    def checkIt(): Unit \ Assert = region rc {
         let kept = Ref.fresh(rc, Map#{});
         let writes = Ref.fresh(rc, 0);
         let both = run {
