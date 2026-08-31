@@ -62,4 +62,20 @@ mod TestPocketSearchLimits {
                     "state ${s}: one found a solution and the other did not")
             })
 
+    /// Enumeration has its own node envelope: yielding no handover cannot make
+    /// an outer target search look cheap or run without bound.
+    @Test
+    def boundedEnumerationReportsItsOwnCap(): Unit \ Assert =
+        let t = PocketSearchTestSupport.tables();
+        let phase = CubeSolve.Solve.Pocket.phaseOf(t);
+        let solved = Table.Pocket.solvedIndex();
+        let capped = IdaStar.enumerateBounded(phase, solved, 0, 1, 1i64);
+        Assert.assertEq(expected = 1i64, capped#nodes);
+        Assert.assertTrue(capped#exhausted);
+        Assert.assertEq(expected = Nil, capped#solutions);
+        let ample = IdaStar.enumerateBounded(phase, solved, 0, 1, 2i64);
+        Assert.assertEq(expected = 1i64, ample#nodes);
+        Assert.assertFalse(ample#exhausted);
+        Assert.assertEq(expected = Nil :: Nil, ample#solutions)
+
 }

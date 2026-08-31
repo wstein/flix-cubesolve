@@ -286,6 +286,24 @@ mod CubeSolve.Solve.IdaStar {
         depth: Int32,
         limit: Int32
     ): (List[List[Int32]], Int64) =
+        let r = enumerateBounded(p, start, depth, limit, Int64.maxValue());
+        (r#solutions, r#nodes)
+
+    ///
+    /// The bounded form of `enumerateCounted`.
+    ///
+    /// `nodes` counts phase-one enumeration itself, rather than only any work
+    /// a consumer performs on its yielded paths. That distinction matters to a
+    /// target search: a phase-two probe cap alone cannot bound an enumeration
+    /// that yields no handovers.
+    ///
+    pub def enumerateBounded(
+        p: Phase[s],
+        start: s,
+        depth: Int32,
+        limit: Int32,
+        maxNodes: Int64
+    ): { solutions = List[List[Int32]], nodes = Int64, exhausted = Bool } =
         region rc {
             let Phase(spec) = p;
             let scratch = Array.repeat(rc, depth + 1, 0);
@@ -295,10 +313,13 @@ mod CubeSolve.Solve.IdaStar {
                 found = MutList.empty(rc),
                 limit = limit,
                 depth = depth,
-                visited = Ref.fresh(rc, 0i64)
+                visited = Ref.fresh(rc, 0i64),
+                maxNodes = maxNodes
             };
             collect(sweep, start, 0, -1);
-            (MutList.toList(sweep#found) |> List.reverse, Ref.get(sweep#visited))
+            { solutions = MutList.toList(sweep#found) |> List.reverse,
+              nodes = Ref.get(sweep#visited),
+              exhausted = Ref.get(sweep#visited) >= maxNodes }
         }
 
     ///
@@ -311,7 +332,8 @@ mod CubeSolve.Solve.IdaStar {
         found = MutList[List[Int32], r],
         limit = Int32,
         depth = Int32,
-        visited = Ref[Int64, r]
+        visited = Ref[Int64, r],
+        maxNodes = Int64
     }
 
     ///
@@ -320,7 +342,9 @@ mod CubeSolve.Solve.IdaStar {
     def collect(sweep: Gather[s, r], state: s, at: Int32, lastMove: Int32): Unit \ r =
         let spec = sweep#spec;
         Ref.put(Ref.get(sweep#visited) + 1i64, sweep#visited);
-        if (MutList.size(sweep#found) >= sweep#limit)
+        if (Ref.get(sweep#visited) >= sweep#maxNodes)
+            ()
+        else if (MutList.size(sweep#found) >= sweep#limit)
             ()
         else if (at == sweep#depth) {
             if ((spec#isGoal)(state))
