@@ -3,6 +3,8 @@ mod TestMove {
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face.{U, R, F, D, L, B}
     use CubeSolve.Model.Move.Move.Turn
+    use CubeSolve.Model.Cube
+    use CubeSolve.Model.Facelets
 
     /// Every move survives being written down and read back.
     @Test
@@ -178,5 +180,58 @@ mod TestMove {
         Assert.assertFalse(flips(L));
         Assert.assertTrue(flips(F));
         Assert.assertTrue(flips(B))
+
+
+    ///
+    /// Adjacent turns of one face compose, and a full cycle disappears.
+    ///
+    /// This is what stops a method answer printing `U U U U F ...`: a step is
+    /// built by joining an orienting turn to an algorithm that starts with one
+    /// of its own, and the parser expands `U2` into two quarter turns.
+    ///
+    @Test
+    def adjacentTurnsOfOneFaceCompose(): Unit \ Assert =
+        let cases =
+            ("U U", "U2")
+                :: ("U U U", "U'")
+                :: ("U U U U", "")
+                :: ("U U'", "")
+                :: ("U2 U2", "")
+                :: ("R R U U", "R2 U2")
+                :: ("U R U", "U R U")
+                :: ("U2 U", "U'")
+                :: ("F B F", "F B F")
+                :: Nil;
+        cases |> List.forEach(match (given, want) ->
+            match Move.parse(given) {
+                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "parsing '${given}'")
+                case Ok(ms) =>
+                    Assert.assertEqWithMsg(expected = want,
+                        Move.showAll(Move.compact(ms)),
+                        "'${given}' should compact to '${want}'")
+            })
+
+    ///
+    /// Compacting never changes what the sequence does.
+    ///
+    /// The property that matters: composition of same-face turns is exact, so a
+    /// compacted sequence must leave every cube exactly where the original did.
+    ///
+    @Test
+    def compactingPreservesTheCube(): Unit \ Assert =
+        let sequences =
+            "U U U U" :: "R R U U R' R'" :: "F F F B B B" :: "U R U' R' U U"
+                :: "L L L D D D L L L" :: Nil;
+        sequences |> List.forEach(text ->
+            match (Move.parse(text), Cube.solved(3)) {
+                case (Ok(ms), Ok(start)) =>
+                    match (Cube.applyAll(ms, start), Cube.applyAll(Move.compact(ms), start)) {
+                        case (Ok(a), Ok(b)) =>
+                            Assert.assertEqWithMsg(expected = Facelets.token(a), Facelets.token(b),
+                                "compacting '${text}' changed what it does")
+                        case _ => Assert.assertTrueWithMsg(false, "applying '${text}'")
+                    }
+                case _ => Assert.assertTrueWithMsg(false, "parsing '${text}'")
+            })
 
 }

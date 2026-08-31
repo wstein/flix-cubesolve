@@ -170,6 +170,36 @@ mod CubeSolve.Model.Move {
         })
 
     ///
+    /// `ms` with adjacent turns of one face composed into a single turn.
+    ///
+    /// Two turns of the same face compose exactly -- they are the same
+    /// generator -- so `U U` is `U2`, `U U'` is nothing at all, and `U U U U`
+    /// is nothing at all. Nothing else is touched: turns of different faces are
+    /// left in the order they were given, even when they commute, because
+    /// reordering them would change a sequence a person has to follow.
+    ///
+    /// **This matters for anything a person reads.** A method answer is built
+    /// by joining an orienting turn to an algorithm that begins with one of its
+    /// own, and the parser expands `U2` into two quarter turns, so an
+    /// uncomposed answer prints `U U U U F ...` -- four quarter turns of one
+    /// face, which is to say nothing at all, in front of the move that matters.
+    /// It also makes the move count wrong, and a move count is the number
+    /// everybody compares.
+    ///
+    pub def compact(ms: List[Move]): List[Move] =
+        ms |> List.foldLeft(compactOnto, Nil) |> List.reverse
+
+    ///
+    /// `m` composed onto `acc`, which is in reverse order.
+    ///
+    def compactOnto(acc: List[Move], m: Move): List[Move] = match acc {
+        case last :: rest if face(last) == face(m) =>
+            let turns = (amount(last) + amount(m)) `Int32.remainder` 4;
+            if (turns == 0) rest else Turn(face(m), turns) :: rest
+        case _ => m :: acc
+    }
+
+    ///
     /// `ms` in the usual notation, space separated.
     ///
     pub def showAll(ms: List[Move]): String =
