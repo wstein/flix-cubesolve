@@ -268,6 +268,24 @@ mod CubeSolve.Solve.IdaStar {
         depth: Int32,
         limit: Int32
     ): List[List[Int32]] =
+        fst(enumerateCounted(p, start, depth, limit))
+
+    ///
+    /// The same, and how many nodes it looked at to find them.
+    ///
+    /// **The node count is the cost; the list is only the yield.** They differ
+    /// by orders of magnitude once the depth passes what the pruning tables can
+    /// bound, because everything below that is searched unguided. A caller
+    /// measuring how much a deeper enumeration costs cannot see it from the
+    /// length of the answer, which is what made the two indistinguishable until
+    /// this was counted.
+    ///
+    pub def enumerateCounted(
+        p: Phase[s],
+        start: s,
+        depth: Int32,
+        limit: Int32
+    ): (List[List[Int32]], Int64) =
         region rc {
             let Phase(spec) = p;
             let scratch = Array.repeat(rc, depth + 1, 0);
@@ -276,10 +294,11 @@ mod CubeSolve.Solve.IdaStar {
                 path = scratch,
                 found = MutList.empty(rc),
                 limit = limit,
-                depth = depth
+                depth = depth,
+                visited = Ref.fresh(rc, 0i64)
             };
             collect(sweep, start, 0, -1);
-            MutList.toList(sweep#found) |> List.reverse
+            (MutList.toList(sweep#found) |> List.reverse, Ref.get(sweep#visited))
         }
 
     ///
@@ -291,7 +310,8 @@ mod CubeSolve.Solve.IdaStar {
         path = Array[Int32, r],
         found = MutList[List[Int32], r],
         limit = Int32,
-        depth = Int32
+        depth = Int32,
+        visited = Ref[Int64, r]
     }
 
     ///
@@ -299,6 +319,7 @@ mod CubeSolve.Solve.IdaStar {
     ///
     def collect(sweep: Gather[s, r], state: s, at: Int32, lastMove: Int32): Unit \ r =
         let spec = sweep#spec;
+        Ref.put(Ref.get(sweep#visited) + 1i64, sweep#visited);
         if (MutList.size(sweep#found) >= sweep#limit)
             ()
         else if (at == sweep#depth) {

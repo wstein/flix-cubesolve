@@ -19,6 +19,13 @@
 ///   15     100000      17    397      370.7     yes
 /// ```
 ///
+/// **Ordering the handovers by their lower bound was tried and reverted.**
+/// Trying the most promising first ought to tighten what is left to beat, and
+/// it does -- by about two probes. Sorting tens of thousands of candidates at
+/// every depth to save them costs far more than they are worth: 254 seconds
+/// became 731 at depth fourteen, and 371 became 869 at fifteen. The probes were
+/// never the expense, so nothing that only rearranges them can help.
+///
 /// **Both knobs are needed and neither is enough.** Depth up to fifteen at
 /// twenty-five thousand handovers never reaches seventeen; a hundred thousand
 /// handovers at depth twelve never reaches it either. It takes depth fourteen
@@ -77,7 +84,8 @@ mod ProbeDepthCost {
             case (Ok(t), Ok(c)) =>
                 println("cube ${token()}, a ${target()}-move solution is known");
                 println("");
-                println("  depth  handovers   HTM   probes   seconds   reaches ${target()}");
+                println("  depth  handovers   HTM   probes   nodes        seconds"
+                    + "   reaches ${target()}");
                 grid() |> List.forEach(match (d, h) -> measure(t, c, d, h))
             case (Err(e), _) => println("tables: ${e}")
             case (_, Err(e)) => println("cube: ${e}")
@@ -108,10 +116,13 @@ mod ProbeDepthCost {
             case Some(n) => if (n <= target()) "yes" else "no"
             case None    => "no"
         };
+        let nodes = out#viewStats
+            |> List.foldLeft((a, v) -> a + v#enumerationNodes, 0i64);
         println("  ${String.padRight(7, ' ', "${depth}")}"
             + "${String.padRight(12, ' ', "${handovers}")}"
             + "${String.padRight(6, ' ', htm)}"
             + "${String.padRight(9, ' ', "${out#probesSpent}")}"
+            + "${String.padRight(13, ' ', "${nodes}")}"
             + "${String.padRight(10, ' ', "${secs}")}"
             + "${hit}")
 }

@@ -101,7 +101,9 @@ mod CubeSolve.Solve.Standard {
         handoversUnreachable = Int32,
         handoversPruned = Int32,
         phaseTwoAttempts = Int32,
-        handoverLimitReached = Bool
+        handoverLimitReached = Bool,
+        enumerationNodes = Int64,
+        deepestPhaseOne = Int32
     }
 
     ///
@@ -124,14 +126,17 @@ mod CubeSolve.Solve.Standard {
         unreachable = Int32,
         pruned = Int32,
         attempts = Int32,
-        limitReached = Bool
+        limitReached = Bool,
+        nodes = Int64,
+        deepest = Int32
     }
 
     ///
     /// No endings seen yet.
     ///
     def noCounts(): Counts =
-        { selected = 0, unreachable = 0, pruned = 0, attempts = 0, limitReached = false }
+        { selected = 0, unreachable = 0, pruned = 0, attempts = 0, limitReached = false,
+          nodes = 0i64, deepest = 0 }
 
     ///
     /// Two tallies added.
@@ -141,7 +146,9 @@ mod CubeSolve.Solve.Standard {
         unreachable = a#unreachable + b#unreachable,
         pruned = a#pruned + b#pruned,
         attempts = a#attempts + b#attempts,
-        limitReached = a#limitReached or b#limitReached
+        limitReached = a#limitReached or b#limitReached,
+        nodes = a#nodes + b#nodes,
+        deepest = Int32.max(a#deepest, b#deepest)
     }
 
     ///
@@ -553,7 +560,9 @@ mod CubeSolve.Solve.Standard {
             handoversUnreachable = tally#unreachable,
             handoversPruned = tally#pruned,
             phaseTwoAttempts = tally#attempts,
-            handoverLimitReached = tally#limitReached
+            handoverLimitReached = tally#limitReached,
+            enumerationNodes = tally#nodes,
+            deepestPhaseOne = tally#deepest
         };
         let newFirst = match f#firstHtm {
             case Some(h) => Some(h)
@@ -834,11 +843,13 @@ mod CubeSolve.Solve.Standard {
         if (depth > limits#phase1Depth or spent)
             (best, probes, tally)
         else {
-            let handovers = IdaStar.enumerate(
+            let (handovers, looked) = IdaStar.enumerateCounted(
                 Phase1.phaseOf(attempt#phase1), start, depth, limits#handovers);
             let offered = List.length(handovers);
-            let seen = plus(tally, { selected = offered, unreachable = 0, pruned = 0,
-                attempts = 0, limitReached = offered >= limits#handovers });
+            let seen = plus(tally, { selected = offered, unreachable = 0,
+                pruned = 0, attempts = 0,
+                limitReached = offered >= limits#handovers,
+                nodes = looked, deepest = depth });
             let (probed, improved, counted) =
                 tryHandovers(attempt, handovers, probes, best, seen);
             byDepth(attempt, start, depth + 1,
