@@ -63,29 +63,78 @@ mod CubeSolve.Method.Beginner.Routines {
     ///
     /// Every routine.
     ///
+    ///
+    /// Every routine, in the order the method works through them.
+    ///
     pub def all(): List[Routine] =
-        { name = "corner-insert-right-twist-0",
-          alphabet = "R U",
-          goal = "the DFR corner is home and untwisted",
-          preserves = "cross; corners DLF, DBL, DRB",
-          setup = "R2 U R2 U' R2",
-          sequence = "R2 U R2 U' R2",
-          length = 5 } ::
-        { name = "corner-insert-right-twist-1",
-          alphabet = "R U",
-          goal = "the DFR corner is home and untwisted",
-          preserves = "cross; corners DLF, DBL, DRB",
-          setup = "R U' R'",
-          sequence = "R U R'",
-          length = 3 } ::
-        { name = "corner-insert-right-twist-2",
-          alphabet = "R U",
-          goal = "the DFR corner is home and untwisted",
-          preserves = "cross; corners DLF, DBL, DRB",
-          setup = "R U R' U'",
-          sequence = "U R U' R'",
-          length = 4 } ::
+        List.append(cornerInsertions(), middleInsertions())
+
+    ///
+    /// Putting a first-layer corner in from the top, by how it is twisted.
+    ///
+    /// The right-hand insertion: two faces, which is what a person uses.
+    ///
+    pub def cornerInsertions(): List[Routine] =
+        { name = "corner-insert-right-twist-0", alphabet = "R U",
+          goal = cornerGoal(), preserves = cornerPreserves(),
+          setup = "R2 U R2 U' R2", sequence = "R2 U R2 U' R2", length = 5 } ::
+        { name = "corner-insert-right-twist-1", alphabet = "R U",
+          goal = cornerGoal(), preserves = cornerPreserves(),
+          setup = "R U' R'", sequence = "R U R'", length = 3 } ::
+        { name = "corner-insert-right-twist-2", alphabet = "R U",
+          goal = cornerGoal(), preserves = cornerPreserves(),
+          setup = "R U R' U'", sequence = "U R U' R'", length = 4 } ::
         Nil
+
+    ///
+    /// Putting a middle edge in from the top, by where it sits and which way
+    /// round it is.
+    ///
+    /// Eight cases, because the alphabet includes `U`: the turn that brings the
+    /// edge to where the routine wants it is part of the routine, so the method
+    /// needs no separate aligning step.
+    ///
+    pub def middleInsertions(): List[Routine] =
+        { name = "middle-insert-slot-0-flip-0", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R U R' U' F' U' F U", sequence = "U' F' U F U R U' R'", length = 8 } ::
+        { name = "middle-insert-slot-0-flip-1", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "F' U F U2 R U2 R'", sequence = "R U2 R' U2 F' U' F", length = 7 } ::
+        { name = "middle-insert-slot-1-flip-0", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R U' R' U2 F' U2 F", sequence = "F' U2 F U2 R U R'", length = 7 } ::
+        { name = "middle-insert-slot-1-flip-1", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R F' U' F U F R' F'", sequence = "F R F' U' F' U F R'", length = 8 } ::
+        { name = "middle-insert-slot-2-flip-0", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R U R' U' F' U' F U'", sequence = "U F' U F U R U' R'", length = 8 } ::
+        { name = "middle-insert-slot-2-flip-1", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R' F R F' R U R'", sequence = "R U' R' F R' F' R", length = 7 } ::
+        { name = "middle-insert-slot-3-flip-0", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R U R' U' F' U' F", sequence = "F' U F U R U' R'", length = 7 } ::
+        { name = "middle-insert-slot-3-flip-1", alphabet = "R U F",
+          goal = middleGoal(), preserves = middlePreserves(),
+          setup = "R' F R F' R U R' U", sequence = "U' R U' R' F R' F' R", length = 8 } ::
+        Nil
+
+    ///
+    /// What each family aims at, and what it must leave alone.
+    ///
+    /// Written once rather than repeated in every record: they are properties of
+    /// the family, and a record that disagreed with its neighbours about what
+    /// "the first layer" means would be a bug that reads as data.
+    ///
+    def cornerGoal(): String = "the DFR corner is home and untwisted"
+
+    def cornerPreserves(): String = "cross; corners DLF, DBL, DRB"
+
+    def middleGoal(): String = "the FR edge is home and unflipped"
+
+    def middlePreserves(): String = "first layer; edges FL, BL, BR"
 
     ///
     /// The routine of that name, if there is one.

@@ -43,34 +43,85 @@ mod TestRoutines {
             and ok(Facts.allHome(c, Vector#{5, 6, 7}, true))
 
     ///
+    /// The first layer and the other three middle edges a middle insertion keeps.
+    ///
+    def preservedForMiddle(c: Cube.Cube): Bool =
+        let ok = r -> Result.getWithDefault(false, r);
+        ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
+            and ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, true))
+            and ok(Facts.allHome(c, Vector#{9, 10, 11}, false))
+
+    ///
+    /// What a record claims to leave alone, as the predicate it means.
+    ///
+    def preservedBy(routine: Routines.Routine): Cube.Cube -> Bool =
+        if (routine#preserves == "cross; corners DLF, DBL, DRB")
+            preservedForInsertion
+        else
+            preservedForMiddle
+
+    ///
     /// The goal a record names, as the predicate it means.
     ///
     def goalOf(routine: Routines.Routine): Cube.Cube -> Bool =
         if (routine#goal == "the DFR corner is home and untwisted")
             c -> preservedForInsertion(c)
                 and Result.getWithDefault(false, Facts.cornerHome(c, 4))
+        else if (routine#goal == "the FR edge is home and unflipped")
+            c -> preservedForMiddle(c)
+                and Result.getWithDefault(false, Facts.edgeHome(c, 8))
         else
             _ -> false
 
     ///
     /// The case a record's setup reaches: its goal, one step away.
     ///
-    def caseOf(routine: Routines.Routine, twist: Int32): Cube.Cube -> Bool =
-        c ->
-            preservedForInsertion(c) and (match Facts.findCorner(c, 4) {
-                case Ok(p)  => p#slot == 0 and p#turn == twist
-                case Err(_) => false
-            })
-            and routine#name != ""
+    /// Rebuilt from the record's own name, so a record whose name this cannot
+    /// read has no case to check against and fails rather than passing.
+    ///
+    def caseOf(routine: Routines.Routine): Option[Cube.Cube -> Bool] =
+        match placeOf("corner-insert-right-twist-", routine#name) {
+            case Some((_, twist)) =>
+                Some(c -> preservedForInsertion(c) and (match Facts.findCorner(c, 4) {
+                    case Ok(p)  => p#slot == 0 and p#turn == twist
+                    case Err(_) => false
+                }))
+            case None => match middlePlace(routine#name) {
+                case Some((slot, flip)) =>
+                    Some(c -> preservedForMiddle(c) and (match Facts.findEdge(c, 8) {
+                        case Ok(p)  => p#slot == slot and p#turn == flip
+                        case Err(_) => false
+                    }))
+                case None => None
+            }
+        }
 
     ///
-    /// The twist a `corner-insert-right-twist-N` record answers.
+    /// The trailing number of a `<prefix>N` name, with no second part.
     ///
-    def twistOf(name: String): Option[Int32] =
-        if (String.startsWith(prefix = "corner-insert-right-twist-", name))
-            Int32.fromString(String.drop(String.length("corner-insert-right-twist-"), name))
+    def placeOf(prefix: String, name: String): Option[(Int32, Int32)] =
+        if (String.startsWith(prefix = prefix, name))
+            Int32.fromString(String.drop(String.length(prefix), name))
+                |> Option.map(n -> (0, n))
         else
             None
+
+    ///
+    /// The slot and flip of a `middle-insert-slot-S-flip-F` name.
+    ///
+    def middlePlace(name: String): Option[(Int32, Int32)] =
+        let head = "middle-insert-slot-";
+        if (not String.startsWith(prefix = head, name))
+            None
+        else
+            match String.splitOn(substr = "-flip-", String.drop(String.length(head), name)) {
+                case s :: f :: Nil =>
+                    match (Int32.fromString(s), Int32.fromString(f)) {
+                        case (Some(a), Some(b)) => Some((a, b))
+                        case _                  => None
+                    }
+                case _ => None
+            }
 
     ///
     /// Every record, through all six steps.
@@ -83,20 +134,20 @@ mod TestRoutines {
         }
 
     def check(solved: Cube.Cube, r: Routines.Routine): Unit \ Assert =
-        match twistOf(r#name) {
+        match caseOf(r) {
             case None =>
                 Assert.assertTrueWithMsg(false,
                     "'${r#name}' has no case this test knows how to rebuild, so it "
                         + "cannot be verified and must not be shipped unchecked")
-            case Some(twist) =>
+            case Some(theCase) =>
                 // 3. the setup reaches the case
                 match Cube.applyNotation(r#setup, solved) {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${r#name}' setup")
                     case Ok(caseCube) =>
-                        Assert.assertTrueWithMsg(caseOf(r, twist)(caseCube),
+                        Assert.assertTrueWithMsg(theCase(caseCube),
                             "'${r#name}': the recorded setup should reach its case");
                         // 1 and 2. derivation still gives this sequence
-                        match Derive.shortest(solved, caseOf(r, twist), alphabetOf(r#alphabet), 8) {
+                        match Derive.shortest(solved, theCase, alphabetOf(r#alphabet), 8) {
                             case None =>
                                 Assert.assertTrueWithMsg(false,
                                     "'${r#name}': the case is no longer reachable under "
@@ -122,7 +173,7 @@ mod TestRoutines {
             case Ok(done) =>
                 Assert.assertTrueWithMsg(goalOf(r)(done),
                     "'${r#name}': after the routine its goal should hold -- ${r#goal}");
-                Assert.assertTrueWithMsg(preservedForInsertion(done),
+                Assert.assertTrueWithMsg(preservedBy(r)(done),
                     "'${r#name}': it claims to preserve ${r#preserves}, and did not");
                 // 6. the routine undoes the setup exactly
                 match Cube.solved(3) |> Result.flatMap(s -> Cube.applyNotation(r#setup, s))
