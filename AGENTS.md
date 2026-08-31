@@ -419,6 +419,24 @@ prereleases until that lane passes and CI promotes them.
 honest signal for putting the suite back on every push is the first release
 somebody builds against.
 
+**A fast pass proves correctness, not solution quality.** Any change to view
+scheduling, phase-one depth, handover limits or pruning must be qualified by the
+ungated pattern stratum in CI before its quality claims or benchmark figures are
+accepted. Run the fast subset locally as usual — do not run the exhaustive suite
+by hand to satisfy this; the qualification belongs to CI.
+
+The rule is written from a failure. Replacing an adaptive probe floor with a
+view count made `default` answer `Black mamba` in eighteen moves against a
+documented sixteen. Everything the fast subset could see stayed green for hours,
+because the 27-pattern gate that measures answer length is in the slow tier by
+cost. `TestOutcome` now carries three patterns as a smoke check, which catches
+that particular shape locally, but it is a smoke check and not the gate: it
+rides an existing table build and cannot afford to be the collection.
+
+The same reasoning applies to any measurement. A benchmark taken before a
+scheduling change does not describe the solver after it, and carrying the old
+figures forward is how a number outlives the thing it measured.
+
 `metrics` reports against a working tree, so a run with uncommitted changes
 describes a state no commit contains — it says so itself. Fix the findings and
 re-run rather than reasoning about which ones the commit will keep.
