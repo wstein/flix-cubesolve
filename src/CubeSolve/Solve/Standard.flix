@@ -56,6 +56,61 @@ mod CubeSolve.Solve.Standard {
         ) yield Tables.Tables(p1, p2)
 
     ///
+    /// Why a search finished.
+    ///
+    pub enum Termination with Eq, ToString {
+        /// The cube was already in the solved state.
+        case SolvedImmediately
+        /// The search reached the probe cap (`probeMax`).
+        case ProbeCap
+        /// The search found an answer and satisfied the probe floor (`probeMin`).
+        case ProbeFloor
+        /// Every orientation and inversion view was searched to completion.
+        case ViewsExhausted
+    }
+
+    ///
+    /// Which axis of the cube phase one aimed at.
+    ///
+    pub enum ViewAxis with Eq, ToString {
+        case UD
+        case FB
+        case RL
+    }
+
+    ///
+    /// Statistics for one orientation/inversion search view.
+    ///
+    /// `accepted` is true if this view produced a candidate that became the
+    /// current best (including the initial candidate). `Outcome.improvements`
+    /// counts strict reductions after the initial candidate.
+    ///
+    pub type alias ViewStats = {
+        axis = ViewAxis,
+        inverted = Bool,
+        probesSpent = Int32,
+        foundMoves = Option[Int32],
+        accepted = Bool
+    }
+
+    ///
+    /// The complete, structured outcome of a 3x3 search, on success or failure.
+    ///
+    pub type alias Outcome = {
+        answer = Option[List[Move.Move]],
+        probesSpent = Int32,
+        probeFloor = Int32,
+        probeCap = Int32,
+        viewsTried = Int32,
+        viewsAvailable = Int32,
+        firstHtm = Option[Int32],
+        finalHtm = Option[Int32],
+        improvements = Int32,
+        termination = Termination,
+        viewStats = List[ViewStats]
+    }
+
+    ///
     /// A solution for `c`, using both phases' tables together.
     ///
     pub def solutionWith(
@@ -63,8 +118,19 @@ mod CubeSolve.Solve.Standard {
         budget: Budget,
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
+        let Budget(limits) = budget;
+        outcomeToResult(solveWithOutcome(t, budget, c), limits#probeMax, limits#maxDepth)
+
+    ///
+    /// A full structured search outcome for `c`, using both phases' tables together.
+    ///
+    pub def solveWithOutcome(
+        t: Tables,
+        budget: Budget,
+        c: Sized.Standard
+    ): Outcome =
         let Tables.Tables(p1, p2) = t;
-        solution(p1, p2, budget, c)
+        solutionOutcome(p1, p2, budget, c)
 
     ///
     /// What a solve is allowed to spend, and what it must achieve.
@@ -139,7 +205,32 @@ mod CubeSolve.Solve.Standard {
         budget: Budget,
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
-        acrossAxes(p1, p2, budget, c)
+        let Budget(limits) = budget;
+        outcomeToResult(solutionOutcome(p1, p2, budget, c), limits#probeMax, limits#maxDepth)
+
+    ///
+    /// A full structured search outcome for `c`, or why there is none within the budget.
+    ///
+    pub def solutionOutcome(
+        p1: Phase1.Tables,
+        p2: Domino.Tables,
+        budget: Budget,
+        c: Sized.Standard
+    ): Outcome =
+        acrossAxesOutcome(p1, p2, budget, c)
+
+    def outcomeToResult(
+        out: Outcome,
+        probeMax: Int32,
+        maxDepth: Int32
+    ): Result[String, List[Move.Move]] =
+        match out#answer {
+            case Some(ms) => Ok(ms)
+            case None     =>
+                Err("no solution within ${probeMax} probes and "
+                    + "${maxDepth} moves: raise the budget rather than "
+                    + "retrying this search unchanged")
+        }
 
     ///
     /// The three axes phase one can aim at.
@@ -173,7 +264,10 @@ mod CubeSolve.Solve.Standard {
             cube = Sized.Standard,
             views = List[(Rotation.Rotation, Bool)],
             spent = Int32,
-            best = Option[List[Move.Move]]
+            best = Option[List[Move.Move]],
+            firstHtm = Option[Int32],
+            improvements = Int32,
+            viewStats = List[ViewStats]
         })
     }
 
@@ -194,14 +288,22 @@ mod CubeSolve.Solve.Standard {
     /// A search over `c` that has not looked at anything yet.
     ///
     pub def start(t: Tables, budget: Budget, c: Sized.Standard): Search =
+        let isSol = Cube.isSolved(Sized.cubeOfStandard(c));
+        let vs = if (isSol) Nil else allViews();
         Search.Search({
             tables = t,
             budget = budget,
             cube = c,
-            views = axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil),
+            views = vs,
             spent = 0,
-            best = None
+            best = if (isSol) Some(Nil) else None,
+            firstHtm = if (isSol) Some(0) else None,
+            improvements = 0,
+            viewStats = Nil
         })
+
+    def allViews(): List[(Rotation.Rotation, Bool)] =
+        axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil)
 
     ///
     /// The shortest solution found so far, if any.
@@ -250,9 +352,12 @@ mod CubeSolve.Solve.Standard {
             tables = f#tables,
             budget = budget,
             cube = f#cube,
-            views = axes() |> List.flatMap(r -> (r, false) :: (r, true) :: Nil),
+            views = allViews(),
             spent = f#spent,
-            best = f#best
+            best = f#best,
+            firstHtm = f#firstHtm,
+            improvements = f#improvements,
+            viewStats = f#viewStats
         })
 
     ///
@@ -310,19 +415,22 @@ mod CubeSolve.Solve.Standard {
         let Search.Search(f) = s;
         match f#views {
             case Nil          => None
-            case view :: rest => Some(afterSearching(s, view, rest))
+            case view :: rest =>
+                let (found, used) = searchOneView(s, view);
+                Some(folded(s, view, rest, found, used))
         }
 
-    ///
-    /// `s` with one view searched and its result folded in.
-    ///
-    def afterSearching(
-        s: Search,
-        view: (Rotation.Rotation, Bool),
-        rest: List[(Rotation.Rotation, Bool)]
-    ): Search =
-        let (found, used) = searchOneView(s, view);
-        folded(s, rest, found, used)
+    def axisOf(r: Rotation.Rotation): ViewAxis =
+        if (r == Rotation.identity()) ViewAxis.UD
+        else if (r == Rotation.x()) ViewAxis.FB
+        else ViewAxis.RL
+
+    def isBetter(best: Option[List[Move.Move]], found: Option[List[Move.Move]]): Bool =
+        match (best, found) {
+            case (None, Some(_))       => true
+            case (Some(b), Some(cand)) => List.length(cand) < List.length(b)
+            case _                     => false
+        }
 
     ///
     /// One view searched, reporting what it found and what it spent.
@@ -343,18 +451,38 @@ mod CubeSolve.Solve.Standard {
     ///
     def folded(
         s: Search,
+        view: (Rotation.Rotation, Bool),
         rest: List[(Rotation.Rotation, Bool)],
         found: Option[List[Move.Move]],
         used: Int32
     ): Search =
         let Search.Search(f) = s;
+        let (r, inverted) = view;
+        let improved = isBetter(f#best, found);
+        let stat = {
+            axis = axisOf(r),
+            inverted = inverted,
+            probesSpent = used,
+            foundMoves = Option.map(List.length, found),
+            accepted = improved
+        };
+        let newFirst = match f#firstHtm {
+            case Some(h) => Some(h)
+            case None    => Option.map(List.length, found)
+        };
+        let newImpr =
+            if (improved and not Option.isEmpty(f#best)) f#improvements + 1
+            else f#improvements;
         Search.Search({
             tables = f#tables,
             budget = f#budget,
             cube = f#cube,
             views = rest,
             spent = f#spent + used,
-            best = keepShorterOf(f#best, found)
+            best = keepShorterOf(f#best, found),
+            firstHtm = newFirst,
+            improvements = newImpr,
+            viewStats = stat :: f#viewStats
         })
 
     ///
@@ -388,21 +516,61 @@ mod CubeSolve.Solve.Standard {
     /// six times over, so this costs no more probes than a single search and
     /// can be compared with the recorded baseline directly.
     ///
-    def acrossAxes(
+    def acrossAxesOutcome(
         p1: Phase1.Tables,
         p2: Domino.Tables,
         budget: Budget,
         c: Sized.Standard
-    ): Result[String, List[Move.Move]] =
+    ): Outcome =
         let Budget(limits) = budget;
+        if (Cube.isSolved(Sized.cubeOfStandard(c)))
+            solvedOutcome(limits)
+        else
+            searchOutcome(p1, p2, budget, limits, c)
+
+    def solvedOutcome(
+        limits: { probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 }
+    ): Outcome = {
+        answer = Some(Nil),
+        probesSpent = 0,
+        probeFloor = limits#probeMin,
+        probeCap = limits#probeMax,
+        viewsTried = 0,
+        viewsAvailable = List.length(allViews()),
+        firstHtm = Some(0),
+        finalHtm = Some(0),
+        improvements = 0,
+        termination = Termination.SolvedImmediately,
+        viewStats = Nil
+    }
+
+    def searchOutcome(
+        p1: Phase1.Tables,
+        p2: Domino.Tables,
+        budget: Budget,
+        limits: { probeMin = Int32, probeMax = Int32, maxDepth = Int32, handovers = Int32 },
+        c: Sized.Standard
+    ): Outcome = {
         let settled = runToSettled(start(Tables.Tables(p1, p2), budget, c));
-        match bestSoFar(settled) {
-            case Some(best) => Ok(best)
-            case None =>
-                Err("no solution within ${limits#probeMax} probes and "
-                    + "${limits#maxDepth} moves: raise the budget rather than "
-                    + "retrying this search unchanged")
+        let Search.Search(f) = settled;
+        let term =
+            if (f#spent >= limits#probeMax) Termination.ProbeCap
+            else if (bestIsGoodEnough(f#best, f#spent, limits)) Termination.ProbeFloor
+            else Termination.ViewsExhausted;
+        {
+            answer = f#best,
+            probesSpent = f#spent,
+            probeFloor = limits#probeMin,
+            probeCap = limits#probeMax,
+            viewsTried = List.length(f#viewStats),
+            viewsAvailable = List.length(allViews()),
+            firstHtm = f#firstHtm,
+            finalHtm = Option.map(List.length, f#best),
+            improvements = f#improvements,
+            termination = term,
+            viewStats = List.reverse(f#viewStats)
         }
+    }
 
     ///
     /// Work through the views until the budget says stop.

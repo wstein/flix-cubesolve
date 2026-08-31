@@ -4,7 +4,7 @@
 /// `CubeSolve.Solve.Standard` counts probes rather than seconds, because a probe
 /// is the same on every machine and a second is not. A larger budget buys a
 /// shorter answer, and buys it with sharply diminishing returns -- the library
-/// records 20.9 moves for `fast` against 20.4 for `default`, for roughly four
+/// records 20.9 moves for `fast` against 20.8 for `default`, for roughly four
 /// times the probes.
 ///
 /// `deep` is this package's own, built from `Standard.budget` rather than taken
