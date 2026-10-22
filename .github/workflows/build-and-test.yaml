@@ -115,7 +115,7 @@ jobs:
             # loudly instead of failing on a download that cannot succeed. The
             # local package overlay job still builds the example against this
             # checkout, so the code itself is not untested meanwhile.
-            pinned="$(grep -m1 -E '^"github:wstein/flix-cubesolve"' "${dir}flix.toml" | sed -nE 's/.*version = "([^"]+)".*/\1/p')"
+            pinned="$(grep -m1 -E '^"github:wstein/flix-cubesolve"' "${dir}flix.toml" | sed -nE 's/.*version = "([^"]+)".*/\1/p' || true)"
             if [ -n "${pinned}" ] && ! gh release view "v${pinned}" -R "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
               echo "::warning::${name} pins cubesolve ${pinned}, which is not released yet; skipping the consumer build"
               skipped=$((skipped + 1))
