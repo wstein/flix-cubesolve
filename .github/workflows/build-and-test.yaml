@@ -106,6 +106,7 @@ jobs:
         run: |
           set -euo pipefail
           found=0
+          skipped=0
           for dir in examples/*/; do
             name="$(basename "${dir}")"
             [ -f "${dir}flix.toml" ] || continue
@@ -114,9 +115,10 @@ jobs:
             # loudly instead of failing on a download that cannot succeed. The
             # local package overlay job still builds the example against this
             # checkout, so the code itself is not untested meanwhile.
-            pinned="$(grep -m1 'github:wstein/flix-cubesolve' "${dir}flix.toml" | sed -E 's/.*version = "([^"]+)".*/\1/')"
+            pinned="$(grep -m1 -E '^"github:wstein/flix-cubesolve"' "${dir}flix.toml" | sed -nE 's/.*version = "([^"]+)".*/\1/p')"
             if [ -n "${pinned}" ] && ! gh release view "v${pinned}" -R "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
               echo "::warning::${name} pins cubesolve ${pinned}, which is not released yet; skipping the consumer build"
+              skipped=$((skipped + 1))
               continue
             fi
             found=$((found + 1))
@@ -145,7 +147,7 @@ jobs:
             fi
             echo "::endgroup::"
           done
-          if [ "${found}" -eq 0 ]; then
+          if [ "${found}" -eq 0 ] && [ "${skipped}" -eq 0 ]; then
             echo "::error::no example package was found under examples/"
             exit 1
           fi
