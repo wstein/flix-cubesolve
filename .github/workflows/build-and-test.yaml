@@ -96,7 +96,18 @@ jobs:
             [ -f "${dir}flix.toml" ] || continue
             found=$((found + 1))
             echo "::group::${name}"
-            if ! ./flixw examples test "${name}" 2>&1 | tee /tmp/example.log; then
+            # A failed dependency download is transient and is retried; a real
+            # test failure fails the same way every time and costs two reruns.
+            ok=0
+            for attempt in 1 2 3; do
+              if ./flixw examples test "${name}" 2>&1 | tee /tmp/example.log; then
+                ok=1
+                break
+              fi
+              echo "::warning::${name} failed (attempt ${attempt}/3)"
+              sleep $((attempt * 15))
+            done
+            if [ "${ok}" -ne 1 ]; then
               echo "::error::${name} failed"
               exit 1
             fi
@@ -129,6 +140,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+
+      # Dependency resolution downloads release assets from GitHub, and a
+      # transient failure there is reported as "Version ... does not exist".
+      # Resolve once with retries so the script below finds them in lib/.
+      - name: Resolve dependencies
+        run: |
+          for attempt in 1 2 3; do
+            ./flixw check && exit 0
+            echo "::warning::dependency resolution failed (attempt ${attempt}/3)"
+            sleep $((attempt * 15))
+          done
+          exit 1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Qualify local overlay
         run: ./scripts/qualify-local-overlay.sh --characterize
@@ -171,12 +196,15 @@ jobs:
           # separate logic, so each one is exercised on the platform it serves.
           - os: ubuntu-latest
             flixw: ./flixw
+            bashw: ./flixw
             shell: bash
           - os: macos-latest
             flixw: ./flixw
+            bashw: ./flixw
             shell: bash
           - os: windows-latest
             flixw: .\flixw.cmd
+            bashw: ./flixw.cmd
             shell: cmd
 
     defaults:
@@ -224,6 +252,19 @@ jobs:
       # failure here means the rest of the run would prove nothing.
       - name: Validate the wrapper
         run: ${{ matrix.flixw }} validate
+
+      - name: Resolve dependencies
+        shell: bash
+        env:
+          FLIXW: ${{ matrix.bashw }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3; do
+            "$FLIXW" check && exit 0
+            echo "::warning::dependency resolution failed (attempt ${attempt}/3)"
+            sleep $((attempt * 15))
+          done
+          exit 1
 
       - name: Check
         run: ${{ matrix.flixw }} check
