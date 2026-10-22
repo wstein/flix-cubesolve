@@ -102,12 +102,23 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           found=0
           for dir in examples/*/; do
             name="$(basename "${dir}")"
             [ -f "${dir}flix.toml" ] || continue
+            # An example may be written ahead of the release it pins. Until that
+            # tag exists there is no published package to consume, so say so
+            # loudly instead of failing on a download that cannot succeed. The
+            # local package overlay job still builds the example against this
+            # checkout, so the code itself is not untested meanwhile.
+            pinned="$(grep -m1 'github:wstein/flix-cubesolve' "${dir}flix.toml" | sed -E 's/.*version = "([^"]+)".*/\1/')"
+            if [ -n "${pinned}" ] && ! gh release view "v${pinned}" -R "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+              echo "::warning::${name} pins cubesolve ${pinned}, which is not released yet; skipping the consumer build"
+              continue
+            fi
             found=$((found + 1))
             echo "::group::${name}"
             # A failed dependency download is transient and is retried; a real
