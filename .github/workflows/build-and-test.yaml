@@ -77,6 +77,20 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # Release assets are fetched from GitHub on every resolution, and on some
+      # runners that fetch fails with "Version ... does not exist" although the
+      # release is there. The downloaded packages are identical on every OS, so
+      # one cache entry serves all of them and a runner that cannot download
+      # still gets them. Keyed on the manifests: a bumped dependency misses.
+      - name: Restore downloaded dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lib
+            examples/*/lib
+          key: flix-deps-${{ hashFiles('flix.toml', 'examples/*/flix.toml') }}
+          enableCrossOsArchive: true
+
       # Examples are found on disk rather than asked for, so a wrapper verb
       # that stops listing them cannot quietly reduce this job to nothing.
       #
@@ -140,6 +154,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+
+      # Release assets are fetched from GitHub on every resolution, and on some
+      # runners that fetch fails with "Version ... does not exist" although the
+      # release is there. The downloaded packages are identical on every OS, so
+      # one cache entry serves all of them and a runner that cannot download
+      # still gets them. Keyed on the manifests: a bumped dependency misses.
+      - name: Restore downloaded dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lib
+            examples/*/lib
+          key: flix-deps-${{ hashFiles('flix.toml', 'examples/*/flix.toml') }}
+          enableCrossOsArchive: true
 
       # Dependency resolution downloads release assets from GitHub, and a
       # transient failure there is reported as "Version ... does not exist".
@@ -252,6 +280,20 @@ jobs:
       # failure here means the rest of the run would prove nothing.
       - name: Validate the wrapper
         run: ${{ matrix.flixw }} validate
+
+      # Release assets are fetched from GitHub on every resolution, and on some
+      # runners that fetch fails with "Version ... does not exist" although the
+      # release is there. The downloaded packages are identical on every OS, so
+      # one cache entry serves all of them and a runner that cannot download
+      # still gets them. Keyed on the manifests: a bumped dependency misses.
+      - name: Restore downloaded dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lib
+            examples/*/lib
+          key: flix-deps-${{ hashFiles('flix.toml', 'examples/*/flix.toml') }}
+          enableCrossOsArchive: true
 
       - name: Resolve dependencies
         shell: bash
