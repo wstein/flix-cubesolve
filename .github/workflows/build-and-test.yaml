@@ -86,6 +86,8 @@ jobs:
       # tests at all. A gate nobody knows is disabled is worse than no gate.
       - name: Test every example
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           found=0
@@ -225,6 +227,9 @@ jobs:
 
       - name: Check
         run: ${{ matrix.flixw }} check
+        # Unauthenticated dependency lookups share the runner's IP rate limit.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       # Nightly rather than per-push, per the note at the top of this file. The
       # step is skipped rather than removed so that a green pull request says
