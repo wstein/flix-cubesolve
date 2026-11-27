@@ -20,7 +20,7 @@
 /// compresses equivalent states, it does not change a pruning value. What
 /// weakens a heuristic is a missing table, not an uncompressed one.
 ///
-mod CubeSolve.Solve.Phase1 {
+pub mod CubeSolve.Solve.Phase1 {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -79,8 +79,11 @@ mod CubeSolve.Solve.Phase1 {
     /// The three coordinates packed into one state.
     ///
     pub def pack(twist: Int32, flip: Int32, slice: Int32): Int64 =
-        (Int32.toInt64(twist) * Int32.toInt64(Standard.flipCount())
-            + Int32.toInt64(flip)) * Int32.toInt64(Standard.sliceCount())
+        (
+            Int32.toInt64(twist) * Int32.toInt64(Standard.flipCount())
+                + Int32.toInt64(flip)
+        )
+            * Int32.toInt64(Standard.sliceCount())
             + Int32.toInt64(slice)
 
     ///
@@ -185,8 +188,11 @@ mod CubeSolve.Solve.Phase1 {
         p: Standard.Tables,
         c: Sized.Standard
     ): Result[String, List[Move.Move]] =
-        stateOf(c) |> Result.flatMap(s ->
-            IdaStar.search(phaseOf(p), s, maxDepth(), IdaStar.unbounded())
-                |> Result.map(f -> IdaStar.moves(f) |> List.map(Standard.moveOfIndex)))
+        stateOf(c)
+            |> Result.flatMap(
+                s ->
+                    IdaStar.search(phaseOf(p), s, maxDepth(), IdaStar.unbounded())
+                        |> Result.map(f -> IdaStar.moves(f) |> List.map(Standard.moveOfIndex))
+            )
 
 }

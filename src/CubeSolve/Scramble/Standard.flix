@@ -26,7 +26,7 @@
 /// `atMost` is therefore the useful constructor and `atLeast` the honest but
 /// nearly useless one.
 ///
-mod CubeSolve.Scramble.Standard {
+pub mod CubeSolve.Scramble.Standard {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -43,9 +43,9 @@ mod CubeSolve.Scramble.Standard {
     ///
     pub enum Scramble {
         case Scramble({
-            moves = List[Move.Move],
-            state = Sized.Standard,
-            atMost = Int32,
+            moves   = List[Move.Move],
+            state   = Sized.Standard,
+            atMost  = Int32,
             atLeast = Int32
         })
     }
@@ -102,15 +102,19 @@ mod CubeSolve.Scramble.Standard {
     pub def lowerBoundOf(t: Tables, c: Sized.Standard): Int32 =
         let Tables.Tables(p1, _) = t;
         let axes = Rotation.identity() :: Rotation.x() :: Rotation.z() :: Nil;
-        axes |> List.foldLeft((best, r) -> {
-            let seen = Cube.conjugate(r, Sized.cubeOfStandard(c));
-            match seen
-                |> Result.flatMap(Sized.standardOf)
-                |> Result.flatMap(Phase1.stateOf) {
-                case Ok(s)  => Int32.max(best, Phase1.heuristicAt(p1, s))
-                case Err(_) => best
-            }
-        }, 0)
+        axes
+            |> List.foldLeft(
+                (best, r) -> {
+                    let seen = Cube.conjugate(r, Sized.cubeOfStandard(c));
+                    match seen
+                        |> Result.flatMap(Sized.standardOf)
+                        |> Result.flatMap(Phase1.stateOf) {
+                        case Ok(s)  => Int32.max(best, Phase1.heuristicAt(p1, s))
+                        case Err(_) => best
+                    }
+                },
+                0
+            )
 
     // ---------- the constructors ----------
 
@@ -122,10 +126,13 @@ mod CubeSolve.Scramble.Standard {
     /// bounds are reported rather than left for the caller to recompute.
     ///
     pub def uniform(t: Tables, budget: Budget, seed: Int64): Result[String, (Scramble, Int64)] =
-        Random.sampleDeterministic(seed, 3) |> Result.flatMap(match (c, next) ->
-            Sized.standardOf(c)
-                |> Result.flatMap(cube -> scrambleOf(t, budget, cube))
-                |> Result.map(s -> (s, next)))
+        Random.sampleDeterministic(seed, 3)
+            |> Result.flatMap(
+                match (c, next) ->
+                    Sized.standardOf(c)
+                        |> Result.flatMap(cube -> scrambleOf(t, budget, cube))
+                        |> Result.map(s -> (s, next))
+            )
 
     ///
     /// A scramble this engine can solve in `d` moves or fewer, and the next seed.
@@ -143,15 +150,19 @@ mod CubeSolve.Scramble.Standard {
         d: Int32,
         seed: Int64
     ): Result[String, (Scramble, Int64)] =
-        rejectUntil(t, {
-            budget = budget,
-            accepts = s -> atMostMoves(s) <= d,
-            whenExhausted =
-                "no state was solved in ${d} moves or fewer within ${attempts()} "
+        rejectUntil(
+            t,
+            {
+                budget  = budget,
+                accepts = s -> atMostMoves(s) <= d,
+                whenExhausted = "no state was solved in ${d} moves or fewer within ${attempts()} "
                     + "draws: this engine averages about 20.8, so a limit near or "
                     + "below that rejects nearly every draw -- raise the limit or "
                     + "the budget"
-        }, seed, attempts())
+            },
+            seed,
+            attempts()
+        )
 
     ///
     /// A scramble certified to need at least `d` moves, and the next seed.
@@ -161,18 +172,24 @@ mod CubeSolve.Scramble.Standard {
     ///
     pub def atLeast(t: Tables, d: Int32, seed: Int64): Result[String, (Scramble, Int64)] =
         if (d > lowerBoundCeiling())
-            Err("cannot certify that a 3x3x3 needs at least ${d} moves: the "
-                + "phase-one pruning tables max at ${lowerBoundCeiling()}, and a "
-                + "pruning value cannot exceed its own table's maximum, so "
-                + "${lowerBoundCeiling()} is the most this engine can prove")
+            Err(
+                "cannot certify that a 3x3x3 needs at least ${d} moves: the "
+                    + "phase-one pruning tables max at ${lowerBoundCeiling()}, and a "
+                    + "pruning value cannot exceed its own table's maximum, so "
+                    + "${lowerBoundCeiling()} is the most this engine can prove"
+            )
         else
-            rejectUntil(t, {
-                budget = boundsOnly(),
-                accepts = s -> atLeastMoves(s) >= d,
-                whenExhausted =
-                    "no state with a certified lower bound of ${d} was found "
+            rejectUntil(
+                t,
+                {
+                    budget  = boundsOnly(),
+                    accepts = s -> atLeastMoves(s) >= d,
+                    whenExhausted = "no state with a certified lower bound of ${d} was found "
                         + "within ${attempts()} draws"
-            }, seed, attempts())
+                },
+                seed,
+                attempts()
+            )
 
     ///
     /// How many draws a rejecting constructor makes before giving up.
@@ -190,16 +207,21 @@ mod CubeSolve.Scramble.Standard {
     /// the solution at all, so it should not pay for a good one.
     ///
     def boundsOnly(): Budget =
-        CubeSolve.Solve.Standard.budget(
-            { minViews = 1, probeFloor = 0, probeMax = 200, maxDepth = 25, handovers = 300,
-                            phase1Depth = 12 })
+        CubeSolve.Solve.Standard.budget({
+            minViews    = 1,
+            probeFloor  = 0,
+            probeMax    = 200,
+            maxDepth    = 25,
+            handovers   = 300,
+            phase1Depth = 12
+        })
 
     ///
     /// Draw until a scramble satisfies `wanted`, or give up with `whenExhausted`.
     ///
     def rejectUntil(
         t: Tables,
-        want: { budget = Budget, accepts = Scramble -> Bool, whenExhausted = String },
+        want: {budget = Budget, accepts = Scramble -> Bool, whenExhausted = String},
         seed: Int64,
         left: Int32
     ): Result[String, (Scramble, Int64)] =
@@ -223,11 +245,14 @@ mod CubeSolve.Scramble.Standard {
     ///
     def scrambleOf(t: Tables, budget: Budget, cube: Sized.Standard): Result[String, Scramble] =
         CubeSolve.Solve.Standard.solutionWith(t, budget, cube)
-            |> Result.map(solution -> Scramble({
-                moves = Move.inverseOf(solution),
-                state = cube,
-                atMost = List.length(solution),
-                atLeast = lowerBoundOf(t, cube)
-            }))
+            |> Result.map(
+                solution ->
+                    Scramble({
+                        moves   = Move.inverseOf(solution),
+                        state   = cube,
+                        atMost  = List.length(solution),
+                        atLeast = lowerBoundOf(t, cube)
+                    })
+            )
 
 }

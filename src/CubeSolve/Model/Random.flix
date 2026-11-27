@@ -21,15 +21,14 @@
 /// of a solution to a sampled state, needs a solver, and lives in
 /// `CubeSolve.Scramble`.
 ///
-mod CubeSolve.Model.Random {
+pub mod CubeSolve.Model.Random {
 
     import java.security.SecureRandom
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
     use CubeSolve.Model.Validate
-    use Orbit64.Coord.Coord
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
+    use CubeSolve.Model.Pieces.Coord
 
     ///
     /// The largest `Int64`, and so the top of the range a raw draw covers.
@@ -44,7 +43,7 @@ mod CubeSolve.Model.Random {
     /// the sign bit smear would ruin the avalanche.
     ///
     pub def nextInt64(seed: Int64): (Int64, Int64) =
-        let advanced = seed + -7046029254386353131i64;   // the golden-ratio odd constant
+        let advanced = seed + -7046029254386353131i64; // the golden-ratio odd constant
         let a = mix(advanced, 30, -4658895280553007687i64);
         let b = mix(a, 27, -7723592293110705685i64);
         (xorShift(b, 31), advanced)
@@ -88,7 +87,7 @@ mod CubeSolve.Model.Random {
         let overhang = Int64.modulo(Int64.modulo(maxInt64(), b) + 1i64, b);
         let highest = maxInt64() - overhang;
         let (raw, next) = nextInt64(seed);
-        let v = Int64.bitwiseAnd(raw, maxInt64());   // drop the sign bit
+        let v = Int64.bitwiseAnd(raw, maxInt64()); // drop the sign bit
         if (v <= highest)
             (Int64.modulo(v, b) |> Int64.tryToInt32 |> Option.getWithDefault(0), next)
         else
@@ -103,7 +102,8 @@ mod CubeSolve.Model.Random {
     pub def permutation(k: Int32, seed: Int64): (Vector[Int32], Int64) = region rc {
         let slots = Array.init(rc, i -> i, k);
         def loop(i, s) =
-            if (i <= 0) s
+            if (i <= 0)
+                s
             else {
                 let (j, next) = nextBelow(i + 1, s);
                 let held = Array.get(i, slots);
@@ -125,7 +125,8 @@ mod CubeSolve.Model.Random {
     ///
     pub def orientation(k: Int32, modulus: Int32, seed: Int64): (Vector[Int32], Int64) =
         def loop(i, s, acc) =
-            if (i <= 0) (List.reverse(acc), s)
+            if (i <= 0)
+                (List.reverse(acc), s)
             else {
                 let (v, next) = nextBelow(modulus, s);
                 loop(i - 1, next, v :: acc)
@@ -146,9 +147,11 @@ mod CubeSolve.Model.Random {
     ///
     pub def sampleDeterministic(seed: Int64, n: Int32): Result[String, (Cube, Int64)] =
         if (not CubeSolve.supports(n))
-            Err("cannot sample a ${n}x${n}x${n}: this engine derives reachability "
-                + "invariants for the 2x2x2 and 3x3x3 only, and a sample it cannot "
-                + "certify is worse than none")
+            Err(
+                "cannot sample a ${n}x${n}x${n}: this engine derives reachability "
+                    + "invariants for the 2x2x2 and 3x3x3 only, and a sample it cannot "
+                    + "certify is worse than none"
+            )
         else
             Ok(rejectUntilReachable(n, seed))
 
@@ -182,7 +185,7 @@ mod CubeSolve.Model.Random {
     def drawCorners(seed: Int64): (Coord, Int64) =
         let (cp, afterPerm) = permutation(8, seed);
         let (co, afterTwist) = orientation(8, 3, afterPerm);
-        (CornerCoord(cp, co), afterTwist)
+        (Coord.CornerCoord(cp, co), afterTwist)
 
     ///
     /// One unconstrained draw of the midge orbit.
@@ -190,7 +193,7 @@ mod CubeSolve.Model.Random {
     def drawMidges(seed: Int64): (Coord, Int64) =
         let (ep, afterPerm) = permutation(12, seed);
         let (eo, afterFlip) = orientation(12, 2, afterPerm);
-        (MidgeCoord(ep, eo), afterFlip)
+        (Coord.MidgeCoord(ep, eo), afterFlip)
 
     ///
     /// A uniform state of an `n x n x n`, seeded from the platform's entropy.

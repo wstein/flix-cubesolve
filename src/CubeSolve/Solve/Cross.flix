@@ -11,7 +11,7 @@
 /// bottom layer is ignored, which is the point: the answer is a step, not a
 /// solution, and `CubeSolve.Solve.Standard` remains the thing that solves cubes.
 ///
-mod CubeSolve.Solve.Cross {
+pub mod CubeSolve.Solve.Cross {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -67,8 +67,11 @@ mod CubeSolve.Solve.Cross {
         maxNodes: Int64
     ): Result[String, List[Move.Move]] =
         IdaStar.search(phase(t), start, diameter(), maxNodes)
-            |> Result.map(f -> IdaStar.moves(f)
-                |> List.filterMap(i -> Move.ofIndex(i)))
+            |> Result.map(
+                f ->
+                    IdaStar.moves(f)
+                        |> List.filterMap(i -> Move.ofIndex(i))
+            )
 
     ///
     /// The phase the search runs.
@@ -82,6 +85,7 @@ mod CubeSolve.Solve.Cross {
             Cross.successor,
             s -> Table.get(s, t),
             s -> s == Cross.solvedIndex(),
-            Move.htmPruningAllows)
+            Move.htmPruningAllows
+        )
 
 }

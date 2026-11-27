@@ -26,7 +26,7 @@
 /// This is not `CubeSolve.Patterns`. That module holds externally published
 /// states and carries their provenance; these are derived here and carry ours.
 ///
-mod CubeSolve.Method.Beginner.Routines {
+pub mod CubeSolve.Method.Beginner.Routines {
 
     use CubeSolve.Method.Beginner.Spec.Situation
 
@@ -40,11 +40,11 @@ mod CubeSolve.Method.Beginner.Routines {
     ///   replacement cannot arrive unnoticed.
     ///
     pub type alias Routine = {
-        name = String,
+        name      = String,
         situation = Situation,
-        setup = String,
-        sequence = String,
-        length = Int32
+        setup     = String,
+        sequence  = String,
+        length    = Int32
     }
 
     ///
@@ -88,73 +88,97 @@ mod CubeSolve.Method.Beginner.Routines {
     /// Waiting at `UR` or `UF`, the two top slots nearest the one it belongs in.
     ///
     pub def cornerFromFrontSlots(): List[Routine] =
-        { name = "corner-insertion-slot-0-twist-0",
-          situation = Situation.CornerInsertion(0, 0),
-          setup = "R2 U R2 U' R2",
-          sequence = "R2 U R2 U' R2",
-          length = 5 } ::
-        { name = "corner-insertion-slot-0-twist-1",
-          situation = Situation.CornerInsertion(0, 1),
-          setup = "R U' R'",
-          sequence = "R U R'",
-          length = 3 } ::
-        { name = "corner-insertion-slot-0-twist-2",
-          situation = Situation.CornerInsertion(0, 2),
-          setup = "R U R' U'",
-          sequence = "U R U' R'",
-          length = 4 } ::
-        { name = "corner-insertion-slot-1-twist-0",
-          situation = Situation.CornerInsertion(1, 0),
-          setup = "R2 U R2 U' R2 U",
-          sequence = "U' R2 U R2 U' R2",
-          length = 6 } ::
-        { name = "corner-insertion-slot-1-twist-1",
-          situation = Situation.CornerInsertion(1, 1),
-          setup = "R U' R' U",
-          sequence = "U' R U R'",
-          length = 4 } ::
-        { name = "corner-insertion-slot-1-twist-2",
-          situation = Situation.CornerInsertion(1, 2),
-          setup = "R U R'",
-          sequence = "R U' R'",
-          length = 3 } ::
-        Nil
+        {
+            name      = "corner-insertion-slot-0-twist-0",
+            situation = Situation.CornerInsertion(0, 0),
+            setup     = "R2 U R2 U' R2",
+            sequence  = "R2 U R2 U' R2",
+            length    = 5
+        }
+            :: {
+                name      = "corner-insertion-slot-0-twist-1",
+                situation = Situation.CornerInsertion(0, 1),
+                setup     = "R U' R'",
+                sequence  = "R U R'",
+                length    = 3
+            }
+            :: {
+                name      = "corner-insertion-slot-0-twist-2",
+                situation = Situation.CornerInsertion(0, 2),
+                setup     = "R U R' U'",
+                sequence  = "U R U' R'",
+                length    = 4
+            }
+            :: {
+                name      = "corner-insertion-slot-1-twist-0",
+                situation = Situation.CornerInsertion(1, 0),
+                setup     = "R2 U R2 U' R2 U",
+                sequence  = "U' R2 U R2 U' R2",
+                length    = 6
+            }
+            :: {
+                name      = "corner-insertion-slot-1-twist-1",
+                situation = Situation.CornerInsertion(1, 1),
+                setup     = "R U' R' U",
+                sequence  = "U' R U R'",
+                length    = 4
+            }
+            :: {
+                name      = "corner-insertion-slot-1-twist-2",
+                situation = Situation.CornerInsertion(1, 2),
+                setup     = "R U R'",
+                sequence  = "R U' R'",
+                length    = 3
+            }
+            :: Nil
 
     ///
     /// Waiting at `UL` or `UB`, which take a further turn to bring round.
     ///
     pub def cornerFromBackSlots(): List[Routine] =
-        { name = "corner-insertion-slot-2-twist-0",
-          situation = Situation.CornerInsertion(2, 0),
-          setup = "R2 U R2 U' R2 U2",
-          sequence = "U2 R2 U R2 U' R2",
-          length = 6 } ::
-        { name = "corner-insertion-slot-2-twist-1",
-          situation = Situation.CornerInsertion(2, 1),
-          setup = "R U' R' U2",
-          sequence = "U2 R U R'",
-          length = 4 } ::
-        { name = "corner-insertion-slot-2-twist-2",
-          situation = Situation.CornerInsertion(2, 2),
-          setup = "R U2 R'",
-          sequence = "R U2 R'",
-          length = 3 } ::
-        { name = "corner-insertion-slot-3-twist-0",
-          situation = Situation.CornerInsertion(3, 0),
-          setup = "R2 U R2 U' R2 U'",
-          sequence = "U R2 U R2 U' R2",
-          length = 6 } ::
-        { name = "corner-insertion-slot-3-twist-1",
-          situation = Situation.CornerInsertion(3, 1),
-          setup = "R U' R' U'",
-          sequence = "U R U R'",
-          length = 4 } ::
-        { name = "corner-insertion-slot-3-twist-2",
-          situation = Situation.CornerInsertion(3, 2),
-          setup = "R U R' U2",
-          sequence = "U2 R U' R'",
-          length = 4 } ::
-        Nil
+        {
+            name      = "corner-insertion-slot-2-twist-0",
+            situation = Situation.CornerInsertion(2, 0),
+            setup     = "R2 U R2 U' R2 U2",
+            sequence  = "U2 R2 U R2 U' R2",
+            length    = 6
+        }
+            :: {
+                name      = "corner-insertion-slot-2-twist-1",
+                situation = Situation.CornerInsertion(2, 1),
+                setup     = "R U' R' U2",
+                sequence  = "U2 R U R'",
+                length    = 4
+            }
+            :: {
+                name      = "corner-insertion-slot-2-twist-2",
+                situation = Situation.CornerInsertion(2, 2),
+                setup     = "R U2 R'",
+                sequence  = "R U2 R'",
+                length    = 3
+            }
+            :: {
+                name      = "corner-insertion-slot-3-twist-0",
+                situation = Situation.CornerInsertion(3, 0),
+                setup     = "R2 U R2 U' R2 U'",
+                sequence  = "U R2 U R2 U' R2",
+                length    = 6
+            }
+            :: {
+                name      = "corner-insertion-slot-3-twist-1",
+                situation = Situation.CornerInsertion(3, 1),
+                setup     = "R U' R' U'",
+                sequence  = "U R U R'",
+                length    = 4
+            }
+            :: {
+                name      = "corner-insertion-slot-3-twist-2",
+                situation = Situation.CornerInsertion(3, 2),
+                setup     = "R U R' U2",
+                sequence  = "U2 R U' R'",
+                length    = 4
+            }
+            :: Nil
 
     ///
     /// The corner already in its slot and the wrong way round.
@@ -163,17 +187,21 @@ mod CubeSolve.Method.Beginner.Routines {
     /// than the twelve above and why they are a case rather than an exception.
     ///
     pub def cornerInPlace(): List[Routine] =
-        { name = "corner-insertion-slot-4-twist-1",
-          situation = Situation.CornerInsertion(4, 1),
-          setup = "R U R' U' R U R'",
-          sequence = "R U' R' U R U' R'",
-          length = 7 } ::
-        { name = "corner-insertion-slot-4-twist-2",
-          situation = Situation.CornerInsertion(4, 2),
-          setup = "R U' R' U R U' R'",
-          sequence = "R U R' U' R U R'",
-          length = 7 } ::
-        Nil
+        {
+            name      = "corner-insertion-slot-4-twist-1",
+            situation = Situation.CornerInsertion(4, 1),
+            setup     = "R U R' U' R U R'",
+            sequence  = "R U' R' U R U' R'",
+            length    = 7
+        }
+            :: {
+                name      = "corner-insertion-slot-4-twist-2",
+                situation = Situation.CornerInsertion(4, 2),
+                setup     = "R U' R' U R U' R'",
+                sequence  = "R U R' U' R U R'",
+                length    = 7
+            }
+            :: Nil
 
     ///
     /// Putting a middle edge in from the top, by where it sits and which way
@@ -184,31 +212,63 @@ mod CubeSolve.Method.Beginner.Routines {
     /// needs no separate aligning step.
     ///
     pub def middleInsertions(): List[Routine] =
-        { name = "middle-insert-slot-0-flip-0",
-          situation = Situation.MiddleInsert(0, 0),
-          setup = "R U R' U' F' U' F U", sequence = "U' F' U F U R U' R'", length = 8 } ::
-        { name = "middle-insert-slot-0-flip-1",
-          situation = Situation.MiddleInsert(0, 1),
-          setup = "F' U F U2 R U2 R'", sequence = "R U2 R' U2 F' U' F", length = 7 } ::
-        { name = "middle-insert-slot-1-flip-0",
-          situation = Situation.MiddleInsert(1, 0),
-          setup = "R U' R' U2 F' U2 F", sequence = "F' U2 F U2 R U R'", length = 7 } ::
-        { name = "middle-insert-slot-1-flip-1",
-          situation = Situation.MiddleInsert(1, 1),
-          setup = "R F' U' F U F R' F'", sequence = "F R F' U' F' U F R'", length = 8 } ::
-        { name = "middle-insert-slot-2-flip-0",
-          situation = Situation.MiddleInsert(2, 0),
-          setup = "R U R' U' F' U' F U'", sequence = "U F' U F U R U' R'", length = 8 } ::
-        { name = "middle-insert-slot-2-flip-1",
-          situation = Situation.MiddleInsert(2, 1),
-          setup = "R' F R F' R U R'", sequence = "R U' R' F R' F' R", length = 7 } ::
-        { name = "middle-insert-slot-3-flip-0",
-          situation = Situation.MiddleInsert(3, 0),
-          setup = "R U R' U' F' U' F", sequence = "F' U F U R U' R'", length = 7 } ::
-        { name = "middle-insert-slot-3-flip-1",
-          situation = Situation.MiddleInsert(3, 1),
-          setup = "R' F R F' R U R' U", sequence = "U' R U' R' F R' F' R", length = 8 } ::
-        Nil
+        {
+            name      = "middle-insert-slot-0-flip-0",
+            situation = Situation.MiddleInsert(0, 0),
+            setup     = "R U R' U' F' U' F U",
+            sequence  = "U' F' U F U R U' R'",
+            length    = 8
+        }
+            :: {
+                name      = "middle-insert-slot-0-flip-1",
+                situation = Situation.MiddleInsert(0, 1),
+                setup     = "F' U F U2 R U2 R'",
+                sequence  = "R U2 R' U2 F' U' F",
+                length    = 7
+            }
+            :: {
+                name      = "middle-insert-slot-1-flip-0",
+                situation = Situation.MiddleInsert(1, 0),
+                setup     = "R U' R' U2 F' U2 F",
+                sequence  = "F' U2 F U2 R U R'",
+                length    = 7
+            }
+            :: {
+                name      = "middle-insert-slot-1-flip-1",
+                situation = Situation.MiddleInsert(1, 1),
+                setup     = "R F' U' F U F R' F'",
+                sequence  = "F R F' U' F' U F R'",
+                length    = 8
+            }
+            :: {
+                name      = "middle-insert-slot-2-flip-0",
+                situation = Situation.MiddleInsert(2, 0),
+                setup     = "R U R' U' F' U' F U'",
+                sequence  = "U F' U F U R U' R'",
+                length    = 8
+            }
+            :: {
+                name      = "middle-insert-slot-2-flip-1",
+                situation = Situation.MiddleInsert(2, 1),
+                setup     = "R' F R F' R U R'",
+                sequence  = "R U' R' F R' F' R",
+                length    = 7
+            }
+            :: {
+                name      = "middle-insert-slot-3-flip-0",
+                situation = Situation.MiddleInsert(3, 0),
+                setup     = "R U R' U' F' U' F",
+                sequence  = "F' U F U R U' R'",
+                length    = 7
+            }
+            :: {
+                name      = "middle-insert-slot-3-flip-1",
+                situation = Situation.MiddleInsert(3, 1),
+                setup     = "R' F R F' R U R' U",
+                sequence  = "U' R U' R' F R' F' R",
+                length    = 8
+            }
+            :: Nil
 
     ///
     /// The routine of that name, if there is one.

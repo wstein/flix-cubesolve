@@ -1,4 +1,4 @@
-mod TestPocket {
+pub mod TestPocket {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -9,7 +9,7 @@ mod TestPocket {
     /// each test that needs them builds them once and asserts a great deal.
     def tables(): Pocket.Tables \ Assert =
         match Pocket.build() {
-            case Ok(t)  => t
+            case Ok(t) => t
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected the tables");
                 unreachable!()
@@ -21,45 +21,72 @@ mod TestPocket {
     /// silently aliases two states onto one entry.
     @Test
     def permutationRankRoundTripsOverTheWholeRange(): Unit \ Assert =
-        Vector.range(0, Pocket.permCount()) |> Vector.forEach(r ->
-            Assert.assertEqWithMsg(
-                expected = r, Pocket.permRank(Pocket.permUnrank(r)), "permutation ${r}"))
+        Vector.range(0, Pocket.permCount())
+            |> Vector.forEach(
+                r ->
+                    Assert.assertEqWithMsg(
+                        expected = r,
+                        Pocket.permRank(Pocket.permUnrank(r)),
+                        "permutation ${r}"
+                    )
+            )
 
     @Test
     def orientationRankRoundTripsOverTheWholeRange(): Unit \ Assert =
-        Vector.range(0, Pocket.oriCount()) |> Vector.forEach(r ->
-            Assert.assertEqWithMsg(
-                expected = r, Pocket.oriRank(Pocket.oriUnrank(r)), "orientation ${r}"))
+        Vector.range(0, Pocket.oriCount())
+            |> Vector.forEach(
+                r ->
+                    Assert.assertEqWithMsg(
+                        expected = r,
+                        Pocket.oriRank(Pocket.oriUnrank(r)),
+                        "orientation ${r}"
+                    )
+            )
 
     /// Unranking really does produce permutations, not merely distinct vectors.
     @Test
     def everyUnrankedPermutationIsAPermutation(): Unit \ Assert =
-        Vector.range(0, Pocket.permCount()) |> Vector.forEach(r -> {
-            let q = Pocket.permUnrank(r);
-            Vector.range(0, 7) |> Vector.forEach(i ->
-                Assert.assertTrueWithMsg(Vector.memberOf(i, q),
-                    "permutation ${r} is missing ${i}"))
-        })
+        Vector.range(0, Pocket.permCount())
+            |> Vector.forEach(
+                r -> {
+                    let q = Pocket.permUnrank(r);
+                    Vector.range(0, 7)
+                        |> Vector.forEach(
+                            i ->
+                                Assert.assertTrueWithMsg(
+                                    Vector.memberOf(i, q),
+                                    "permutation ${r} is missing ${i}"
+                                )
+                        )
+                }
+            )
 
     /// Unranked twists obey the sum rule, so the seventh really is forced.
     @Test
     def everyUnrankedOrientationSumsToZeroModThree(): Unit \ Assert =
-        Vector.range(0, Pocket.oriCount()) |> Vector.forEach(r -> {
-            let o = Pocket.oriUnrank(r);
-            Assert.assertEq(expected = 7, Vector.length(o));
-            Assert.assertEqWithMsg(
-                expected = 0, Int32.modulo(Vector.sum(o), 3), "orientation ${r}")
-        })
+        Vector.range(0, Pocket.oriCount())
+            |> Vector.forEach(
+                r -> {
+                    let o = Pocket.oriUnrank(r);
+                    Assert.assertEq(expected = 7, Vector.length(o));
+                    Assert.assertEqWithMsg(
+                        expected = 0,
+                        Int32.modulo(Vector.sum(o), 3),
+                        "orientation ${r}"
+                    )
+                }
+            )
 
     /// The coordinate and the model describe the same cube.
     @Test
     def theCoordinateRoundTripsThroughTheModel(): Unit \ Assert =
-        List.forEach(i ->
-            match Pocket.decode(i) |> Result.flatMap(Pocket.encode) {
+        List.forEach(
+            i -> match Pocket.decode(i) |> Result.flatMap(Pocket.encode) {
                 case Ok(back) => Assert.assertEqWithMsg(expected = i, back, "state ${i}")
                 case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "state ${i}")
             },
-            0 :: 1 :: 728 :: 729 :: 100000 :: 2000000 :: 3674159 :: Nil)
+            0 :: 1 :: 728 :: 729 :: 100000 :: 2000000 :: 3674159 :: Nil
+        )
 
     @Test
     def theSolvedCoordinateIsZero(): Unit \ Assert =
@@ -79,7 +106,7 @@ mod TestPocket {
     def aCubeWithItsHeldCornerMovedIsRefused(): Unit \ Assert =
         match Cube.solved(2) |> Result.flatMap(c -> Cube.applyNotation("D", c)) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "D applies")
-            case Ok(c)  =>
+            case Ok(c) =>
                 match Pocket.encode(c) {
                     case Ok(_)  => Assert.assertTrueWithMsg(false, "D moves DBL")
                     case Err(e) => Assert.assertTrue(String.contains(substr = "DBL", e))
@@ -104,20 +131,28 @@ mod TestPocket {
             case Ok(x)  => x
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "ori moves"); unreachable!()
         };
-        List.forEach(i ->
-            Vector.range(0, Pocket.moveCount()) |> Vector.forEach(m -> {
-                let viaTable =
-                    Table.get(i / Pocket.oriCount() * Pocket.moveCount() + m, pm)
-                        * Pocket.oriCount()
-                    + Table.get(Int32.modulo(i, Pocket.oriCount()) * Pocket.moveCount() + m, om);
-                let viaModel =
-                    Pocket.decode(i)
-                        |> Result.flatMap(c -> Cube.apply(Pocket.moveOfIndex(m), c))
-                        |> Result.flatMap(Pocket.encode);
-                Assert.assertEqWithMsg(
-                    expected = Ok(viaTable), viaModel, "state ${i} under move ${m}")
-            }),
-            0 :: 1 :: 729 :: 5000 :: 123457 :: 2000000 :: 3674159 :: Nil)
+        List.forEach(
+            i ->
+                Vector.range(0, Pocket.moveCount())
+                    |> Vector.forEach(
+                        m -> {
+                            let viaTable =
+                                Table.get(i / Pocket.oriCount() * Pocket.moveCount() + m, pm)
+                                    * Pocket.oriCount()
+                                    + Table.get(Int32.modulo(i, Pocket.oriCount()) * Pocket.moveCount() + m, om);
+                            let viaModel =
+                                Pocket.decode(i)
+                                    |> Result.flatMap(c -> Cube.apply(Pocket.moveOfIndex(m), c))
+                                    |> Result.flatMap(Pocket.encode);
+                            Assert.assertEqWithMsg(
+                                expected = Ok(viaTable),
+                                viaModel,
+                                "state ${i} under move ${m}"
+                            )
+                        }
+                    ),
+            0 :: 1 :: 729 :: 5000 :: 123457 :: 2000000 :: 3674159 :: Nil
+        )
 
     // ---------- the exhaustive oracle ----------
 
@@ -143,8 +178,10 @@ mod TestPocket {
     ///   that make the case for using them together.
     @Test
     def theOracleIsExhaustiveConsistentAndAdmissible(): Unit \ Assert + IO =
-        if (Slow.skip("TestPocket.theOracleIsExhaustiveConsistentAndAdmissible",
-                "builds the whole 2x2x2 oracle"))
+        if (Slow.skip(
+            "TestPocket.theOracleIsExhaustiveConsistentAndAdmissible",
+            "builds the whole 2x2x2 oracle"
+        ))
             ()
         else {
             let t = tables();
@@ -166,56 +203,98 @@ mod TestPocket {
                 // 4: the largest value the two heuristics jointly take
                 let faults = Array.repeat(rc, 5, -1);
                 Array.put(0, 4, faults);
-                Vector.range(0, Pocket.stateCount()) |> Vector.forEach(s -> {
-                    let here = Table.get(s, d);
-                    Array.put(Array.get(here, histogram) + 1, here, histogram);
-                    let pi = s / n;
-                    let oi = Int32.modulo(s, n);
-                    let closer = Vector.range(0, k) |> Vector.count(m -> {
-                        let perm = Table.get(pi * k + m, pm);
-                        let to = perm * n + Table.get(oi * k + m, om);
-                        let there = Table.get(to, d);
-                        if (Int32.abs(here - there) > 1) Array.put(s, 0, faults) else ();
-                        there == here - 1
-                    });
-                    if (here > 0 and closer == 0) Array.put(s, 1, faults) else ();
-                    let ho = Table.get(oi, oriD);
-                    let hp = Table.get(pi, permD);
-                    if (ho > here) Array.put(s, 2, faults) else ();
-                    if (hp > here) Array.put(s, 3, faults) else ();
-                    let best = Int32.max(ho, hp);
-                    if (best > Array.get(4, faults)) Array.put(best, 4, faults) else ()
-                });
+                Vector.range(0, Pocket.stateCount())
+                    |> Vector.forEach(
+                        s -> {
+                            let here = Table.get(s, d);
+                            Array.put(Array.get(here, histogram) + 1, here, histogram);
+                            let pi = s / n;
+                            let oi = Int32.modulo(s, n);
+                            let closer = Vector.range(0, k)
+                                |> Vector.count(
+                                    m -> {
+                                        let perm = Table.get(pi * k + m, pm);
+                                        let to = perm * n + Table.get(oi * k + m, om);
+                                        let there = Table.get(to, d);
+                                        if (Int32.abs(here - there) > 1) Array.put(s, 0, faults) else ();
+                                        there == here - 1
+                                    }
+                                );
+                            if (here > 0 and closer == 0) Array.put(s, 1, faults) else ();
+                            let ho = Table.get(oi, oriD);
+                            let hp = Table.get(pi, permD);
+                            if (ho > here) Array.put(s, 2, faults) else ();
+                            if (hp > here) Array.put(s, 3, faults) else ();
+                            let best = Int32.max(ho, hp);
+                            if (best > Array.get(4, faults)) Array.put(best, 4, faults) else ()
+                        }
+                    );
                 (Array.toVector(histogram), Array.toVector(faults))
             };
             let (counts, faults) = report;
 
             // The histogram, computed independently before any of this was written.
             let expected = Vector#{
-                1, 9, 54, 321, 1847, 9992, 50136, 227536, 870072, 1887748, 623800, 2644
+                1,
+                9,
+                54,
+                321,
+                1847,
+                9992,
+                50136,
+                227536,
+                870072,
+                1887748,
+                623800,
+                2644
             };
-            Vector.range(0, 12) |> Vector.forEach(i ->
-                Assert.assertEqWithMsg(
-                    expected = Vector.get(i, expected), Vector.get(i, counts),
-                    "states at distance ${i}"));
-            Vector.range(12, 16) |> Vector.forEach(i ->
-                Assert.assertEqWithMsg(
-                    expected = 0, Vector.get(i, counts),
-                    "nothing should sit at distance ${i}, including the unvisited marker"));
+            Vector.range(0, 12)
+                |> Vector.forEach(
+                    i ->
+                        Assert.assertEqWithMsg(
+                            expected = Vector.get(i, expected),
+                            Vector.get(i, counts),
+                            "states at distance ${i}"
+                        )
+                );
+            Vector.range(12, 16)
+                |> Vector.forEach(
+                    i ->
+                        Assert.assertEqWithMsg(
+                            expected = 0,
+                            Vector.get(i, counts),
+                            "nothing should sit at distance ${i}, including the unvisited marker"
+                        )
+                );
             Assert.assertEq(expected = 0, Table.get(Pocket.solvedIndex(), d));
 
-            Assert.assertEqWithMsg(expected = -1, Vector.get(0, faults),
-                "a move changed the distance by more than one");
-            Assert.assertEqWithMsg(expected = -1, Vector.get(1, faults),
-                "an unsolved state had no neighbour closer to solved");
-            Assert.assertEqWithMsg(expected = -1, Vector.get(2, faults),
-                "the orientation heuristic overestimated some state");
-            Assert.assertEqWithMsg(expected = -1, Vector.get(3, faults),
-                "the permutation heuristic overestimated some state");
+            Assert.assertEqWithMsg(
+                expected = -1,
+                Vector.get(0, faults),
+                "a move changed the distance by more than one"
+            );
+            Assert.assertEqWithMsg(
+                expected = -1,
+                Vector.get(1, faults),
+                "an unsolved state had no neighbour closer to solved"
+            );
+            Assert.assertEqWithMsg(
+                expected = -1,
+                Vector.get(2, faults),
+                "the orientation heuristic overestimated some state"
+            );
+            Assert.assertEqWithMsg(
+                expected = -1,
+                Vector.get(3, faults),
+                "the permutation heuristic overestimated some state"
+            );
             // Measured independently: orientation tops out at 6 and permutation at
             // 7, against a diameter of 11. That gap is why both are used.
-            Assert.assertEqWithMsg(expected = 7, Vector.get(4, faults),
-                "the two heuristics together should reach 7 and no further")
+            Assert.assertEqWithMsg(
+                expected = 7,
+                Vector.get(4, faults),
+                "the two heuristics together should reach 7 and no further"
+            )
         }
 
     /// The projections are genuinely coarser than the full space, so the

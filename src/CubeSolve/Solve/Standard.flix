@@ -11,7 +11,7 @@
 /// coordinate would otherwise hand phase two a state that does not exist, and
 /// phase two would either fail mysteriously or solve a different cube.
 ///
-mod CubeSolve.Solve.Standard {
+pub mod CubeSolve.Solve.Standard {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -96,19 +96,19 @@ mod CubeSolve.Solve.Standard {
     /// counts strict reductions after the initial candidate.
     ///
     pub type alias ViewStats = {
-        axis = ViewAxis,
-        inverted = Bool,
-        probesSpent = Int32,
-        foundMoves = Option[Int32],
-        accepted = Bool,
-        handoversSelected = Int32,
+        axis                 = ViewAxis,
+        inverted             = Bool,
+        probesSpent          = Int32,
+        foundMoves           = Option[Int32],
+        accepted             = Bool,
+        handoversSelected    = Int32,
         handoversUnreachable = Int32,
-        handoversPruned = Int32,
-        phaseTwoAttempts = Int32,
-        handoversUnexamined = Int32,
+        handoversPruned      = Int32,
+        phaseTwoAttempts     = Int32,
+        handoversUnexamined  = Int32,
         handoverLimitReached = Bool,
-        enumerationNodes = Int64,
-        deepestPhaseOne = Int32
+        enumerationNodes     = Int64,
+        deepestPhaseOne      = Int32
     }
 
     ///
@@ -127,53 +127,61 @@ mod CubeSolve.Solve.Standard {
     /// view's probe count. `TestOutcome` asserts both.
     ///
     type alias Counts = {
-        selected = Int32,
-        unreachable = Int32,
-        pruned = Int32,
-        attempts = Int32,
-        unexamined = Int32,
+        selected     = Int32,
+        unreachable  = Int32,
+        pruned       = Int32,
+        attempts     = Int32,
+        unexamined   = Int32,
         limitReached = Bool,
-        nodes = Int64,
-        deepest = Int32
+        nodes        = Int64,
+        deepest      = Int32
     }
 
     ///
     /// No endings seen yet.
     ///
     def noCounts(): Counts =
-        { selected = 0, unreachable = 0, pruned = 0, attempts = 0, unexamined = 0,
-          limitReached = false, nodes = 0i64, deepest = 0 }
+        {
+            selected     = 0,
+            unreachable  = 0,
+            pruned       = 0,
+            attempts     = 0,
+            unexamined   = 0,
+            limitReached = false,
+            nodes        = 0i64,
+            deepest      = 0
+        }
 
     ///
     /// Two tallies added.
     ///
     def plus(a: Counts, b: Counts): Counts = {
-        selected = a#selected + b#selected,
-        unreachable = a#unreachable + b#unreachable,
-        pruned = a#pruned + b#pruned,
-        attempts = a#attempts + b#attempts,
-        unexamined = a#unexamined + b#unexamined,
+        selected     = a#selected + b#selected,
+        unreachable  = a#unreachable + b#unreachable,
+        pruned       = a#pruned + b#pruned,
+        attempts     = a#attempts + b#attempts,
+        unexamined   = a#unexamined + b#unexamined,
         limitReached = a#limitReached or b#limitReached,
-        nodes = a#nodes + b#nodes,
-        deepest = Int32.max(a#deepest, b#deepest)
+        nodes        = a#nodes + b#nodes,
+        deepest      = Int32.max(a#deepest, b#deepest)
     }
 
     ///
     /// The complete, structured outcome of a 3x3 search, on success or failure.
     ///
     pub type alias Outcome = {
-        answer = Option[List[Move.Move]],
-        probesSpent = Int32,
-        viewTarget = Int32,
-        probeFloor = Int32,
-        probeCap = Int32,
-        viewsTried = Int32,
+        answer         = Option[List[Move.Move]],
+        probesSpent    = Int32,
+        viewTarget     = Int32,
+        probeFloor     = Int32,
+        probeCap       = Int32,
+        viewsTried     = Int32,
         viewsAvailable = Int32,
-        firstHtm = Option[Int32],
-        finalHtm = Option[Int32],
-        improvements = Int32,
-        termination = Termination,
-        viewStats = List[ViewStats]
+        firstHtm       = Option[Int32],
+        finalHtm       = Option[Int32],
+        improvements   = Int32,
+        termination    = Termination,
+        viewStats      = List[ViewStats]
     }
 
     ///
@@ -208,8 +216,14 @@ mod CubeSolve.Solve.Standard {
     /// answer everywhere.
     ///
     pub enum Budget {
-        case Budget({ minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 })
+        case Budget({
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        })
     }
 
     ///
@@ -228,8 +242,14 @@ mod CubeSolve.Solve.Standard {
     /// which is a tier somebody can choose between.
     ///
     pub def fastBudget(): Budget =
-        Budget({ minViews = 1, probeFloor = 30, probeMax = 500, maxDepth = 25,
-            handovers = 150, phase1Depth = Phase1.maxDepth() })
+        Budget({
+            minViews    = 1,
+            probeFloor  = 30,
+            probeMax    = 500,
+            maxDepth    = 25,
+            handovers   = 150,
+            phase1Depth = Phase1.maxDepth()
+        })
 
     ///
     /// The budget to use when nothing else is stated.
@@ -238,8 +258,14 @@ mod CubeSolve.Solve.Standard {
     /// stated as a multiple of this one.
     ///
     pub def defaultBudget(): Budget =
-        Budget({ minViews = 2, probeFloor = 120, probeMax = 500, maxDepth = 25,
-            handovers = 300, phase1Depth = Phase1.maxDepth() })
+        Budget({
+            minViews    = 2,
+            probeFloor  = 120,
+            probeMax    = 500,
+            maxDepth    = 25,
+            handovers   = 300,
+            phase1Depth = Phase1.maxDepth()
+        })
 
     ///
     /// Every view, at the standard handovers.
@@ -258,8 +284,14 @@ mod CubeSolve.Solve.Standard {
     /// take every view; `max` offers phase two twice the endings.
     ///
     pub def deepBudget(): Budget =
-        Budget({ minViews = 6, probeFloor = 600, probeMax = 1200, maxDepth = 25,
-            handovers = 300, phase1Depth = Phase1.maxDepth() })
+        Budget({
+            minViews    = 6,
+            probeFloor  = 600,
+            probeMax    = 1200,
+            maxDepth    = 25,
+            handovers   = 300,
+            phase1Depth = Phase1.maxDepth()
+        })
 
     ///
     /// All six views, with double the handovers and double the probe cap.
@@ -273,8 +305,14 @@ mod CubeSolve.Solve.Standard {
     /// handovers does anything on its own -- see `TestBudgetAblation`.
     ///
     pub def maxBudget(): Budget =
-        Budget({ minViews = 6, probeFloor = 1200, probeMax = 2400, maxDepth = 25,
-            handovers = 600, phase1Depth = Phase1.maxDepth() })
+        Budget({
+            minViews    = 6,
+            probeFloor  = 1200,
+            probeMax    = 2400,
+            maxDepth    = 25,
+            handovers   = 600,
+            phase1Depth = Phase1.maxDepth()
+        })
 
     ///
     /// Deprecated name for `deepBudget`.
@@ -285,8 +323,14 @@ mod CubeSolve.Solve.Standard {
     /// A budget, from its parts.
     ///
     pub def budget(
-        parts: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 }
+        parts: {
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        }
     ): Budget = Budget(parts)
 
     ///
@@ -329,10 +373,12 @@ mod CubeSolve.Solve.Standard {
     ): Result[String, List[Move.Move]] =
         match out#answer {
             case Some(ms) => Ok(ms)
-            case None     =>
-                Err("no solution within ${probeMax} probes and "
-                    + "${maxDepth} moves: raise the budget rather than "
-                    + "retrying this search unchanged")
+            case None =>
+                Err(
+                    "no solution within ${probeMax} probes and "
+                        + "${maxDepth} moves: raise the budget rather than "
+                        + "retrying this search unchanged"
+                )
         }
 
     ///
@@ -362,15 +408,15 @@ mod CubeSolve.Solve.Standard {
     ///
     pub enum Search {
         case Search({
-            tables = Tables,
-            budget = Budget,
-            cube = Sized.Standard,
-            views = List[(Rotation.Rotation, Bool)],
-            spent = Int32,
-            best = Option[List[Move.Move]],
-            firstHtm = Option[Int32],
+            tables       = Tables,
+            budget       = Budget,
+            cube         = Sized.Standard,
+            views        = List[(Rotation.Rotation, Bool)],
+            spent        = Int32,
+            best         = Option[List[Move.Move]],
+            firstHtm     = Option[Int32],
             improvements = Int32,
-            viewStats = List[ViewStats]
+            viewStats    = List[ViewStats]
         })
     }
 
@@ -394,15 +440,15 @@ mod CubeSolve.Solve.Standard {
         let isSol = Cube.isSolved(Sized.cubeOfStandard(c));
         let vs = if (isSol) Nil else allViews();
         Search.Search({
-            tables = t,
-            budget = budget,
-            cube = c,
-            views = vs,
-            spent = 0,
-            best = if (isSol) Some(Nil) else None,
-            firstHtm = if (isSol) Some(0) else None,
+            tables       = t,
+            budget       = budget,
+            cube         = c,
+            views        = vs,
+            spent        = 0,
+            best         = if (isSol) Some(Nil) else None,
+            firstHtm     = if (isSol) Some(0) else None,
             improvements = 0,
-            viewStats = Nil
+            viewStats    = Nil
         })
 
     def allViews(): List[(Rotation.Rotation, Bool)] =
@@ -452,15 +498,15 @@ mod CubeSolve.Solve.Standard {
     pub def withBudget(s: Search, budget: Budget): Search =
         let Search.Search(f) = s;
         Search.Search({
-            tables = f#tables,
-            budget = budget,
-            cube = f#cube,
-            views = allViews(),
-            spent = f#spent,
-            best = f#best,
-            firstHtm = f#firstHtm,
+            tables       = f#tables,
+            budget       = budget,
+            cube         = f#cube,
+            views        = allViews(),
+            spent        = f#spent,
+            best         = f#best,
+            firstHtm     = f#firstHtm,
             improvements = f#improvements,
-            viewStats = f#viewStats
+            viewStats    = f#viewStats
         })
 
     ///
@@ -517,17 +563,26 @@ mod CubeSolve.Solve.Standard {
     def stepOnce(s: Search): Option[Search] =
         let Search.Search(f) = s;
         match f#views {
-            case Nil          => None
+            case Nil => None
             case view :: rest =>
                 let (found, used, tally) = searchOneView(s, view);
-                Some(folded(s, view, rest,
-                    { found = found, used = used, tally = tally }))
+                Some(
+                    folded(
+                        s,
+                        view,
+                        rest,
+                        {found = found, used = used, tally = tally}
+                    )
+                )
         }
 
     def axisOf(r: Rotation.Rotation): ViewAxis =
-        if (r == Rotation.identity()) ViewAxis.UD
-        else if (r == Rotation.x()) ViewAxis.FB
-        else ViewAxis.RL
+        if (r == Rotation.identity())
+            ViewAxis.UD
+        else if (r == Rotation.x())
+            ViewAxis.FB
+        else
+            ViewAxis.RL
 
     def isBetter(best: Option[List[Move.Move]], found: Option[List[Move.Move]]): Bool =
         match (best, found) {
@@ -547,7 +602,7 @@ mod CubeSolve.Solve.Standard {
         let Tables.Tables(p1, p2) = f#tables;
         let Budget(limits) = f#budget;
         let (r, inverted) = view;
-        let looking = { rotation = r, inverted = inverted };
+        let looking = {rotation = r, inverted = inverted};
         alongAxis(p1, p2, shareFor(limits, f#spent, f#best), f#cube, looking)
 
     ///
@@ -557,7 +612,7 @@ mod CubeSolve.Solve.Standard {
         s: Search,
         view: (Rotation.Rotation, Bool),
         rest: List[(Rotation.Rotation, Bool)],
-        result: { found = Option[List[Move.Move]], used = Int32, tally = Counts }
+        result: {found = Option[List[Move.Move]], used = Int32, tally = Counts}
     ): Search =
         let found = result#found;
         let used = result#used;
@@ -566,37 +621,39 @@ mod CubeSolve.Solve.Standard {
         let (r, inverted) = view;
         let improved = isBetter(f#best, found);
         let stat = {
-            axis = axisOf(r),
-            inverted = inverted,
-            probesSpent = used,
-            foundMoves = Option.map(List.length, found),
-            accepted = improved,
-            handoversSelected = tally#selected,
+            axis                 = axisOf(r),
+            inverted             = inverted,
+            probesSpent          = used,
+            foundMoves           = Option.map(List.length, found),
+            accepted             = improved,
+            handoversSelected    = tally#selected,
             handoversUnreachable = tally#unreachable,
-            handoversPruned = tally#pruned,
-            phaseTwoAttempts = tally#attempts,
-            handoversUnexamined = tally#unexamined,
+            handoversPruned      = tally#pruned,
+            phaseTwoAttempts     = tally#attempts,
+            handoversUnexamined  = tally#unexamined,
             handoverLimitReached = tally#limitReached,
-            enumerationNodes = tally#nodes,
-            deepestPhaseOne = tally#deepest
+            enumerationNodes     = tally#nodes,
+            deepestPhaseOne      = tally#deepest
         };
         let newFirst = match f#firstHtm {
             case Some(h) => Some(h)
             case None    => Option.map(List.length, found)
         };
         let newImpr =
-            if (improved and not Option.isEmpty(f#best)) f#improvements + 1
-            else f#improvements;
+            if (improved and not Option.isEmpty(f#best))
+                f#improvements + 1
+            else
+                f#improvements;
         Search.Search({
-            tables = f#tables,
-            budget = f#budget,
-            cube = f#cube,
-            views = rest,
-            spent = f#spent + used,
-            best = keepShorterOf(f#best, found),
-            firstHtm = newFirst,
+            tables       = f#tables,
+            budget       = f#budget,
+            cube         = f#cube,
+            views        = rest,
+            spent        = f#spent + used,
+            best         = keepShorterOf(f#best, found),
+            firstHtm     = newFirst,
             improvements = newImpr,
-            viewStats = stat :: f#viewStats
+            viewStats    = stat :: f#viewStats
         })
 
     ///
@@ -606,24 +663,30 @@ mod CubeSolve.Solve.Standard {
     /// a view either improves on the answer or gives up quickly.
     ///
     def shareFor(
-        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 },
+        limits: {
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        },
         spent: Int32,
         best: Option[List[Move.Move]]
     ): Budget =
         Budget({
-            minViews = 1,
+            minViews    = 1,
             // A view has no floor of its own: the floor is a property of the
             // whole search, and applying it here would make one view keep
             // looking when the next view is the cheaper place to look.
-            probeFloor = 0,
+            probeFloor  = 0,
             // The view inherits the caller's phase-one depth. Substituting the
             // default here would silently discard a deeper search that was
             // asked for, which is what it did when this field was introduced.
             phase1Depth = limits#phase1Depth,
-            probeMax = limits#probeMax - spent,
-            maxDepth = shorterThanBest(best, limits#maxDepth),
-            handovers = limits#handovers
+            probeMax    = limits#probeMax - spent,
+            maxDepth    = shorterThanBest(best, limits#maxDepth),
+            handovers   = limits#handovers
         })
 
     ///
@@ -652,51 +715,65 @@ mod CubeSolve.Solve.Standard {
             searchOutcome(p1, p2, budget, limits, c)
 
     def solvedOutcome(
-        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 }
+        limits: {
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        }
     ): Outcome = {
-        answer = Some(Nil),
-        probesSpent = 0,
-        viewTarget = limits#minViews,
-        probeFloor = limits#probeFloor,
-        probeCap = limits#probeMax,
-        viewsTried = 0,
+        answer         = Some(Nil),
+        probesSpent    = 0,
+        viewTarget     = limits#minViews,
+        probeFloor     = limits#probeFloor,
+        probeCap       = limits#probeMax,
+        viewsTried     = 0,
         viewsAvailable = List.length(allViews()),
-        firstHtm = Some(0),
-        finalHtm = Some(0),
-        improvements = 0,
-        termination = Termination.SolvedImmediately,
-        viewStats = Nil
+        firstHtm       = Some(0),
+        finalHtm       = Some(0),
+        improvements   = 0,
+        termination    = Termination.SolvedImmediately,
+        viewStats      = Nil
     }
 
     def searchOutcome(
         p1: Phase1.Tables,
         p2: Domino.Tables,
         budget: Budget,
-        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 },
+        limits: {
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        },
         c: Sized.Standard
     ): Outcome = {
         let settled = runToSettled(start(Tables.Tables(p1, p2), budget, c));
         let Search.Search(f) = settled;
         let term =
-            if (f#spent >= limits#probeMax) Termination.ProbeCap
+            if (f#spent >= limits#probeMax)
+                Termination.ProbeCap
             else if (hasSettled(f#best, List.length(f#viewStats), f#spent, limits))
                 Termination.Settled
-            else Termination.ViewsExhausted;
+            else
+                Termination.ViewsExhausted;
         {
-            answer = f#best,
-            probesSpent = f#spent,
-            viewTarget = limits#minViews,
-            probeFloor = limits#probeFloor,
-            probeCap = limits#probeMax,
-            viewsTried = List.length(f#viewStats),
+            answer         = f#best,
+            probesSpent    = f#spent,
+            viewTarget     = limits#minViews,
+            probeFloor     = limits#probeFloor,
+            probeCap       = limits#probeMax,
+            viewsTried     = List.length(f#viewStats),
             viewsAvailable = List.length(allViews()),
-            firstHtm = f#firstHtm,
-            finalHtm = Option.map(List.length, f#best),
-            improvements = f#improvements,
-            termination = term,
-            viewStats = List.reverse(f#viewStats)
+            firstHtm       = f#firstHtm,
+            finalHtm       = Option.map(List.length, f#best),
+            improvements   = f#improvements,
+            termination    = term,
+            viewStats      = List.reverse(f#viewStats)
         }
     }
 
@@ -716,7 +793,7 @@ mod CubeSolve.Solve.Standard {
         let Search.Search(f) = s;
         let Budget(limits) = f#budget;
         if (f#spent >= limits#probeMax
-                or hasSettled(f#best, List.length(f#viewStats), f#spent, limits))
+            or hasSettled(f#best, List.length(f#viewStats), f#spent, limits))
             s
         else
             match stepOnce(s) {
@@ -754,7 +831,7 @@ mod CubeSolve.Solve.Standard {
         p2: Domino.Tables,
         share: Budget,
         c: Sized.Standard,
-        view: { rotation = Rotation.Rotation, inverted = Bool }
+        view: {rotation = Rotation.Rotation, inverted = Bool}
     ): (Option[List[Move.Move]], Int32, Counts) =
         let r = view#rotation;
         // A 3x3x3 has no centre orbit, so neither of these can refuse; the
@@ -803,9 +880,11 @@ mod CubeSolve.Solve.Standard {
         match searchOnce(p1, p2, budget, c) {
             case (Some(best), _, _) => Ok(best)
             case (None, _, _) =>
-                Err("no solution within ${limits#probeMax} probes and "
-                    + "${limits#maxDepth} moves: raise the budget rather than "
-                    + "retrying this search unchanged")
+                Err(
+                    "no solution within ${limits#probeMax} probes and "
+                        + "${limits#maxDepth} moves: raise the budget rather than "
+                        + "retrying this search unchanged"
+                )
         }
 
     ///
@@ -827,9 +906,13 @@ mod CubeSolve.Solve.Standard {
             case Err(_) => (None, 0, noCounts())
             case Ok(start) =>
                 let first = Phase1.heuristicAt(p1, start);
-                let attempt = { phase1 = p1, phase2 = p2, limits = limits, cube = c };
-                byDepth(attempt, start, first,
-                    { probes = 0, best = None, tally = noCounts() })
+                let attempt = {phase1 = p1, phase2 = p2, limits = limits, cube = c};
+                byDepth(
+                    attempt,
+                    start,
+                    first,
+                    {probes = 0, best = None, tally = noCounts()}
+                )
         }
 
     ///
@@ -838,9 +921,15 @@ mod CubeSolve.Solve.Standard {
     type alias Attempt = {
         phase1 = Phase1.Tables,
         phase2 = Domino.Tables,
-        limits = { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 },
-        cube = Sized.Standard
+        limits = {
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        },
+        cube   = Sized.Standard
     }
 
     ///
@@ -850,7 +939,7 @@ mod CubeSolve.Solve.Standard {
         attempt: Attempt,
         start: Int64,
         depth: Int32,
-        carried: { probes = Int32, best = Option[List[Move.Move]], tally = Counts }
+        carried: {probes = Int32, best = Option[List[Move.Move]], tally = Counts}
     ): (Option[List[Move.Move]], Int32, Counts) =
         let probes = carried#probes;
         let best = carried#best;
@@ -872,16 +961,33 @@ mod CubeSolve.Solve.Standard {
             (best, probes, tally)
         else {
             let (handovers, looked) = IdaStar.enumerateCounted(
-                Phase1.phaseOf(attempt#phase1), start, depth, limits#handovers);
+                Phase1.phaseOf(attempt#phase1),
+                start,
+                depth,
+                limits#handovers
+            );
             let offered = List.length(handovers);
-            let seen = plus(tally, { selected = offered, unreachable = 0,
-                pruned = 0, attempts = 0, unexamined = 0,
-                limitReached = offered >= limits#handovers,
-                nodes = looked, deepest = depth });
+            let seen = plus(
+                tally,
+                {
+                    selected     = offered,
+                    unreachable  = 0,
+                    pruned       = 0,
+                    attempts     = 0,
+                    unexamined   = 0,
+                    limitReached = offered >= limits#handovers,
+                    nodes        = looked,
+                    deepest      = depth
+                }
+            );
             let (probed, improved, counted) =
                 tryHandovers(attempt, handovers, probes, best, seen);
-            byDepth(attempt, start, depth + 1,
-                { probes = probed, best = improved, tally = counted })
+            byDepth(
+                attempt,
+                start,
+                depth + 1,
+                {probes = probed, best = improved, tally = counted}
+            )
         }
 
     ///
@@ -892,8 +998,14 @@ mod CubeSolve.Solve.Standard {
         best: Option[List[Move.Move]],
         viewsDone: Int32,
         probes: Int32,
-        limits: { minViews = Int32, probeFloor = Int32, probeMax = Int32, maxDepth = Int32,
-          handovers = Int32, phase1Depth = Int32 }
+        limits: {
+            minViews    = Int32,
+            probeFloor  = Int32,
+            probeMax    = Int32,
+            maxDepth    = Int32,
+            handovers   = Int32,
+            phase1Depth = Int32
+        }
     ): Bool =
         Option.isEmpty(best) == false
             and viewsDone >= limits#minViews
@@ -905,8 +1017,8 @@ mod CubeSolve.Solve.Standard {
     ///
     type alias Handover = {
         prefix = List[Move.Move],
-        state = Int64,
-        bound = Int32
+        state  = Int64,
+        bound  = Int32
     }
 
     ///
@@ -922,8 +1034,8 @@ mod CubeSolve.Solve.Standard {
                 let state = Domino.packPhase2(cperm, eperm, mperm);
                 Some({
                     prefix = prefix,
-                    state = state,
-                    bound = Domino.lowerBoundOf(attempt#phase2, state)
+                    state  = state,
+                    bound  = Domino.lowerBoundOf(attempt#phase2, state)
                 })
         }
 
@@ -949,18 +1061,29 @@ mod CubeSolve.Solve.Standard {
             case first :: rest =>
                 let limits = attempt#limits;
                 if (probes >= limits#probeMax)
-                    (probes, best,
-                        { unexamined = tally#unexamined + 1 + List.length(rest) | tally })
+                    (
+                        probes,
+                        best,
+                        {unexamined = tally#unexamined + 1 + List.length(rest) | tally}
+                    )
                 else if (not Option.isEmpty(best))
                     // This view has its answer. Anything further belongs to the
                     // next view, which looks at the cube another way -- and the
                     // endings left behind are counted, so the accounting stays
                     // exact rather than merely plausible.
-                    (probes, best,
-                        { unexamined = tally#unexamined + 1 + List.length(rest) | tally })
+                    (
+                        probes,
+                        best,
+                        {unexamined = tally#unexamined + 1 + List.length(rest) | tally}
+                    )
                 else
-                    afterOne(attempt, { first = first, rest = rest },
-                        probes, best, tally)
+                    afterOne(
+                        attempt,
+                        {first = first, rest = rest},
+                        probes,
+                        best,
+                        tally
+                    )
         }
 
     ///
@@ -973,7 +1096,7 @@ mod CubeSolve.Solve.Standard {
     ///
     def afterOne(
         attempt: Attempt,
-        endings: { first = List[Int32], rest = List[List[Int32]] },
+        endings: {first = List[Int32], rest = List[List[Int32]]},
         probes: Int32,
         best: Option[List[Move.Move]],
         tally: Counts
@@ -983,18 +1106,32 @@ mod CubeSolve.Solve.Standard {
         let rest = endings#rest;
         match describe(attempt, first) {
             case None =>
-                tryHandovers(attempt, rest, probes, best,
-                    { unreachable = tally#unreachable + 1 | tally })
+                tryHandovers(
+                    attempt,
+                    rest,
+                    probes,
+                    best,
+                    {unreachable = tally#unreachable + 1 | tally}
+                )
             case Some(h) =>
                 let room =
                     shorterThanBest(best, limits#maxDepth) - List.length(h#prefix);
                 if (h#bound > room)
-                    tryHandovers(attempt, rest, probes, best,
-                        { pruned = tally#pruned + 1 | tally })
+                    tryHandovers(
+                        attempt,
+                        rest,
+                        probes,
+                        best,
+                        {pruned = tally#pruned + 1 | tally}
+                    )
                 else
-                    tryHandovers(attempt, rest, probes + 1,
+                    tryHandovers(
+                        attempt,
+                        rest,
+                        probes + 1,
                         tryOne(attempt, h, best),
-                        { attempts = tally#attempts + 1 | tally })
+                        {attempts = tally#attempts + 1 | tally}
+                    )
         }
 
     ///
@@ -1044,7 +1181,7 @@ mod CubeSolve.Solve.Standard {
         candidate: List[Move.Move]
     ): Option[List[Move.Move]] =
         match best {
-            case None    => Some(candidate)
+            case None => Some(candidate)
             case Some(b) =>
                 if (List.length(candidate) < List.length(b)) Some(candidate) else Some(b)
         }

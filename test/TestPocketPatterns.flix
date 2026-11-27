@@ -1,4 +1,4 @@
-mod TestPocketPatterns {
+pub mod TestPocketPatterns {
 
     use CubeSolve.Patterns
     use CubeSolve.Model.Cube
@@ -10,7 +10,7 @@ mod TestPocketPatterns {
     /// The cube `alg` makes from a solved 2x2x2.
     def made(what: String, alg: String): Cube.Cube \ Assert =
         match Cube.solved(2) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "${what}: '${alg}'");
                 unreachable!()
@@ -50,43 +50,67 @@ mod TestPocketPatterns {
     def theCollectionIsSoundCompleteAndDistinct(): Unit \ Assert =
         Assert.assertEq(expected = 24, Vector.length(reorientations()));
         let held = reorientations()
-            |> Vector.map(w -> Facelets.token(made("reorientation", w))
-                                   |> Result.getWithDefault("?"))
+            |> Vector.map(
+                w ->
+                    Facelets.token(made("reorientation", w))
+                        |> Result.getWithDefault("?")
+            )
             |> Vector.toList;
         Assert.assertEqWithMsg(
-            expected = 24, List.length(List.distinct(held)),
-            "the 24 reorientations should be distinct recordings of a solved cube");
+            expected = 24,
+            List.length(List.distinct(held)),
+            "the 24 reorientations should be distinct recordings of a solved cube"
+        );
 
         let all = Patterns.Pocket.all();
-        Assert.assertEqWithMsg(expected = 89, Vector.length(all),
-            "the collection should hold 89 distinct patterns");
+        Assert.assertEqWithMsg(
+            expected = 89,
+            Vector.length(all),
+            "the collection should hold 89 distinct patterns"
+        );
         let names = all |> Vector.map(Patterns.Pocket.name) |> Vector.toList;
         Assert.assertEqWithMsg(
-            expected = List.length(names), List.length(List.distinct(names)),
-            "two patterns share a name");
+            expected = List.length(names),
+            List.length(List.distinct(names)),
+            "two patterns share a name"
+        );
         let ids = all |> Vector.map(Patterns.Pocket.canonical) |> Vector.toList;
         Assert.assertEqWithMsg(
-            expected = List.length(ids), List.length(List.distinct(ids)),
-            "two patterns in the collection are the same pattern");
+            expected = List.length(ids),
+            List.length(List.distinct(ids)),
+            "two patterns in the collection are the same pattern"
+        );
 
-        all |> Vector.forEach(p -> {
-            let name = Patterns.Pocket.name(p);
-            Assert.assertTrueWithMsg(
-                Patterns.Pocket.url(Patterns.Pocket.source(p)) != "unknown",
-                "'${name}' cites an unknown source");
-            let published = made(name, Patterns.Pocket.notation(p));
-            Assert.assertEqWithMsg(
-                expected = Patterns.Pocket.canonical(p), identityOf(published),
-                "'${name}' does not reach its recorded pattern");
-            Assert.assertEqWithMsg(
-                expected = None, Validate.faultOf(published),
-                "'${name}' reaches a state turning cannot");
-            let shortest = made(name, Patterns.Pocket.optimal(p));
-            Assert.assertEqWithMsg(
-                expected = Patterns.Pocket.canonical(p), identityOf(shortest),
-                "'${name}' shortest form makes a different pattern");
-            Assert.assertTrueWithMsg(not Cube.isSolved(shortest),
-                "'${name}' is the solved cube, not a pattern")
-        })
+        all
+            |> Vector.forEach(
+                p -> {
+                    let name = Patterns.Pocket.name(p);
+                    Assert.assertTrueWithMsg(
+                        Patterns.Pocket.url(Patterns.Pocket.source(p)) != "unknown",
+                        "'${name}' cites an unknown source"
+                    );
+                    let published = made(name, Patterns.Pocket.notation(p));
+                    Assert.assertEqWithMsg(
+                        expected = Patterns.Pocket.canonical(p),
+                        identityOf(published),
+                        "'${name}' does not reach its recorded pattern"
+                    );
+                    Assert.assertEqWithMsg(
+                        expected = None,
+                        Validate.faultOf(published),
+                        "'${name}' reaches a state turning cannot"
+                    );
+                    let shortest = made(name, Patterns.Pocket.optimal(p));
+                    Assert.assertEqWithMsg(
+                        expected = Patterns.Pocket.canonical(p),
+                        identityOf(shortest),
+                        "'${name}' shortest form makes a different pattern"
+                    );
+                    Assert.assertTrueWithMsg(
+                        not Cube.isSolved(shortest),
+                        "'${name}' is the solved cube, not a pattern"
+                    )
+                }
+            )
 
 }

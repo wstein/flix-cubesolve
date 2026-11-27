@@ -18,7 +18,7 @@
 /// lower bounds is a lower bound -- and it cuts the search by more than a
 /// factor of ten for a table of five kilobytes.
 ///
-mod CubeSolve.Solve.Pocket {
+pub mod CubeSolve.Solve.Pocket {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Sized
@@ -76,8 +76,10 @@ mod CubeSolve.Solve.Pocket {
     pub def singleProjectionPhaseOf(t: Pocket.Tables, useOrientation: Bool): Phase[Int32] =
         let table = if (useOrientation) Pocket.oriDistanceTable(t) else Pocket.permDistanceTable(t);
         let index =
-            if (useOrientation) s -> Int32.modulo(s, Pocket.oriCount())
-            else s -> s / Pocket.oriCount();
+            if (useOrientation)
+                s -> Int32.modulo(s, Pocket.oriCount())
+            else
+                s -> s / Pocket.oriCount();
         IdaStar.phase(
             Pocket.moveCount(),
             successorOf(t),

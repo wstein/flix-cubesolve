@@ -1,4 +1,4 @@
-mod TestDerive {
+pub mod TestDerive {
 
     use CubeSolve.Method.Derive
     use CubeSolve.Model.Cube
@@ -14,10 +14,12 @@ mod TestDerive {
     def alphabet(letters: List[String]): Vector[Move.Move] \ Assert =
         letters
             |> List.flatMap(l -> (l :: "${l}2" :: "${l}'" :: Nil))
-            |> List.map(t -> match Move.parseMove(t) {
-                case Ok(m)  => m
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${t}'"); unreachable!()
-            })
+            |> List.map(
+                t -> match Move.parseMove(t) {
+                    case Ok(m)  => m
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${t}'"); unreachable!()
+                }
+            )
             |> List.toVector
 
     /// It finds the shortest undo of a short sequence.
@@ -25,19 +27,24 @@ mod TestDerive {
     def itFindsTheShortestUndo(): Unit \ Assert + IO =
         let c = after("R U R'");
         match Derive.shortest(c, Cube.isSolved, alphabet("R" :: "U" :: Nil), 4) {
-            case None    => Assert.assertTrueWithMsg(false, "should have found R U' R'")
+            case None => Assert.assertTrueWithMsg(false, "should have found R U' R'")
             case Some(ms) =>
                 println("  derive: undo of 'R U R'' is '${Move.showAll(ms)}'");
-                Assert.assertEqWithMsg(expected = 3, List.length(ms),
-                    "the shortest undo is three moves");
+                Assert.assertEqWithMsg(
+                    expected = 3,
+                    List.length(ms),
+                    "the shortest undo is three moves"
+                );
                 // The length alone is not the claim. An earlier version of the
                 // search returned the moves in reverse, which has the right
                 // length and does not solve anything.
                 match Cube.applyAll(ms, c) {
-                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "replaying")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replaying")
                     case Ok(done) =>
-                        Assert.assertTrueWithMsg(Cube.isSolved(done),
-                            "'${Move.showAll(ms)}' should solve the cube, in that order")
+                        Assert.assertTrueWithMsg(
+                            Cube.isSolved(done),
+                            "'${Move.showAll(ms)}' should solve the cube, in that order"
+                        )
                 }
         }
 
@@ -47,15 +54,17 @@ mod TestDerive {
         // Six moves, and nothing shorter solves it.
         let c = after("F R U R' U' F'");
         match Derive.shortest(c, Cube.isSolved, alphabet("F" :: "R" :: "U" :: Nil), 6) {
-            case None     => Assert.assertTrueWithMsg(false, "six moves should be reachable")
+            case None => Assert.assertTrueWithMsg(false, "six moves should be reachable")
             case Some(ms) =>
                 println("  derive: six-move case answered in ${List.length(ms)}");
                 Assert.assertTrueWithMsg(List.length(ms) <= 6, "at most six");
                 match Cube.applyAll(ms, c) {
-                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "replaying")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replaying")
                     case Ok(done) =>
-                        Assert.assertTrueWithMsg(Cube.isSolved(done),
-                            "the answer should solve the cube, in the order given")
+                        Assert.assertTrueWithMsg(
+                            Cube.isSolved(done),
+                            "the answer should solve the cube, in the order given"
+                        )
                 }
         }
 }

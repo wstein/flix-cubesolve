@@ -20,7 +20,7 @@
 /// short" therefore proves nothing, which is why the tests check admissibility
 /// exhaustively and optimality against the exact oracle.
 ///
-mod CubeSolve.Solve.IdaStar {
+pub mod CubeSolve.Solve.IdaStar {
 
     use CubeSolve.Solve.IdaStar.Phase.Phase
     use CubeSolve.Solve.IdaStar.Found.Found
@@ -40,11 +40,11 @@ mod CubeSolve.Solve.IdaStar {
     /// time -- each phase gets a specialised search rather than a boxed one.
     ///
     pub type alias Spec[s] = {
-        moves = Int32,
+        moves     = Int32,
         successor = (s, Int32) -> s,
         heuristic = s -> Int32,
-        isGoal = s -> Bool,
-        allows = (Int32, Int32) -> Bool
+        isGoal    = s -> Bool,
+        allows    = (Int32, Int32) -> Bool
     }
 
     ///
@@ -63,7 +63,7 @@ mod CubeSolve.Solve.IdaStar {
     /// where a timing is not.
     ///
     pub enum Found {
-        case Found({ moves = List[Int32], nodes = Int64 })
+        case Found({moves = List[Int32], nodes = Int64})
     }
 
     ///
@@ -97,11 +97,11 @@ mod CubeSolve.Solve.IdaStar {
         allows: (Int32, Int32) -> Bool
     ): Phase[s] =
         Phase({
-            moves = moveCount,
+            moves     = moveCount,
             successor = successor,
             heuristic = heuristic,
-            isGoal = isGoal,
-            allows = allows
+            isGoal    = isGoal,
+            allows    = allows
         })
 
     ///
@@ -112,10 +112,10 @@ mod CubeSolve.Solve.IdaStar {
     /// separately would put six arguments on the hot recursion.
     ///
     type alias Pass[s: Type, r: Region] = {
-        spec = Spec[s],
-        path = Array[Int32, r],
-        visited = Ref[Int64, r],
-        bound = Int32,
+        spec     = Spec[s],
+        path     = Array[Int32, r],
+        visited  = Ref[Int64, r],
+        bound    = Int32,
         maxNodes = Int64
     }
 
@@ -148,10 +148,10 @@ mod CubeSolve.Solve.IdaStar {
         region rc {
             let Phase(spec) = p;
             let pass = {
-                spec = spec,
-                path = Array.repeat(rc, maxDepth + 1, 0),
-                visited = Ref.fresh(rc, 0i64),
-                bound = (spec#heuristic)(start),
+                spec     = spec,
+                path     = Array.repeat(rc, maxDepth + 1, 0),
+                visited  = Ref.fresh(rc, 0i64),
+                bound    = (spec#heuristic)(start),
                 maxNodes = maxNodes
             };
             deepen(pass, start, maxDepth)
@@ -171,18 +171,24 @@ mod CubeSolve.Solve.IdaStar {
     ///
     def deepen(pass: Pass[s, r], start: s, maxDepth: Int32): Result[String, Found] \ r =
         if (pass#bound > maxDepth)
-            Err("no solution of ${maxDepth} moves or fewer: the heuristic still "
-                + "demands more at depth ${maxDepth}, so raise the depth rather "
-                + "than retrying this search unchanged")
+            Err(
+                "no solution of ${maxDepth} moves or fewer: the heuristic still "
+                    + "demands more at depth ${maxDepth}, so raise the depth rather "
+                    + "than retrying this search unchanged"
+            )
         else if (descend(pass, start, 0, -1))
-            Ok(Found({
-                moves = List.take(pass#bound, Array.toList(pass#path)),
-                nodes = Ref.get(pass#visited)
-            }))
+            Ok(
+                Found({
+                    moves = List.take(pass#bound, Array.toList(pass#path)),
+                    nodes = Ref.get(pass#visited)
+                })
+            )
         else if (spent(pass))
-            Err("exhausted after ${Ref.get(pass#visited)} nodes at depth "
-                + "${pass#bound}: this state needs a larger node budget, not a "
-                + "retry of the same one")
+            Err(
+                "exhausted after ${Ref.get(pass#visited)} nodes at depth "
+                    + "${pass#bound}: this state needs a larger node budget, not a "
+                    + "retry of the same one"
+            )
         else
             deepen(atBound(pass, pass#bound + 1), start, maxDepth)
 
@@ -196,8 +202,13 @@ mod CubeSolve.Solve.IdaStar {
     /// The same pass, working to a deeper bound.
     ///
     def atBound(pass: Pass[s, r], bound: Int32): Pass[s, r] =
-        { spec = pass#spec, path = pass#path, visited = pass#visited, bound = bound,
-          maxNodes = pass#maxNodes }
+        {
+            spec     = pass#spec,
+            path     = pass#path,
+            visited  = pass#visited,
+            bound    = bound,
+            maxNodes = pass#maxNodes
+        }
 
     ///
     /// Depth-first to the pass's bound, writing moves into the path as it goes.
@@ -303,23 +314,25 @@ mod CubeSolve.Solve.IdaStar {
         depth: Int32,
         limit: Int32,
         maxNodes: Int64
-    ): { solutions = List[List[Int32]], nodes = Int64, exhausted = Bool } =
+    ): {solutions = List[List[Int32]], nodes = Int64, exhausted = Bool} =
         region rc {
             let Phase(spec) = p;
             let scratch = Array.repeat(rc, depth + 1, 0);
             let sweep = {
-                spec = spec,
-                path = scratch,
-                found = MutList.empty(rc),
-                limit = limit,
-                depth = depth,
-                visited = Ref.fresh(rc, 0i64),
+                spec     = spec,
+                path     = scratch,
+                found    = MutList.empty(rc),
+                limit    = limit,
+                depth    = depth,
+                visited  = Ref.fresh(rc, 0i64),
                 maxNodes = maxNodes
             };
             collect(sweep, start, 0, -1);
-            { solutions = MutList.toList(sweep#found) |> List.reverse,
-              nodes = Ref.get(sweep#visited),
-              exhausted = Ref.get(sweep#visited) >= maxNodes }
+            {
+                solutions = MutList.toList(sweep#found) |> List.reverse,
+                nodes     = Ref.get(sweep#visited),
+                exhausted = Ref.get(sweep#visited) >= maxNodes
+            }
         }
 
     ///
@@ -327,12 +340,12 @@ mod CubeSolve.Solve.IdaStar {
     /// found, and the bounds it is working to.
     ///
     type alias Gather[s: Type, r: Region] = {
-        spec = Spec[s],
-        path = Array[Int32, r],
-        found = MutList[List[Int32], r],
-        limit = Int32,
-        depth = Int32,
-        visited = Ref[Int64, r],
+        spec     = Spec[s],
+        path     = Array[Int32, r],
+        found    = MutList[List[Int32], r],
+        limit    = Int32,
+        depth    = Int32,
+        visited  = Ref[Int64, r],
         maxNodes = Int64
     }
 
@@ -349,7 +362,8 @@ mod CubeSolve.Solve.IdaStar {
         else if (at == sweep#depth) {
             if ((spec#isGoal)(state))
                 MutList.push(List.take(sweep#depth, Array.toList(sweep#path)), sweep#found)
-            else ()
+            else
+                ()
         } else if (at + (spec#heuristic)(state) > sweep#depth)
             ()
         else
@@ -372,7 +386,8 @@ mod CubeSolve.Solve.IdaStar {
             if ((spec#allows)(lastMove, m)) {
                 Array.put(m, at, sweep#path);
                 collect(sweep, (spec#successor)(state, m), at + 1, m)
-            } else ();
+            } else
+                ();
             eachMove(sweep, state, at, lastMove, m + 1)
         }
 

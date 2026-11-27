@@ -12,13 +12,20 @@
 /// is asserted in `TestTwoLayers`, which builds it anyway. Building it twice
 /// cost the suite seventy seconds to prove the same thing.
 ///
-mod TestCornerEdgePair {
+pub mod TestCornerEdgePair {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Solve.TwoLayers
-    use CubeSolve.Table.CornerEdgePair.{designatedEdge, encode, rank, solvedIndex,
-        stateCount, successor, unrank}
+    use CubeSolve.Table.CornerEdgePair.{
+        designatedEdge,
+        encode,
+        rank,
+        solvedIndex,
+        stateCount,
+        successor,
+        unrank
+    }
     use CubeSolve.Table.Cross
     use CubeSolve.Table.FirstLayer
     use CubeSolve.Table.MiddleEdges
@@ -34,14 +41,23 @@ mod TestCornerEdgePair {
     ///
     @Test
     def everyPairCoordinateRoundTrips(): Unit \ Assert =
-        Assert.assertEqWithMsg(expected = 3265920, stateCount(),
-            "136,080 corner states by twelve slots by two flips");
-        let bad = Vector.range(0, stateCount()) |> Vector.count(i -> {
-            let (corners, slot, flip) = unrank(i);
-            rank(corners, slot, flip) != i
-        });
-        Assert.assertEqWithMsg(expected = 0, bad,
-            "coordinates that do not survive unrank then rank")
+        Assert.assertEqWithMsg(
+            expected = 3265920,
+            stateCount(),
+            "136,080 corner states by twelve slots by two flips"
+        );
+        let bad = Vector.range(0, stateCount())
+            |> Vector.count(
+                i -> {
+                    let (corners, slot, flip) = unrank(i);
+                    rank(corners, slot, flip) != i
+                }
+            );
+        Assert.assertEqWithMsg(
+            expected = 0,
+            bad,
+            "coordinates that do not survive unrank then rank"
+        )
 
     ///
     /// A solved cube sits at the solved coordinate, and the edge is where it
@@ -51,8 +67,11 @@ mod TestCornerEdgePair {
     def aSolvedCubeSitsAtTheSolvedCoordinate(): Unit \ Assert =
         Assert.assertEq(expected = Ok(solvedIndex()), encode(made("")));
         let (_, slot, flip) = unrank(solvedIndex());
-        Assert.assertEqWithMsg(expected = designatedEdge(), slot,
-            "the designated edge is home when solved");
+        Assert.assertEqWithMsg(
+            expected = designatedEdge(),
+            slot,
+            "the designated edge is home when solved"
+        );
         Assert.assertEqWithMsg(expected = 0, flip, "and the right way round")
 
     ///
@@ -64,21 +83,33 @@ mod TestCornerEdgePair {
     ///
     @Test
     def thePairSuccessorAgreesWithTheModel(): Unit \ Assert =
-        Vector#{"", "R", "R U", "F2 L' D", "R U R' U' F2 L D B'", "D2 R2 L F B' U",
-            "M2 E2 S2"}
-            |> Vector.forEach(alg -> {
+        Vector#{
+            "",
+            "R",
+            "R U",
+            "F2 L' D",
+            "R U R' U' F2 L D B'",
+            "D2 R2 L F B' U",
+            "M2 E2 S2"
+        } |> Vector.forEach(
+            alg -> {
                 let c = made(alg);
                 match encode(c) {
-                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
                     case Ok(here) =>
-                        Move.all() |> Vector.forEach(m ->
-                            Assert.assertEqWithMsg(
-                                expected = Ok(successor(here, Move.index(m))),
-                                Cube.apply(m, c) |> Result.flatMap(encode),
-                                "'${alg}' then ${m}: the pair coordinate and the "
-                                    + "model disagree"))
+                        Move.all()
+                            |> Vector.forEach(
+                                m ->
+                                    Assert.assertEqWithMsg(
+                                        expected = Ok(successor(here, Move.index(m))),
+                                        Cube.apply(m, c) |> Result.flatMap(encode),
+                                        "'${alg}' then ${m}: the pair coordinate and the "
+                                            + "model disagree"
+                                    )
+                            )
                 }
-            })
+            }
+        )
 
     ///
     /// `Cross.firstPiece` agrees with `unrank`, on every cross coordinate.
@@ -91,12 +122,18 @@ mod TestCornerEdgePair {
     ///
     @Test
     def firstPieceAgreesWithUnrankEverywhere(): Unit \ Assert =
-        let bad = Vector.range(0, Cross.stateCount()) |> Vector.count(i -> {
-            let (places, flips) = Cross.unrank(i);
-            Cross.firstPiece(i) != (Vector.get(0, places), Vector.get(0, flips))
-        });
-        Assert.assertEqWithMsg(expected = 0, bad,
-            "cross coordinates where the fast first-piece read disagrees with unrank")
+        let bad = Vector.range(0, Cross.stateCount())
+            |> Vector.count(
+                i -> {
+                    let (places, flips) = Cross.unrank(i);
+                    Cross.firstPiece(i) != (Vector.get(0, places), Vector.get(0, flips))
+                }
+            );
+        Assert.assertEqWithMsg(
+            expected = 0,
+            bad,
+            "cross coordinates where the fast first-piece read disagrees with unrank"
+        )
 
     ///
     /// The pair coordinate the search derives is the one this module encodes.
@@ -117,23 +154,41 @@ mod TestCornerEdgePair {
     ///
     @Test
     def theSearchDerivesThePairCoordinateThisModuleEncodes(): Unit \ Assert =
-        Assert.assertEqWithMsg(expected = designatedEdge(),
+        Assert.assertEqWithMsg(
+            expected = designatedEdge(),
             Vector.get(0, MiddleEdges.middleEdges()),
-            "the pair's designated edge must be the middle-edge coordinate's first");
-        Vector#{"", "R", "R U", "F2 L' D", "R U R' U' F2 L D B'", "D2 R2 L F B' U",
-            "M2 E2 S2", "U R U' R' F' U F", "R2 D2 B L' F"}
-            |> Vector.forEach(alg -> {
+            "the pair's designated edge must be the middle-edge coordinate's first"
+        );
+        Vector#{
+            "",
+            "R",
+            "R U",
+            "F2 L' D",
+            "R U R' U' F2 L D B'",
+            "D2 R2 L F B' U",
+            "M2 E2 S2",
+            "U R U' R' F' U F",
+            "R2 D2 B L' F"
+        } |> Vector.forEach(
+            alg -> {
                 let c = made(alg);
-                match (Cross.encode(c), FirstLayer.encode(c), MiddleEdges.encode(c),
-                        encode(c)) {
+                match (
+                    Cross.encode(c),
+                    FirstLayer.encode(c),
+                    MiddleEdges.encode(c),
+                    encode(c)
+                ) {
                     case (Ok(x), Ok(y), Ok(z), Ok(pair)) =>
-                        Assert.assertEqWithMsg(expected = pair,
+                        Assert.assertEqWithMsg(
+                            expected = pair,
                             TwoLayers.pairedOf(TwoLayers.pack(x, y, z)),
                             "'${alg}': the search derives a different pair "
-                                + "coordinate than the table was built over")
+                                + "coordinate than the table was built over"
+                        )
                     case _ =>
                         Assert.assertTrueWithMsg(false, "'${alg}' should encode")
                 }
-            })
+            }
+        )
 
 }

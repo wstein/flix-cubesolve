@@ -6,7 +6,7 @@
 /// state -- rather than against the solver. A fact layer verified by the thing
 /// that consumes it would agree with itself and prove nothing.
 ///
-mod TestFacts {
+pub mod TestFacts {
 
     use CubeSolve.Method.Facts
     use CubeSolve.Method.Facts.TopShape
@@ -23,14 +23,29 @@ mod TestFacts {
     @Test
     def aSolvedCubeHasEveryPieceHome(): Unit \ Assert =
         let c = after("");
-        Vector.range(0, 12) |> Vector.forEach(s ->
-            Assert.assertEqWithMsg(expected = Ok(true), Facts.edgeHome(c, s),
-                "edge slot ${s} should be home on a solved cube"));
-        Vector.range(0, 8) |> Vector.forEach(s ->
-            Assert.assertEqWithMsg(expected = Ok(true), Facts.cornerHome(c, s),
-                "corner slot ${s} should be home on a solved cube"));
-        Assert.assertEqWithMsg(expected = Ok(TopShape.Cross), Facts.topShape(c),
-            "a solved cube's top face is the cross")
+        Vector.range(0, 12)
+            |> Vector.forEach(
+                s ->
+                    Assert.assertEqWithMsg(
+                        expected = Ok(true),
+                        Facts.edgeHome(c, s),
+                        "edge slot ${s} should be home on a solved cube"
+                    )
+            );
+        Vector.range(0, 8)
+            |> Vector.forEach(
+                s ->
+                    Assert.assertEqWithMsg(
+                        expected = Ok(true),
+                        Facts.cornerHome(c, s),
+                        "corner slot ${s} should be home on a solved cube"
+                    )
+            );
+        Assert.assertEqWithMsg(
+            expected = Ok(TopShape.Cross),
+            Facts.topShape(c),
+            "a solved cube's top face is the cross"
+        )
 
     ///
     /// A quarter turn of `U` moves the four top edges and nothing below.
@@ -41,12 +56,24 @@ mod TestFacts {
     @Test
     def aTopTurnMovesTheTopAndLeavesTheRest(): Unit \ Assert =
         let c = after("U");
-        Facts.topEdgeSlots() |> Vector.forEach(s ->
-            Assert.assertEqWithMsg(expected = Ok(false), Facts.edgeHome(c, s),
-                "edge slot ${s} should have moved under U"));
-        Vector.append(Facts.crossSlots(), Facts.middleSlots()) |> Vector.forEach(s ->
-            Assert.assertEqWithMsg(expected = Ok(true), Facts.edgeHome(c, s),
-                "edge slot ${s} is below the top and U should not have touched it"))
+        Facts.topEdgeSlots()
+            |> Vector.forEach(
+                s ->
+                    Assert.assertEqWithMsg(
+                        expected = Ok(false),
+                        Facts.edgeHome(c, s),
+                        "edge slot ${s} should have moved under U"
+                    )
+            );
+        Vector.append(Facts.crossSlots(), Facts.middleSlots())
+            |> Vector.forEach(
+                s ->
+                    Assert.assertEqWithMsg(
+                        expected = Ok(true),
+                        Facts.edgeHome(c, s),
+                        "edge slot ${s} is below the top and U should not have touched it"
+                    )
+            )
 
     ///
     /// Finding a piece is the inverse of the slot-indexed permutation.
@@ -60,24 +87,34 @@ mod TestFacts {
         match Facts.edges(c) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "edges")
             case Ok(es) =>
-                es |> Vector.forEach(p ->
-                    match Facts.findEdge(c, p#piece) {
-                        case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "finding")
-                        case Ok(found) =>
-                            Assert.assertEqWithMsg(expected = p#slot, found#slot,
-                                "edge ${p#piece} sits in slot ${p#slot}")
-                    })
+                es
+                    |> Vector.forEach(
+                        p -> match Facts.findEdge(c, p#piece) {
+                            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "finding")
+                            case Ok(found) =>
+                                Assert.assertEqWithMsg(
+                                    expected = p#slot,
+                                    found#slot,
+                                    "edge ${p#piece} sits in slot ${p#slot}"
+                                )
+                        }
+                    )
         };
         match Facts.corners(c) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "corners")
             case Ok(cs) =>
-                cs |> Vector.forEach(p ->
-                    match Facts.findCorner(c, p#piece) {
-                        case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "finding")
-                        case Ok(found) =>
-                            Assert.assertEqWithMsg(expected = p#slot, found#slot,
-                                "corner ${p#piece} sits in slot ${p#slot}")
-                    })
+                cs
+                    |> Vector.forEach(
+                        p -> match Facts.findCorner(c, p#piece) {
+                            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "finding")
+                            case Ok(found) =>
+                                Assert.assertEqWithMsg(
+                                    expected = p#slot,
+                                    found#slot,
+                                    "corner ${p#piece} sits in slot ${p#slot}"
+                                )
+                        }
+                    )
         }
 
     ///
@@ -89,17 +126,24 @@ mod TestFacts {
     ///
     @Test
     def theFourTopShapesAreToldApart(): Unit \ Assert =
-        Assert.assertEqWithMsg(expected = Ok(TopShape.Cross), Facts.topShape(after("")),
-            "solved is the cross");
+        Assert.assertEqWithMsg(
+            expected = Ok(TopShape.Cross),
+            Facts.topShape(after("")),
+            "solved is the cross"
+        );
         // F R U R' U' F' flips exactly two adjacent top edges from solved.
         let shaped = Facts.topShape(after("F R U R' U' F'"));
-        Assert.assertTrueWithMsg(shaped != Ok(TopShape.Cross),
-            "after an edge-flipping algorithm the top is no longer the cross: ${shaped}");
+        Assert.assertTrueWithMsg(
+            shaped != Ok(TopShape.Cross),
+            "after an edge-flipping algorithm the top is no longer the cross: ${shaped}"
+        );
         // The shape must be one of the four, whatever it is.
         Assert.assertTrueWithMsg(
             shaped == Ok(TopShape.Dot) or shaped == Ok(TopShape.Corner)
-                or shaped == Ok(TopShape.Line) or shaped == Ok(TopShape.Cross),
-            "every top face is one of the four shapes, and this is ${shaped}")
+                or shaped == Ok(TopShape.Line)
+                or shaped == Ok(TopShape.Cross),
+            "every top face is one of the four shapes, and this is ${shaped}"
+        )
 
     ///
     /// The facts refuse a cube that is not a 3x3x3, rather than guessing.
@@ -108,8 +152,10 @@ mod TestFacts {
     def anotherSizeIsRefused(): Unit \ Assert =
         match Cube.solved(2) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a solved 2x2x2")
-            case Ok(c)  =>
-                Assert.assertTrueWithMsg(Result.isErr(Facts.edges(c)),
-                    "a 2x2x2 has no midge orbit and these facts should say so")
+            case Ok(c) =>
+                Assert.assertTrueWithMsg(
+                    Result.isErr(Facts.edges(c)),
+                    "a 2x2x2 has no midge orbit and these facts should say so"
+                )
         }
 }

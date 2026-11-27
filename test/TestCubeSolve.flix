@@ -1,4 +1,7 @@
-mod TestCubeSolve {
+pub mod TestCubeSolve {
+
+    use orbit64::Orbit64.V2.Registry.{Model, Pose}
+    use orbit64::Orbit64.V2.State
 
     /// The list says what is implemented, not what is planned. A size listed
     /// here must be one every layer can actually handle, because callers branch
@@ -24,9 +27,14 @@ mod TestCubeSolve {
     @Test
     def turningIsAWeakerClaimThanSolving(): Unit \ Assert =
         Assert.assertEq(expected = Vector#{2, 3, 4, 5}, CubeSolve.turnableSizes());
-        CubeSolve.supportedSizes() |> Vector.forEach(n ->
-            Assert.assertTrueWithMsg(CubeSolve.canTurn(n),
-                "a ${n}x${n}x${n} is solvable but not turnable, which is impossible"));
+        CubeSolve.supportedSizes()
+            |> Vector.forEach(
+                n ->
+                    Assert.assertTrueWithMsg(
+                        CubeSolve.canTurn(n),
+                        "a ${n}x${n}x${n} is solvable but not turnable, which is impossible"
+                    )
+            );
         Assert.assertTrue(CubeSolve.canTurn(4) and not CubeSolve.supports(4));
         Assert.assertTrue(CubeSolve.canTurn(5) and not CubeSolve.supports(5));
         Assert.assertFalse(CubeSolve.canTurn(1));
@@ -36,33 +44,37 @@ mod TestCubeSolve {
     /// cannot drift ahead of the implementation either.
     @Test
     def everyTurnableSizeCanBeBuiltAndTurned(): Unit \ Assert =
-        CubeSolve.turnableSizes() |> Vector.forEach(n ->
-            Assert.assertOk(
-                CubeSolve.Model.Cube.solved(n)
-                    |> Result.flatMap(c -> CubeSolve.Model.Cube.applyNotation("R U F' D2", c))
-            ))
+        CubeSolve.turnableSizes()
+            |> Vector.forEach(
+                n ->
+                    Assert.assertOk(
+                        CubeSolve.Model.Cube.solved(n)
+                            |> Result.flatMap(c -> CubeSolve.Model.Cube.applyNotation("R U F' D2", c))
+                    )
+            )
 
     /// Every supported size is one the model can actually build and turn --
     /// the list cannot drift ahead of the implementation without failing here.
     @Test
     def everySupportedSizeCanBeBuiltAndTurned(): Unit \ Assert =
-        CubeSolve.supportedSizes() |> Vector.forEach(n ->
-            Assert.assertOk(
-                CubeSolve.Model.Cube.solved(n)
-                    |> Result.flatMap(c -> CubeSolve.Model.Cube.applyNotation("R U F' D2", c))
-            ))
+        CubeSolve.supportedSizes()
+            |> Vector.forEach(
+                n ->
+                    Assert.assertOk(
+                        CubeSolve.Model.Cube.solved(n)
+                            |> Result.flatMap(c -> CubeSolve.Model.Cube.applyNotation("R U F' D2", c))
+                    )
+            )
 
     ///
-    /// The dependency is reachable and agrees with the arithmetic the plan
-    /// records: `Orbit64.stateCount(3)` counts every encodable state, which is
-    /// exactly twice the classic figure because the classic figure excludes the
-    /// unreachable half that the coupled permutation parity rules out.
+    /// The dependency is reachable. V2 counts reachable 3x3x3 color states,
+    /// which is the classic figure: corner and midge parity are one digit.
     ///
     @Test
     def orbit64IsOnTheClasspath(): Unit \ Assert =
         Assert.assertEq(
-            expected = 2ii * 43252003274489856000ii,
-            Orbit64.stateCount(3)
+            expected = 43252003274489856000ii,
+            State.count(3, Model.Color, Pose.Canonical)
         )
 
 }

@@ -82,7 +82,7 @@
 /// say the individual knobs did nothing here and not enough to put a number on
 /// what the pair is worth.
 ///
-mod TestBudgetAblation {
+pub mod TestBudgetAblation {
 
     use CubeSolve.Model.Holding
     use CubeSolve.Solve.Standard
@@ -91,14 +91,20 @@ mod TestBudgetAblation {
     /// The cubes measured, as canonical tokens.
     ///
     /// Seven drawn from the uniform scrambler and pinned, plus the state that
-    /// started this: `AD44qcBJiFJM`, whose four presets once collapsed into two
-    /// behaviours. Pinned rather than drawn afresh so that two runs of this can
-    /// be compared to each other.
+    /// started this: `B8bey0jRCmS` (formerly the V1 token `AD44qcBJiFJM`), whose
+    /// four presets once collapsed into two behaviors. Pinned rather than drawn
+    /// afresh so that two runs of this can be compared to each other.
     ///
     def corpus(): List[String] =
-        "AD44qcBJiFJM" :: "BBhzw-IyLWDz" :: "AsEcE0Z-JGmZ" :: "AY-QJTFLELSu"
-            :: "Ac4jnBmFqDvJ" :: "AQ4-xgwvdEU9" :: "AoQmsdNGOivQ"
-            :: "A40MKWmYYc_9" :: Nil
+        "B8bey0jRCmS"
+            :: "gw4vUwCFrZ4"
+            :: "WCPA3TcEjTM"
+            :: "MfHp4f0iFup"
+            :: "OcSPK8TVBye"
+            :: "IcdiF46OiXl"
+            :: "UISyii3HRBe"
+            :: "caFEC5QsOX_"
+            :: Nil
 
     ///
     /// The four combinations, named for what they are.
@@ -111,21 +117,25 @@ mod TestBudgetAblation {
             :: ("default", Standard.defaultBudget())
             :: ("deep", Standard.deepBudget())
             :: ("max", Standard.maxBudget())
-            // And the knobs alone, at a floor of zero, so a difference here is
-            // the view count or the handover limit and not the floor.
-            :: ("5 views, 300 h", cell(5, 300))
-            :: ("5 views, 600 h", cell(5, 600))
-            :: ("6 views, 300 h", cell(6, 300))
-            :: ("6 views, 600 h", cell(6, 600))
-            :: Nil
+                // And the knobs alone, at a floor of zero, so a difference here is
+                // the view count or the handover limit and not the floor.
+                :: ("5 views, 300 h", cell(5, 300))
+                    :: ("5 views, 600 h", cell(5, 600))
+                    :: ("6 views, 300 h", cell(6, 300))
+                    :: ("6 views, 600 h", cell(6, 600))
+                    :: Nil
 
     ///
     /// One knob combination, with no floor of its own.
     ///
     def cell(views: Int32, handovers: Int32): Standard.Budget =
         Standard.budget({
-            minViews = views, probeFloor = 0, probeMax = 4000,
-            maxDepth = 25, handovers = handovers, phase1Depth = 12
+            minViews    = views,
+            probeFloor  = 0,
+            probeMax    = 4000,
+            maxDepth    = 25,
+            handovers   = handovers,
+            phase1Depth = 12
         })
 
     @Test
@@ -133,31 +143,40 @@ mod TestBudgetAblation {
         match Sys.Env.handle(_ -> Sys.Env.getVar("CUBESOLVE_ABLATION"))(()) {
             case Some("1") => report()
             case _ =>
-                println("TestBudgetAblation: SKIPPED -- it solves eight cubes four "
-                    + "ways. Run with CUBESOLVE_ABLATION=1; it is a report rather "
-                    + "than a gate, so nothing depends on it.")
+                println(
+                    "TestBudgetAblation: SKIPPED -- it solves eight cubes four "
+                        + "ways. Run with CUBESOLVE_ABLATION=1; it is a report rather "
+                        + "than a gate, so nothing depends on it."
+                )
         }
 
     def report(): Unit \ Assert + IO =
         match Standard.buildTables() {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables")
-            case Ok(t)  =>
+            case Ok(t) =>
                 println("");
-                println("  budget          HTM   probes  views  selected  unreachable  pruned  "
-                    + "attempted  unexamined  capped");
-                combinations() |> List.forEach(match (name, b) -> {
-                    let r = overCorpus(t, b);
-                    println("  ${String.padRight(16, ' ', name)}"
-                        + "${String.padRight(6, ' ', "${r#htm}")}"
-                        + "${String.padRight(8, ' ', "${r#probes}")}"
-                        + "${String.padRight(7, ' ', "${r#views}")}"
-                        + "${String.padRight(10, ' ', "${r#selected}")}"
-                        + "${String.padRight(13, ' ', "${r#unreachable}")}"
-                        + "${String.padRight(8, ' ', "${r#pruned}")}"
-                        + "${String.padRight(11, ' ', "${r#attempted}")}"
-                        + "${String.padRight(12, ' ', "${r#unexamined}")}"
-                        + "${r#capped}")
-                })
+                println(
+                    "  budget          HTM   probes  views  selected  unreachable  pruned  "
+                        + "attempted  unexamined  capped"
+                );
+                combinations()
+                    |> List.forEach(
+                        match (name, b) -> {
+                            let r = overCorpus(t, b);
+                            println(
+                                "  ${String.padRight(16, ' ', name)}"
+                                    + "${String.padRight(6, ' ', "${r#htm}")}"
+                                    + "${String.padRight(8, ' ', "${r#probes}")}"
+                                    + "${String.padRight(7, ' ', "${r#views}")}"
+                                    + "${String.padRight(10, ' ', "${r#selected}")}"
+                                    + "${String.padRight(13, ' ', "${r#unreachable}")}"
+                                    + "${String.padRight(8, ' ', "${r#pruned}")}"
+                                    + "${String.padRight(11, ' ', "${r#attempted}")}"
+                                    + "${String.padRight(12, ' ', "${r#unexamined}")}"
+                                    + "${r#capped}"
+                            )
+                        }
+                    )
         }
 
     ///
@@ -165,25 +184,45 @@ mod TestBudgetAblation {
     /// were answered.
     ///
     def overCorpus(t: Standard.Tables, b: Standard.Budget): Tally =
-        corpus() |> List.foldLeft((acc, token) ->
-            match Holding.ofToken(3, token)
+        corpus()
+            |> List.foldLeft(
+                (acc, token) -> match Holding.ofToken(3, token)
                     |> Result.flatMap(CubeSolve.Model.Sized.standardOf) {
-                case Err(_) => acc
-                case Ok(c)  => add(acc, Standard.solveWithOutcome(t, b, c))
-            }, empty())
+                    case Err(_) => acc
+                    case Ok(c)  => add(acc, Standard.solveWithOutcome(t, b, c))
+                },
+                empty()
+            )
 
     ///
     /// What the corpus adds up to under one budget.
     ///
     type alias Tally = {
-        htm = Int32, probes = Int32, views = Int32, solved = Int32,
-        selected = Int32, unreachable = Int32, attempted = Int32, pruned = Int32,
-        unexamined = Int32, capped = Int32
+        htm         = Int32,
+        probes      = Int32,
+        views       = Int32,
+        solved      = Int32,
+        selected    = Int32,
+        unreachable = Int32,
+        attempted   = Int32,
+        pruned      = Int32,
+        unexamined  = Int32,
+        capped      = Int32
     }
 
     def empty(): Tally =
-        { htm = 0, probes = 0, views = 0, solved = 0, selected = 0, unreachable = 0,
-          attempted = 0, pruned = 0, unexamined = 0, capped = 0 }
+        {
+            htm         = 0,
+            probes      = 0,
+            views       = 0,
+            solved      = 0,
+            selected    = 0,
+            unreachable = 0,
+            attempted   = 0,
+            pruned      = 0,
+            unexamined  = 0,
+            capped      = 0
+        }
 
     ///
     /// One cube's outcome folded in.
@@ -191,18 +230,19 @@ mod TestBudgetAblation {
     def add(acc: Tally, out: Standard.Outcome): Tally =
         let vs = out#viewStats;
         let sum = f -> vs |> List.foldLeft((a, v) -> a + f(v), 0);
-        { htm = acc#htm + Option.getWithDefault(0, out#finalHtm),
-          probes = acc#probes + out#probesSpent,
-          views = acc#views + out#viewsTried,
-          solved = acc#solved + (if (Option.isEmpty(out#finalHtm)) 0 else 1),
-          selected = acc#selected + sum(v -> v#handoversSelected),
-          unreachable = acc#unreachable + sum(v -> v#handoversUnreachable),
-          attempted = acc#attempted + sum(v -> v#phaseTwoAttempts),
-          pruned = acc#pruned + sum(v -> v#handoversPruned),
-          unexamined = acc#unexamined + sum(v -> v#handoversUnexamined),
-          capped = acc#capped
-              + (vs |> List.count(v -> v#handoverLimitReached)) }
-
+        {
+            htm         = acc#htm + Option.getWithDefault(0, out#finalHtm),
+            probes      = acc#probes + out#probesSpent,
+            views       = acc#views + out#viewsTried,
+            solved      = acc#solved + (if (Option.isEmpty(out#finalHtm)) 0 else 1),
+            selected    = acc#selected + sum(v -> v#handoversSelected),
+            unreachable = acc#unreachable + sum(v -> v#handoversUnreachable),
+            attempted   = acc#attempted + sum(v -> v#phaseTwoAttempts),
+            pruned      = acc#pruned + sum(v -> v#handoversPruned),
+            unexamined  = acc#unexamined + sum(v -> v#handoversUnexamined),
+            capped = acc#capped
+                + (vs |> List.count(v -> v#handoverLimitReached))
+        }
 
     ///
     /// Every combination answers every cube.
@@ -212,18 +252,25 @@ mod TestBudgetAblation {
     ///
     @Test
     def everyCombinationAnswersEveryCube(): Unit \ Assert + IO =
-        if (Slow.skip("TestBudgetAblation.everyCombinationAnswersEveryCube",
-                "solves eight cubes four ways"))
+        if (Slow.skip(
+            "TestBudgetAblation.everyCombinationAnswersEveryCube",
+            "solves eight cubes four ways"
+        ))
             ()
         else
             match Standard.buildTables() {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables")
-                case Ok(t)  =>
-                    combinations() |> List.forEach(match (name, b) -> {
-                        let r = overCorpus(t, b);
-                        Assert.assertEqWithMsg(expected = List.length(corpus()),
-                            r#solved,
-                            "${name} did not answer every cube in the corpus")
-                    })
+                case Ok(t) =>
+                    combinations()
+                        |> List.forEach(
+                            match (name, b) -> {
+                                let r = overCorpus(t, b);
+                                Assert.assertEqWithMsg(
+                                    expected = List.length(corpus()),
+                                    r#solved,
+                                    "${name} did not answer every cube in the corpus"
+                                )
+                            }
+                        )
             }
 }

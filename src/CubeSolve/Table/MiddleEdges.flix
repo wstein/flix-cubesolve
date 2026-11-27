@@ -10,14 +10,14 @@
 /// are `CubeSolve.Table.Cross`'s and only the pieces tracked differ. A second
 /// copy would be a second thing to get wrong.
 ///
-mod CubeSolve.Table.MiddleEdges {
+pub mod CubeSolve.Table.MiddleEdges {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Table
     use CubeSolve.Table.Cache
     use CubeSolve.Table.Cross
     use CubeSolve.Table.TableView
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The edges between the centres: `FR FL BL BR`, slots 8 to 11.
@@ -44,7 +44,7 @@ mod CubeSolve.Table.MiddleEdges {
     ///
     pub def encode(c: Cube.Cube): Result[String, Int32] =
         match Cube.orbits(c) {
-            case CornerCoord(_, _) :: MidgeCoord(ep, eo) :: Nil =>
+            case Coord.CornerCoord(_, _) :: Coord.MidgeCoord(ep, eo) :: Nil =>
                 let places = middleEdges() |> Vector.map(p -> slotOf(p, ep));
                 if (Vector.exists(s -> s < 0, places))
                     Err("this cube is missing a middle edge, which cannot happen")
@@ -71,8 +71,9 @@ mod CubeSolve.Table.MiddleEdges {
     ///
     pub def build(): Result[String, TableView] =
         Table.distancesFrom(
-            { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8 },
-            successor)
+            {states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8},
+            successor
+        )
 
     ///
     /// The same table, read from the cache when one is there.

@@ -7,7 +7,7 @@
 /// first alone -- the group laws and round trips elsewhere depend on `==`
 /// meaning identical.
 ///
-mod TestHolding {
+pub mod TestHolding {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
@@ -23,7 +23,7 @@ mod TestHolding {
     def identity(what: String, c: Cube.Cube): String \ Assert =
         match Holding.identityOf(c) {
             case Some(t) => t
-            case None    =>
+            case None =>
                 Assert.assertTrueWithMsg(false, "${what}: no identity");
                 ""
         }
@@ -40,23 +40,33 @@ mod TestHolding {
     def everyHoldingOfAPatternHasOneIdentity(): Unit \ Assert =
         let standard = made(3, "R U R' U' F2 L D B'");
         let wanted3 = identity("3x3x3", standard);
-        Rotation.all() |> Vector.forEach(r ->
-            match Cube.conjugate(r, standard) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "conjugating")
-                case Ok(held) =>
-                    Assert.assertEqWithMsg(expected = wanted3, identity("3x3x3 as ${r}", held),
-                        "a 3x3x3 held as ${r} is the same pattern")
-            });
+        Rotation.all()
+            |> Vector.forEach(
+                r -> match Cube.conjugate(r, standard) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "conjugating")
+                    case Ok(held) =>
+                        Assert.assertEqWithMsg(
+                            expected = wanted3,
+                            identity("3x3x3 as ${r}", held),
+                            "a 3x3x3 held as ${r} is the same pattern"
+                        )
+                }
+            );
 
         let pocket = made(2, "R U' F2 R U");
         let wanted2 = identity("2x2x2", pocket);
-        Holding.reorientations() |> Vector.forEach(match (r, word) ->
-            match Cube.applyNotation(word, pocket) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${word}'")
-                case Ok(held) =>
-                    Assert.assertEqWithMsg(expected = wanted2, identity("2x2x2 as ${r}", held),
-                        "a 2x2x2 held as ${r} is the same pattern")
-            })
+        Holding.reorientations()
+            |> Vector.forEach(
+                match (r, word) -> match Cube.applyNotation(word, pocket) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${word}'")
+                    case Ok(held) =>
+                        Assert.assertEqWithMsg(
+                            expected = wanted2,
+                            identity("2x2x2 as ${r}", held),
+                            "a 2x2x2 held as ${r} is the same pattern"
+                        )
+                }
+            )
 
     ///
     /// `sameUpToHolding` is reflexive and symmetric, and says exactly what
@@ -68,40 +78,75 @@ mod TestHolding {
     @Test
     def sameUpToHoldingIsAnEquivalenceAndAgreesWithIdentity(): Unit \ Assert =
         let cubes = Vector#{
-            made(3, "R U R' U'"), made(3, "M2 S2 E2"), made(3, ""), made(3, "F2 B2")
+            made(3, "R U R' U'"),
+            made(3, "M2 S2 E2"),
+            made(3, ""),
+            made(3, "F2 B2")
         };
         // On the supported domain it is a genuine equivalence: reflexive,
         // symmetric, and exactly identity equality.
-        cubes |> Vector.forEach(a -> {
-            Assert.assertEqWithMsg(expected = Some(true), Holding.sameUpToHolding(a, a),
-                "reflexive");
-            cubes |> Vector.forEach(b -> {
-                Assert.assertEqWithMsg(
-                    expected = Holding.sameUpToHolding(a, b), Holding.sameUpToHolding(b, a),
-                    "symmetric");
-                Assert.assertEqWithMsg(
-                    expected = Some(Holding.identityOf(a) == Holding.identityOf(b)),
-                    Holding.sameUpToHolding(a, b),
-                    "agrees with identity equality")
-            })
-        });
+        cubes
+            |> Vector.forEach(
+                a -> {
+                    Assert.assertEqWithMsg(
+                        expected = Some(true),
+                        Holding.sameUpToHolding(a, a),
+                        "reflexive"
+                    );
+                    cubes
+                        |> Vector.forEach(
+                            b -> {
+                                Assert.assertEqWithMsg(
+                                    expected = Holding.sameUpToHolding(a, b),
+                                    Holding.sameUpToHolding(b, a),
+                                    "symmetric"
+                                );
+                                Assert.assertEqWithMsg(
+                                    expected = Some(Holding.identityOf(a) == Holding.identityOf(b)),
+                                    Holding.sameUpToHolding(a, b),
+                                    "agrees with identity equality"
+                                )
+                            }
+                        )
+                }
+            );
         // Transitive too, which is the law the other two do not imply.
-        cubes |> Vector.forEach(a -> cubes |> Vector.forEach(b -> cubes |> Vector.forEach(c ->
-            if (Holding.sameUpToHolding(a, b) == Some(true)
-                    and Holding.sameUpToHolding(b, c) == Some(true))
-                Assert.assertEqWithMsg(expected = Some(true), Holding.sameUpToHolding(a, c),
-                    "transitive")
-            else ())));
+        cubes
+            |> Vector.forEach(
+                a ->
+                    cubes
+                        |> Vector.forEach(
+                            b ->
+                                cubes
+                                    |> Vector.forEach(
+                                        c ->
+                                            if (Holding.sameUpToHolding(a, b) == Some(true)
+                                                and Holding.sameUpToHolding(b, c) == Some(true))
+                                                Assert.assertEqWithMsg(
+                                                    expected = Some(true),
+                                                    Holding.sameUpToHolding(a, c),
+                                                    "transitive"
+                                                )
+                                            else
+                                                ()
+                                    )
+                        )
+            );
         // The point of the whole module: same pattern, different state.
         let upright = made(3, "R U R' U'");
         match Cube.conjugate(Rotation.y(), upright) {
-            case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "conjugating")
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "conjugating")
             case Ok(held) =>
-                Assert.assertEqWithMsg(expected = Some(true),
+                Assert.assertEqWithMsg(
+                    expected = Some(true),
                     Holding.sameUpToHolding(upright, held),
-                    "a re-held cube is the same pattern");
-                Assert.assertNeqWithMsg(unexpected = Cube.orbits(upright), Cube.orbits(held),
-                    "and is not the same state -- Eq must stay exact")
+                    "a re-held cube is the same pattern"
+                );
+                Assert.assertNeqWithMsg(
+                    unexpected = Cube.orbits(upright),
+                    Cube.orbits(held),
+                    "and is not the same state -- Eq must stay exact"
+                )
         }
 
     ///
@@ -115,23 +160,32 @@ mod TestHolding {
                 let c = made(n, alg);
                 let raw = Facelets.token(c) |> Result.getWithDefault("?");
                 match Holding.ofToken(n, raw) {
-                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "decoding ${raw}")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "decoding ${raw}")
                     case Ok(back) =>
-                        Assert.assertEqWithMsg(expected = Cube.orbits(c), Cube.orbits(back),
-                            "a token decodes to the state it encoded")
+                        Assert.assertEqWithMsg(
+                            expected = Cube.orbits(c),
+                            Cube.orbits(back),
+                            "a token decodes to the state it encoded"
+                        )
                 };
                 // and the canonical token decodes to some holding of the same pattern
                 let canon = identity("${n}x${n}x${n}", c);
                 match Holding.ofToken(n, canon) {
-                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "decoding ${canon}")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "decoding ${canon}")
                     case Ok(back) =>
-                        Assert.assertEqWithMsg(expected = canon, identity("canonical", back),
-                            "a canonical token is its own identity");
-                        Assert.assertEqWithMsg(expected = Some(true),
+                        Assert.assertEqWithMsg(
+                            expected = canon,
+                            identity("canonical", back),
+                            "a canonical token is its own identity"
+                        );
+                        Assert.assertEqWithMsg(
+                            expected = Some(true),
                             Holding.sameUpToHolding(c, back),
-                            "and describes the same pattern")
+                            "and describes the same pattern"
+                        )
                 }
-            })
+            }
+        )
 
     ///
     /// A cube with centre orbits has no identity here, and does not compare
@@ -144,13 +198,21 @@ mod TestHolding {
     ///
     @Test
     def sizesWithCentreOrbitsHaveNoHoldingIdentity(): Unit \ Assert =
-        Vector#{4, 5} |> Vector.forEach(n -> {
-            let c = made(n, "R U");
-            Assert.assertEqWithMsg(expected = None, Holding.identityOf(c),
-                "a ${n}x${n}x${n} has no holding identity yet");
-            Assert.assertEqWithMsg(expected = None, Holding.sameUpToHolding(c, c),
-                "and reports the comparison as unavailable rather than as false")
-        });
+        Vector#{4, 5} |> Vector.forEach(
+            n -> {
+                let c = made(n, "R U");
+                Assert.assertEqWithMsg(
+                    expected = None,
+                    Holding.identityOf(c),
+                    "a ${n}x${n}x${n} has no holding identity yet"
+                );
+                Assert.assertEqWithMsg(
+                    expected = None,
+                    Holding.sameUpToHolding(c, c),
+                    "and reports the comparison as unavailable rather than as false"
+                )
+            }
+        );
         // It is still a perfectly good cube, and still exactly equal to itself.
         let big = made(4, "R U");
         Assert.assertEq(expected = Cube.orbits(big), Cube.orbits(made(4, "R U")))
@@ -163,23 +225,37 @@ mod TestHolding {
     ///
     @Test
     def bothCorporaDelegateToTheModel(): Unit \ Assert =
-        CubeSolve.Patterns.Standard.all() |> Vector.forEach(p -> {
-            let c = made(3, CubeSolve.Patterns.Standard.faceTurns(p));
-            Assert.assertEqWithMsg(
-                expected = Holding.identityOf(c), CubeSolve.Patterns.Standard.identify(c),
-                "'${CubeSolve.Patterns.Standard.name(p)}' disagrees with the model");
-            Assert.assertEqWithMsg(
-                expected = Some(CubeSolve.Patterns.Standard.canonical(p)), Holding.identityOf(c),
-                "'${CubeSolve.Patterns.Standard.name(p)}' recorded identity changed")
-        });
-        CubeSolve.Patterns.Pocket.all() |> Vector.forEach(p -> {
-            let c = made(2, CubeSolve.Patterns.Pocket.optimal(p));
-            Assert.assertEqWithMsg(
-                expected = Holding.identityOf(c), CubeSolve.Patterns.Pocket.identify(c),
-                "'${CubeSolve.Patterns.Pocket.name(p)}' disagrees with the model");
-            Assert.assertEqWithMsg(
-                expected = Some(CubeSolve.Patterns.Pocket.canonical(p)), Holding.identityOf(c),
-                "'${CubeSolve.Patterns.Pocket.name(p)}' recorded identity changed")
-        })
+        CubeSolve.Patterns.Standard.all()
+            |> Vector.forEach(
+                p -> {
+                    let c = made(3, CubeSolve.Patterns.Standard.faceTurns(p));
+                    Assert.assertEqWithMsg(
+                        expected = Holding.identityOf(c),
+                        CubeSolve.Patterns.Standard.identify(c),
+                        "'${CubeSolve.Patterns.Standard.name(p)}' disagrees with the model"
+                    );
+                    Assert.assertEqWithMsg(
+                        expected = Some(CubeSolve.Patterns.Standard.canonical(p)),
+                        Holding.identityOf(c),
+                        "'${CubeSolve.Patterns.Standard.name(p)}' recorded identity changed"
+                    )
+                }
+            );
+        CubeSolve.Patterns.Pocket.all()
+            |> Vector.forEach(
+                p -> {
+                    let c = made(2, CubeSolve.Patterns.Pocket.optimal(p));
+                    Assert.assertEqWithMsg(
+                        expected = Holding.identityOf(c),
+                        CubeSolve.Patterns.Pocket.identify(c),
+                        "'${CubeSolve.Patterns.Pocket.name(p)}' disagrees with the model"
+                    );
+                    Assert.assertEqWithMsg(
+                        expected = Some(CubeSolve.Patterns.Pocket.canonical(p)),
+                        Holding.identityOf(c),
+                        "'${CubeSolve.Patterns.Pocket.name(p)}' recorded identity changed"
+                    )
+                }
+            )
 
 }

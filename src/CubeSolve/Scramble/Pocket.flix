@@ -13,7 +13,7 @@
 /// is a set that can be sampled from rather than an approximation. Larger cubes
 /// have no such table and can only certify bounds.
 ///
-mod CubeSolve.Scramble.Pocket {
+pub mod CubeSolve.Scramble.Pocket {
 
     use CubeSolve.Model.Sized
     use CubeSolve.Model.Move
@@ -31,7 +31,7 @@ mod CubeSolve.Scramble.Pocket {
     /// difficulty needs to see what it actually got.
     ///
     pub enum Scramble {
-        case Scramble({ moves = List[Move.Move], state = Sized.Pocket, distance = Int32 })
+        case Scramble({moves = List[Move.Move], state = Sized.Pocket, distance = Int32})
     }
 
     ///
@@ -92,10 +92,16 @@ mod CubeSolve.Scramble.Pocket {
     pub def indexOf(t: CubeSolve.Table.Pocket.Tables): Index =
         let table = CubeSolve.Table.Pocket.distanceTable(t);
         let all = Vector.range(0, CubeSolve.Table.Pocket.stateCount());
-        Index(Vector.init(d ->
-            if (isIndexed(d)) Vector.filter(s -> Table.get(s, table) == d, all)
-            else Vector#{},
-            diameter() + 1))
+        Index(
+            Vector.init(
+                d ->
+                    if (isIndexed(d))
+                        Vector.filter(s -> Table.get(s, table) == d, all)
+                    else
+                        Vector#{},
+                diameter() + 1
+            )
+        )
 
     ///
     /// The states listed at distance `d`, empty for a class left to rejection.
@@ -118,8 +124,10 @@ mod CubeSolve.Scramble.Pocket {
         seed: Int64
     ): Result[String, (Scramble, Int64)] =
         if (d < 0 or d > diameter())
-            Err("no 2x2x2 state is ${d} moves from solved: the furthest is "
-                + "${diameter()}, measured by exhaustive search")
+            Err(
+                "no 2x2x2 state is ${d} moves from solved: the furthest is "
+                    + "${diameter()}, measured by exhaustive search"
+            )
         else
             let (chosen, next) =
                 if (isIndexed(d)) fromIndex(ix, d, seed) else byRejection(t, d, seed);
@@ -173,8 +181,8 @@ mod CubeSolve.Scramble.Pocket {
             solution <- CubeSolve.Solve.Pocket.solutionForState(t, at);
             cube <- CubeSolve.Table.Pocket.decode(at) |> Result.flatMap(Sized.pocketOf)
         ) yield Scramble({
-            moves = Move.inverseOf(solution),
-            state = cube,
+            moves    = Move.inverseOf(solution),
+            state    = cube,
             distance = List.length(solution)
         })
 

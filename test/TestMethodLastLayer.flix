@@ -6,7 +6,7 @@
 /// the two together solve, and that a step which is not needed is reported
 /// rather than dropped.
 ///
-mod TestMethodLastLayer {
+pub mod TestMethodLastLayer {
 
     use CubeSolve.Method
     use CubeSolve.Method.Oll
@@ -38,30 +38,44 @@ mod TestMethodLastLayer {
     ///
     @Test
     def bothStepsRunAndTheirAnswerSolves(): Unit \ Assert =
-        Vector.range(0, 40) |> Vector.forEach(n -> {
-            let oll = Vector.get(Int32.modulo(n * 7, 57), Oll.all());
-            let pll = Vector.get(Int32.modulo(n * 5, 21), Pll.all());
-            let c = needing(oll, pll);
-            match Method.lastLayer(SourceFirst, c) {
-                case Err(e) =>
-                    Assert.assertEqWithMsg(expected = "", e,
-                        "'${Oll.name(oll)}' then '${Pll.name(pll)}'")
-                case Ok(answer) =>
-                    Assert.assertEqWithMsg(expected = 2, List.length(answer#stages),
-                        "an answer has an OLL stage and a PLL stage");
-                    match Cube.applyNotation(Method.sequenceOf(answer), c) {
-                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replaying")
-                        case Ok(after) =>
-                            Assert.assertTrueWithMsg(Cube.isSolved(after),
-                                "'${Oll.name(oll)}' then '${Pll.name(pll)}': "
-                                    + "'${Method.sequenceOf(answer)}' does not solve it")
-                    };
-                    let counted = answer#stages
-                        |> List.foldLeft((t, s) -> t + s#layerTurns, 0);
-                    Assert.assertEqWithMsg(expected = counted, answer#layerTurns,
-                        "the total should be what the stages add up to")
-            }
-        })
+        Vector.range(0, 40)
+            |> Vector.forEach(
+                n -> {
+                    let oll = Vector.get(Int32.modulo(n * 7, 57), Oll.all());
+                    let pll = Vector.get(Int32.modulo(n * 5, 21), Pll.all());
+                    let c = needing(oll, pll);
+                    match Method.lastLayer(SourceFirst, c) {
+                        case Err(e) =>
+                            Assert.assertEqWithMsg(
+                                expected = "",
+                                e,
+                                "'${Oll.name(oll)}' then '${Pll.name(pll)}'"
+                            )
+                        case Ok(answer) =>
+                            Assert.assertEqWithMsg(
+                                expected = 2,
+                                List.length(answer#stages),
+                                "an answer has an OLL stage and a PLL stage"
+                            );
+                            match Cube.applyNotation(Method.sequenceOf(answer), c) {
+                                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replaying")
+                                case Ok(after) =>
+                                    Assert.assertTrueWithMsg(
+                                        Cube.isSolved(after),
+                                        "'${Oll.name(oll)}' then '${Pll.name(pll)}': "
+                                            + "'${Method.sequenceOf(answer)}' does not solve it"
+                                    )
+                            };
+                            let counted = answer#stages
+                                |> List.foldLeft((t, s) -> t + s#layerTurns, 0);
+                            Assert.assertEqWithMsg(
+                                expected = counted,
+                                answer#layerTurns,
+                                "the total should be what the stages add up to"
+                            )
+                    }
+                }
+            )
 
     ///
     /// The stages are named, and in the order they are done.
@@ -72,10 +86,12 @@ mod TestMethodLastLayer {
         let firstPll = Vector.get(0, Pll.all());
         let c = needing(firstOll, firstPll);
         match Method.lastLayer(SourceFirst, c) {
-            case Err(e)       => Assert.assertEqWithMsg(expected = "", e, "a two-stage cube")
-            case Ok(answer)   =>
-                Assert.assertEq(expected = "OLL" :: "PLL" :: Nil,
-                    answer#stages |> List.map(s -> s#step))
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a two-stage cube")
+            case Ok(answer) =>
+                Assert.assertEq(
+                    expected = "OLL" :: "PLL" :: Nil,
+                    answer#stages |> List.map(s -> s#step)
+                )
         }
 
     ///
@@ -90,30 +106,43 @@ mod TestMethodLastLayer {
         // Oriented already: only PLL is left.
         let pllOnly = made("(${Pll.algorithm(Vector.get(0, Pll.all()))})'");
         match Method.lastLayer(SourceFirst, pllOnly) {
-            case Err(e)     => Assert.assertEqWithMsg(expected = "", e, "a PLL-only cube")
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a PLL-only cube")
             case Ok(answer) =>
                 match answer#stages {
                     case first :: second :: Nil =>
-                        Assert.assertEqWithMsg(expected = "skip", first#caseName,
-                            "OLL should be a skip");
+                        Assert.assertEqWithMsg(
+                            expected = "skip",
+                            first#caseName,
+                            "OLL should be a skip"
+                        );
                         Assert.assertTrue(String.isEmpty(first#sequence));
                         Assert.assertTrueWithMsg(
                             String.contains(substr = "arrived oriented", first#note),
-                            "the skip should say why: ${first#note}");
+                            "the skip should say why: ${first#note}"
+                        );
                         Assert.assertNeq(unexpected = "skip", second#caseName)
                     case _ => Assert.assertTrueWithMsg(false, "two stages expected")
                 }
         };
         // Solved already: both are skips, and the answer costs nothing.
         match Method.lastLayer(SourceFirst, made("")) {
-            case Err(e)     => Assert.assertEqWithMsg(expected = "", e, "a solved cube")
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a solved cube")
             case Ok(answer) =>
-                Assert.assertEqWithMsg(expected = 0, answer#layerTurns,
-                    "a solved cube needs no moves");
+                Assert.assertEqWithMsg(
+                    expected = 0,
+                    answer#layerTurns,
+                    "a solved cube needs no moves"
+                );
                 Assert.assertTrue(String.isEmpty(Method.sequenceOf(answer)));
-                answer#stages |> List.forEach(s ->
-                    Assert.assertEqWithMsg(expected = "skip", s#caseName,
-                        "${s#step} should be a skip"))
+                answer#stages
+                    |> List.forEach(
+                        s ->
+                            Assert.assertEqWithMsg(
+                                expected = "skip",
+                                s#caseName,
+                                "${s#step} should be a skip"
+                            )
+                    )
         }
 
     ///
@@ -122,13 +151,16 @@ mod TestMethodLastLayer {
     ///
     @Test
     def anUnfinishedF2lIsRefused(): Unit \ Assert =
-        Vector#{"R", "R U R' U' F2 L D B' R2 F"} |> Vector.forEach(alg ->
-            match Method.lastLayer(SourceFirst, made(alg)) {
-                case Ok(_)    =>
+        Vector#{"R", "R U R' U' F2 L D B' R2 F"} |> Vector.forEach(
+            alg -> match Method.lastLayer(SourceFirst, made(alg)) {
+                case Ok(_) =>
                     Assert.assertTrueWithMsg(false, "'${alg}' has no last layer to finish")
                 case Err(why) =>
-                    Assert.assertTrueWithMsg(String.contains(substr = "first two layers", why),
-                        "'${alg}' should be refused for its F2L, not: ${why}")
-            })
+                    Assert.assertTrueWithMsg(
+                        String.contains(substr = "first two layers", why),
+                        "'${alg}' should be refused for its F2L, not: ${why}"
+                    )
+            }
+        )
 
 }

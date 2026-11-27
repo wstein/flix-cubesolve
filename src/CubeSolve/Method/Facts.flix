@@ -17,10 +17,10 @@
 /// them: corners `0..3` are the top layer and `4..7` the bottom, edges `0..3`
 /// the top, `4..7` the bottom, `8..11` the middle.
 ///
-mod CubeSolve.Method.Facts {
+pub mod CubeSolve.Method.Facts {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// A piece, where it sits and how it is turned there.
@@ -28,7 +28,7 @@ mod CubeSolve.Method.Facts {
     /// `piece` is the slot the piece belongs in, so `piece == slot` means it is
     /// home. `turn` is the twist for a corner and the flip for an edge.
     ///
-    pub type alias Placed = { piece = Int32, slot = Int32, turn = Int32 }
+    pub type alias Placed = {piece = Int32, slot = Int32, turn = Int32}
 
     ///
     /// The last layer's top face, as the four shapes a beginner is taught.
@@ -52,17 +52,27 @@ mod CubeSolve.Method.Facts {
     /// Every edge, by the slot it is sitting in.
     ///
     pub def edges(c: Cube.Cube): Result[String, Vector[Placed]] =
-        orbitsOf(c) |> Result.map(match (_, _, ep, eo) ->
-            Vector.range(0, 12) |> Vector.map(s ->
-                { piece = Vector.get(s, ep), slot = s, turn = Vector.get(s, eo) }))
+        orbitsOf(c)
+            |> Result.map(
+                match (_, _, ep, eo) ->
+                    Vector.range(0, 12)
+                        |> Vector.map(
+                            s -> {piece = Vector.get(s, ep), slot = s, turn = Vector.get(s, eo)}
+                        )
+            )
 
     ///
     /// Every corner, by the slot it is sitting in.
     ///
     pub def corners(c: Cube.Cube): Result[String, Vector[Placed]] =
-        orbitsOf(c) |> Result.map(match (cp, co, _, _) ->
-            Vector.range(0, 8) |> Vector.map(s ->
-                { piece = Vector.get(s, cp), slot = s, turn = Vector.get(s, co) }))
+        orbitsOf(c)
+            |> Result.map(
+                match (cp, co, _, _) ->
+                    Vector.range(0, 8)
+                        |> Vector.map(
+                            s -> {piece = Vector.get(s, cp), slot = s, turn = Vector.get(s, co)}
+                        )
+            )
 
     ///
     /// The slot `piece` is sitting in, and how it is turned there.
@@ -124,18 +134,21 @@ mod CubeSolve.Method.Facts {
     /// two can be adjacent or opposite.
     ///
     pub def topShape(c: Cube.Cube): Result[String, TopShape] =
-        edges(c) |> Result.map(es -> {
-            let up = topEdgeSlots() |> Vector.filter(s -> Vector.get(s, es)#turn == 0);
-            match Vector.length(up) {
-                case 0 => TopShape.Dot
-                case 4 => TopShape.Cross
-                case _ =>
-                    // UR and UL are opposite, as are UF and UB.
-                    let a = Vector.get(0, up);
-                    let b = Vector.get(1, up);
-                    if (Int32.abs(a - b) == 2) TopShape.Line else TopShape.Corner
-            }
-        })
+        edges(c)
+            |> Result.map(
+                es -> {
+                    let up = topEdgeSlots() |> Vector.filter(s -> Vector.get(s, es)#turn == 0);
+                    match Vector.length(up) {
+                        case 0 => TopShape.Dot
+                        case 4 => TopShape.Cross
+                        case _ =>
+                            // UR and UL are opposite, as are UF and UB.
+                            let a = Vector.get(0, up);
+                            let b = Vector.get(1, up);
+                            if (Int32.abs(a - b) == 2) TopShape.Line else TopShape.Corner
+                    }
+                }
+            )
 
     ///
     /// Whether every slot in `slots` holds its own piece the right way round.
@@ -155,9 +168,11 @@ mod CubeSolve.Method.Facts {
     def located(piece: Int32, what: String): Vector[Placed] -> Result[String, Placed] =
         ps -> match Vector.findLeft(p -> p#piece == piece, ps) {
             case Some(p) => Ok(p)
-            case None    =>
-                Err("no ${what} numbered ${piece} is on this cube, which means "
-                    + "the state is not a cube at all")
+            case None =>
+                Err(
+                    "no ${what} numbered ${piece} is on this cube, which means "
+                        + "the state is not a cube at all"
+                )
         }
 
     ///
@@ -167,11 +182,13 @@ mod CubeSolve.Method.Facts {
         c: Cube.Cube
     ): Result[String, (Vector[Int32], Vector[Int32], Vector[Int32], Vector[Int32])] =
         if (Cube.size(c) != 3)
-            Err("these are the facts of a 3x3x3, and this is a "
-                + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}")
+            Err(
+                "these are the facts of a 3x3x3, and this is a "
+                    + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}"
+            )
         else
             match Cube.orbits(c) {
-                case CornerCoord(cp, co) :: MidgeCoord(ep, eo) :: Nil => Ok((cp, co, ep, eo))
-                case _ => Err("this cube does not have the orbits a 3x3x3 has")
+                case Coord.CornerCoord(cp, co) :: Coord.MidgeCoord(ep, eo) :: Nil => Ok((cp, co, ep, eo))
+                case _                                                            => Err("this cube does not have the orbits a 3x3x3 has")
             }
 }

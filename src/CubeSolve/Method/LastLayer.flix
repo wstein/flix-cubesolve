@@ -13,14 +13,14 @@
 /// and which way round. Asking a search coordinate would be the wrong layer, and
 /// asking the facelets would be a slower way to ask the same thing.
 ///
-mod CubeSolve.Method.LastLayer {
+pub mod CubeSolve.Method.LastLayer {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face.U
     use CubeSolve.Model.Move.Move.Turn
     use CubeSolve.Model.Rotation
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The slots a 3x3x3's last layer occupies.
@@ -36,17 +36,23 @@ mod CubeSolve.Method.LastLayer {
     ///
     pub def faultBelowTheTop(c: Cube.Cube): Option[String] =
         if (Cube.size(c) != 3)
-            Some("this is a step of the 3x3x3 method, and this is a "
-                + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}")
+            Some(
+                "this is a step of the 3x3x3 method, and this is a "
+                    + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}"
+            )
         else
             match Cube.orbits(c) {
-                case CornerCoord(cp, co) :: MidgeCoord(ep, eo) :: Nil =>
+                case Coord.CornerCoord(cp, co) :: Coord.MidgeCoord(ep, eo) :: Nil =>
                     if (not settled(lastLayerSlots(), 8, cp, co))
-                        Some("the first two layers are not solved: a bottom corner "
-                            + "is out of place or twisted")
+                        Some(
+                            "the first two layers are not solved: a bottom corner "
+                                + "is out of place or twisted"
+                        )
                     else if (not settled(lastLayerSlots(), 12, ep, eo))
-                        Some("the first two layers are not solved: a bottom or "
-                            + "middle edge is out of place or flipped")
+                        Some(
+                            "the first two layers are not solved: a bottom or "
+                                + "middle edge is out of place or flipped"
+                        )
                     else
                         None
                 case _ => Some("this cube does not have the orbits a 3x3x3 has")
@@ -59,7 +65,7 @@ mod CubeSolve.Method.LastLayer {
     ///
     pub def topIsOriented(c: Cube.Cube): Bool =
         match Cube.orbits(c) {
-            case CornerCoord(_, co) :: MidgeCoord(_, eo) :: Nil =>
+            case Coord.CornerCoord(_, co) :: Coord.MidgeCoord(_, eo) :: Nil =>
                 unturned(0, lastLayerSlots(), co) and unturned(0, lastLayerSlots(), eo)
             case _ => false
         }
@@ -90,8 +96,11 @@ mod CubeSolve.Method.LastLayer {
         perm: Vector[Int32],
         ori: Vector[Int32]
     ): Bool =
-        Vector.range(start, stop) |> Vector.forAll(i ->
-            Vector.get(i, perm) == i and Vector.get(i, ori) == 0)
+        Vector.range(start, stop)
+            |> Vector.forAll(
+                i ->
+                    Vector.get(i, perm) == i and Vector.get(i, ori) == 0
+            )
 
     ///
     /// Whether every orientation from `start` up to `stop` is zero.

@@ -18,7 +18,7 @@
 /// is then committed as source, the way the pattern collections are. Nothing on
 /// a solving path calls it.
 ///
-mod CubeSolve.Method.Derive {
+pub mod CubeSolve.Method.Derive {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move

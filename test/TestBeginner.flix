@@ -6,11 +6,19 @@
 /// predicates the other methods already use, and that it is not satisfied by
 /// accident.
 ///
-mod TestBeginner {
+pub mod TestBeginner {
 
     use CubeSolve.Method.Beginner
-    use CubeSolve.Method.Beginner.Stage.{Nothing, Cross, FirstLayer, TwoLayers,
-        TopCross, TopEdgesPlaced, TopCornersPlaced, Solved}
+    use CubeSolve.Method.Beginner.Stage.{
+        Nothing,
+        Cross,
+        FirstLayer,
+        TwoLayers,
+        TopCross,
+        TopEdgesPlaced,
+        TopCornersPlaced,
+        Solved
+    }
     use CubeSolve.Method.LastLayer
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Random
@@ -31,24 +39,45 @@ mod TestBeginner {
     @Test
     def theLadderIsMonotone(): Unit \ Assert =
         let cubes = Vector.append(
-            Vector#{made(""), made("R"), made("U"), made("R U R' U'"),
+            Vector#{
+                made(""),
+                made("R"),
+                made("U"),
+                made("R U R' U'"),
                 made("(R U R' U' R' F R2 U' R' U' R U R' F')'"),
-                made("(r U R' U R U2 r')'")},
-            Vector.range(0, 24) |> Vector.map(i ->
-                match Random.sampleDeterministic(Int32.toInt64(i) + 51000i64, 3)
-                    |> Result.map(fst) {
-                    case Ok(c)  => c
-                    case Err(_) => made("")
-                }));
-        cubes |> Vector.forEach(c ->
-            Beginner.ladder() |> List.forEach(s ->
-                if (Beginner.isComplete(s, c))
-                    Beginner.ladder() |> List.forEach(earlier ->
-                        if (earlier <= s)
-                            Assert.assertTrueWithMsg(Beginner.isComplete(earlier, c),
-                                "a cube at ${s} must also be at ${earlier}")
-                        else ())
-                else ()))
+                made("(r U R' U R U2 r')'")
+            },
+            Vector.range(0, 24)
+                |> Vector.map(
+                    i -> match Random.sampleDeterministic(Int32.toInt64(i) + 51000i64, 3)
+                        |> Result.map(fst) {
+                        case Ok(c)  => c
+                        case Err(_) => made("")
+                    }
+                )
+        );
+        cubes
+            |> Vector.forEach(
+                c ->
+                    Beginner.ladder()
+                        |> List.forEach(
+                            s ->
+                                if (Beginner.isComplete(s, c))
+                                    Beginner.ladder()
+                                        |> List.forEach(
+                                            earlier ->
+                                                if (earlier <= s)
+                                                    Assert.assertTrueWithMsg(
+                                                        Beginner.isComplete(earlier, c),
+                                                        "a cube at ${s} must also be at ${earlier}"
+                                                    )
+                                                else
+                                                    ()
+                                        )
+                                else
+                                    ()
+                        )
+            )
 
     ///
     /// The rungs are reached by cubes built to sit on them.
@@ -60,11 +89,15 @@ mod TestBeginner {
         // oriented but its pieces out of place.
         Assert.assertEq(expected = TopCross, Beginner.reached(made("U")));
         // A PLL case: everything below solved, top oriented, top pieces astray.
-        Assert.assertEq(expected = TopCross,
-            Beginner.reached(made("(R U R' U' R' F R2 U' R' U' R U R' F')'")));
+        Assert.assertEq(
+            expected = TopCross,
+            Beginner.reached(made("(R U R' U' R' F R2 U' R' U' R U R' F')'"))
+        );
         // An OLL case: two layers done, top not oriented.
-        Assert.assertEq(expected = TwoLayers,
-            Beginner.reached(made("(r U R' U R U2 r')'")));
+        Assert.assertEq(
+            expected = TwoLayers,
+            Beginner.reached(made("(r U R' U R U2 r')'"))
+        );
         // One turn of a side face breaks the cross.
         Assert.assertEq(expected = Nothing, Beginner.reached(made("F")))
 
@@ -76,21 +109,25 @@ mod TestBeginner {
     ///
     @Test
     def theLadderAgreesWithTheLastLayerPredicates(): Unit \ Assert =
-        Vector.range(0, 30) |> Vector.forEach(i ->
-            match Random.sampleDeterministic(Int32.toInt64(i) + 52000i64, 3)
-                |> Result.map(fst) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "sampling")
-                case Ok(c)  =>
-                    Assert.assertEqWithMsg(
-                        expected = Option.isEmpty(LastLayer.faultBelowTheTop(c)),
-                        Beginner.isComplete(TwoLayers, c),
-                        "TwoLayers should be OLL's precondition");
-                    Assert.assertEqWithMsg(
-                        expected = Option.isEmpty(LastLayer.faultBelowTheTop(c))
-                            and LastLayer.topIsOriented(c),
-                        Beginner.isComplete(TopCross, c),
-                        "TopCross should be PLL's precondition")
-            })
+        Vector.range(0, 30)
+            |> Vector.forEach(
+                i -> match Random.sampleDeterministic(Int32.toInt64(i) + 52000i64, 3)
+                    |> Result.map(fst) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "sampling")
+                    case Ok(c) =>
+                        Assert.assertEqWithMsg(
+                            expected = Option.isEmpty(LastLayer.faultBelowTheTop(c)),
+                            Beginner.isComplete(TwoLayers, c),
+                            "TwoLayers should be OLL's precondition"
+                        );
+                        Assert.assertEqWithMsg(
+                            expected = Option.isEmpty(LastLayer.faultBelowTheTop(c))
+                                and LastLayer.topIsOriented(c),
+                            Beginner.isComplete(TopCross, c),
+                            "TopCross should be PLL's precondition"
+                        )
+                }
+            )
 
     ///
     /// Every stage says what it is for, and no two say the same thing.
@@ -98,9 +135,15 @@ mod TestBeginner {
     @Test
     def everyStageIsDescribedDistinctly(): Unit \ Assert =
         let said = Beginner.ladder() |> List.map(Beginner.describe);
-        Assert.assertEqWithMsg(expected = List.length(said),
-            List.length(List.distinct(said)), "two stages share a description");
-        said |> List.forEach(d ->
-            Assert.assertTrueWithMsg(String.length(d) > 10, "'${d}' says too little"))
+        Assert.assertEqWithMsg(
+            expected = List.length(said),
+            List.length(List.distinct(said)),
+            "two stages share a description"
+        );
+        said
+            |> List.forEach(
+                d ->
+                    Assert.assertTrueWithMsg(String.length(d) > 10, "'${d}' says too little")
+            )
 
 }

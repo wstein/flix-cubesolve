@@ -1,7 +1,7 @@
 ///
 /// The 4x4x4 reduction solver: reduces a 4x4x4 cube to a 3x3x3, fixes parities, and solves.
 ///
-mod CubeSolve.Solve.Revenge {
+pub mod CubeSolve.Solve.Revenge {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
@@ -30,8 +30,10 @@ mod CubeSolve.Solve.Revenge {
         if (Cube.size(c) != 4)
             Err("expected a 4x4x4 cube")
         else if (not Revenge.isReduced(c))
-            Err("4x4x4 full center and wing reduction is in progress: this solver "
-                + "handles reduced 4x4x4 states with parity correction")
+            Err(
+                "4x4x4 full center and wing reduction is in progress: this solver "
+                    + "handles reduced 4x4x4 states with parity correction"
+            )
         else
             solveReduced(t3, c)
 

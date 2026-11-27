@@ -1,7 +1,7 @@
 ///
 /// Drawing a cube as a net.
 ///
-mod TestRender {
+pub mod TestRender {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Render
@@ -24,7 +24,8 @@ mod TestRender {
     ///
     @Test
     def aSolvedCubeDrawsAsTheFamiliarCross(): Unit \ Assert =
-        let expected = List.join(String.lineSeparator(),
+        let expected = List.join(
+            String.lineSeparator(),
             "            ┌───┬───┬───┐"
                 :: "            │ U │ U │ U │"
                 :: "            ├───┼───┼───┤"
@@ -43,7 +44,9 @@ mod TestRender {
                 :: "            │ D │ D │ D │"
                 :: "            ├───┼───┼───┤"
                 :: "            │ D │ D │ D │"
-                :: "            └───┴───┴───┘" :: Nil);
+                :: "            └───┴───┴───┘"
+                :: Nil
+        );
         Assert.assertEq(expected = expected, drawn(Render.net, made(3, "U U'")))
 
     ///
@@ -51,7 +54,8 @@ mod TestRender {
     ///
     @Test
     def aSolvedPocketCubeDrawsTheSameShapeSmaller(): Unit \ Assert =
-        let expected = List.join(String.lineSeparator(),
+        let expected = List.join(
+            String.lineSeparator(),
             "        ┌───┬───┐"
                 :: "        │ U │ U │"
                 :: "        ├───┼───┤"
@@ -64,7 +68,9 @@ mod TestRender {
                 :: "        │ D │ D │"
                 :: "        ├───┼───┤"
                 :: "        │ D │ D │"
-                :: "        └───┴───┘" :: Nil);
+                :: "        └───┴───┘"
+                :: Nil
+        );
         Assert.assertEq(expected = expected, drawn(Render.net, made(2, "U U'")))
 
     ///
@@ -77,7 +83,8 @@ mod TestRender {
     ///
     @Test
     def aQuarterTurnMovesTheStickersItShould(): Unit \ Assert =
-        let expected = List.join(String.lineSeparator(),
+        let expected = List.join(
+            String.lineSeparator(),
             "            ┌───┬───┬───┐"
                 :: "            │ U │ U │ U │"
                 :: "            ├───┼───┼───┤"
@@ -96,7 +103,9 @@ mod TestRender {
                 :: "            │ D │ D │ D │"
                 :: "            ├───┼───┼───┤"
                 :: "            │ D │ D │ D │"
-                :: "            └───┴───┴───┘" :: Nil);
+                :: "            └───┴───┴───┘"
+                :: Nil
+        );
         Assert.assertEq(expected = expected, drawn(Render.net, made(3, "U")))
 
     ///
@@ -108,15 +117,22 @@ mod TestRender {
     ///
     @Test
     def colourIsDecorationOverTheSameLetters(): Unit \ Assert =
-        Vector#{"U U'", "R U R' U'", "F2 B2 L2"} |> Vector.forEach(alg -> {
-            let c = made(3, alg);
-            let plain = drawn(Render.net, c);
-            let coloured = drawn(Render.colouredNet, c);
-            Assert.assertTrueWithMsg(String.length(coloured) > String.length(plain),
-                "'${alg}': the coloured form should carry escapes");
-            Assert.assertEqWithMsg(expected = plain, stripped(coloured),
-                "'${alg}': stripping the colour should give back the plain net")
-        })
+        Vector#{"U U'", "R U R' U'", "F2 B2 L2"} |> Vector.forEach(
+            alg -> {
+                let c = made(3, alg);
+                let plain = drawn(Render.net, c);
+                let coloured = drawn(Render.colouredNet, c);
+                Assert.assertTrueWithMsg(
+                    String.length(coloured) > String.length(plain),
+                    "'${alg}': the coloured form should carry escapes"
+                );
+                Assert.assertEqWithMsg(
+                    expected = plain,
+                    stripped(coloured),
+                    "'${alg}': stripping the colour should give back the plain net"
+                )
+            }
+        )
 
     ///
     /// `text` with every ANSI escape sequence removed.
@@ -133,10 +149,13 @@ mod TestRender {
     @Test
     def renderedNetsRoundTripThroughParse(): Unit \ Assert =
         let algs = "U U'" :: "U" :: "R U" :: "U R F" :: "R U R' U'" :: "F2 B2 L2 R2 U2 D2" :: Nil;
-        algs |> List.forEach(alg -> {
-            checkNetRoundTrip(3, alg);
-            checkNetRoundTrip(2, alg)
-        })
+        algs
+            |> List.forEach(
+                alg -> {
+                    checkNetRoundTrip(3, alg);
+                    checkNetRoundTrip(2, alg)
+                }
+            )
 
     ///
     /// Verify all 4 net formats round-trip through parse.
@@ -153,7 +172,8 @@ mod TestRender {
     ///
     @Test
     def asciiNetsParseCorrectly(): Unit \ Assert =
-        let asciiNet = List.join(String.lineSeparator(),
+        let asciiNet = List.join(
+            String.lineSeparator(),
             "            +---+---+---+"
                 :: "            | U | U | U |"
                 :: "            +---+---+---+"
@@ -172,7 +192,9 @@ mod TestRender {
                 :: "            | D | D | D |"
                 :: "            +---+---+---+"
                 :: "            | D | D | D |"
-                :: "            +---+---+---+" :: Nil);
+                :: "            +---+---+---+"
+                :: Nil
+        );
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(asciiNet))
 
     ///
@@ -180,7 +202,8 @@ mod TestRender {
     ///
     @Test
     def colorCodesParseCorrectly(): Unit \ Assert =
-        let colorNet = List.join(String.lineSeparator(),
+        let colorNet = List.join(
+            String.lineSeparator(),
             "            ┌───┬───┬───┐"
                 :: "            │ W │ W │ W │"
                 :: "            ├───┼───┼───┤"
@@ -199,7 +222,9 @@ mod TestRender {
                 :: "            │ Y │ Y │ Y │"
                 :: "            ├───┼───┼───┤"
                 :: "            │ Y │ Y │ Y │"
-                :: "            └───┴───┴───┘" :: Nil);
+                :: "            └───┴───┴───┘"
+                :: Nil
+        );
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(colorNet))
 
     ///
@@ -207,7 +232,8 @@ mod TestRender {
     ///
     @Test
     def numericIndicesParseCorrectly(): Unit \ Assert =
-        let numNet = List.join(String.lineSeparator(),
+        let numNet = List.join(
+            String.lineSeparator(),
             "            ┌───┬───┬───┐"
                 :: "            │ 0 │ 0 │ 0 │"
                 :: "            ├───┼───┼───┤"
@@ -226,7 +252,9 @@ mod TestRender {
                 :: "            │ 3 │ 3 │ 3 │"
                 :: "            ├───┼───┼───┤"
                 :: "            │ 3 │ 3 │ 3 │"
-                :: "            └───┴───┴───┘" :: Nil);
+                :: "            └───┴───┴───┘"
+                :: Nil
+        );
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(numNet))
 
     ///
@@ -234,7 +262,8 @@ mod TestRender {
     ///
     @Test
     def plainSpacedNetsParseCorrectly(): Unit \ Assert =
-        let plainNet = List.join(String.lineSeparator(),
+        let plainNet = List.join(
+            String.lineSeparator(),
             "      U U U"
                 :: "      U U U"
                 :: "      U U U"
@@ -243,7 +272,9 @@ mod TestRender {
                 :: "L L L F F F R R R B B B"
                 :: "      D D D"
                 :: "      D D D"
-                :: "      D D D" :: Nil);
+                :: "      D D D"
+                :: Nil
+        );
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(plainNet))
 
     ///
@@ -251,7 +282,8 @@ mod TestRender {
     ///
     @Test
     def compactNetsParseCorrectly(): Unit \ Assert =
-        let compactNet = List.join(String.lineSeparator(),
+        let compactNet = List.join(
+            String.lineSeparator(),
             "    UUU"
                 :: "    UUU"
                 :: "    UUU"
@@ -260,7 +292,9 @@ mod TestRender {
                 :: "LLLFFFRRRBBB"
                 :: "    DDD"
                 :: "    DDD"
-                :: "    DDD" :: Nil);
+                :: "    DDD"
+                :: Nil
+        );
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(compactNet))
 
     ///
@@ -268,7 +302,8 @@ mod TestRender {
     ///
     @Test
     def docCommentNetsParseCorrectly(): Unit \ Assert =
-        let docNet = List.join(String.lineSeparator(),
+        let docNet = List.join(
+            String.lineSeparator(),
             "/// ```"
                 :: "///             ┌───┬───┬───┐"
                 :: "///             │ U │ U │ U │"
@@ -289,7 +324,9 @@ mod TestRender {
                 :: "///             ├───┼───┼───┤"
                 :: "///             │ D │ D │ D │"
                 :: "///             └───┴───┴───┘"
-                :: "/// ```" :: Nil);
+                :: "/// ```"
+                :: Nil
+        );
         Assert.assertEq(expected = Ok(made(3, "U U'")), Render.parse(docNet))
 
     ///

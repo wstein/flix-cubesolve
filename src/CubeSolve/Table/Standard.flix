@@ -26,17 +26,18 @@
 /// symmetry is then purely a memory-and-speed optimisation and is not done
 /// here.
 ///
-mod CubeSolve.Table.Standard {
+pub mod CubeSolve.Table.Standard {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
     use CubeSolve.Model.Move
+    use orbit64::Orbit64.Rank
     use CubeSolve.Table
     use CubeSolve.Table.TableView
     use CubeSolve.Table.Standard.Tables.Tables
     use CubeSolve.Table.Cache
     use CubeSolve.Table.Codec
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The number of corner-orientation states.
@@ -72,7 +73,7 @@ mod CubeSolve.Table.Standard {
     /// slots, and the solved arrangement `{8, 9, 10, 11}` is the largest such
     /// set, so it ranks last.
     ///
-    pub def solvedSlice(): Int32 = Orbit64.Rank.combRank(sliceSlots())
+    pub def solvedSlice(): Int32 = Rank.combRank(sliceSlots())
 
     // ---------- coordinates ----------
 
@@ -113,12 +114,12 @@ mod CubeSolve.Table.Standard {
     ///
     /// The UDSlice coordinate of an edge permutation.
     ///
-    /// Which slots hold the four slice edges, as a set. `Orbit64.Rank.combRank`
+    /// Which slots hold the four slice edges, as a set. `Rank.combRank`
     /// is exactly Kociemba's UDSlice coordinate generalised, so this is adopted
     /// rather than restated.
     ///
     pub def sliceOf(ep: Vector[Int32]): Int32 =
-        Orbit64.Rank.combRank(occupiedSlots(ep))
+        Rank.combRank(occupiedSlots(ep))
 
     ///
     /// The slots holding a slice edge, ascending.
@@ -129,18 +130,20 @@ mod CubeSolve.Table.Standard {
     ///
     /// The four slots that UDSlice coordinate `r` says are occupied.
     ///
-    pub def sliceUnrank(r: Int32): Vector[Int32] = Orbit64.Rank.combUnrank(r, 4)
+    pub def sliceUnrank(r: Int32): Vector[Int32] = Rank.combUnrank(r, 4)
 
     ///
     /// The three phase-one coordinates of `c`, or why it has none.
     ///
     pub def coordsOf(c: Cube): Result[String, (Int32, Int32, Int32)] =
         if (Cube.size(c) != 3)
-            Err("the phase-one coordinates describe a 3x3x3, not a "
-                + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}")
+            Err(
+                "the phase-one coordinates describe a 3x3x3, not a "
+                    + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}"
+            )
         else
             match Cube.orbits(c) {
-                case CornerCoord(_, co) :: MidgeCoord(ep, eo) :: Nil =>
+                case Coord.CornerCoord(_, co) :: Coord.MidgeCoord(ep, eo) :: Nil =>
                     Ok((twistOf(co), flipOf(eo), sliceOf(ep)))
                 case _ => Err("a 3x3x3 has a corner orbit and a midge orbit, in that order")
             }
@@ -189,9 +192,15 @@ mod CubeSolve.Table.Standard {
         region rc {
             let entries = states * moveCount();
             let payload = Table.emptyPayload(rc, 16, entries);
-            Vector.range(0, states) |> Vector.forEach(r ->
-                Vector.range(0, moveCount()) |> Vector.forEach(m ->
-                    Table.putEntry(payload, 16, r * moveCount() + m, after(r, m))));
+            Vector.range(0, states)
+                |> Vector.forEach(
+                    r ->
+                        Vector.range(0, moveCount())
+                            |> Vector.forEach(
+                                m ->
+                                    Table.putEntry(payload, 16, r * moveCount() + m, after(r, m))
+                            )
+                );
             Table.ofPayload(16, entries, payload)
         }
 
@@ -203,10 +212,14 @@ mod CubeSolve.Table.Standard {
         let face = Move.face(move);
         let perm = Move.cornerPermutation(face);
         let delta = Move.cornerTwist(face);
-        let step = o -> Vector.init(i -> {
-            let carried = Vector.get(Vector.get(i, perm), o);
-            Int32.modulo(carried + Vector.get(i, delta), 3)
-        }, 8);
+        let step = o ->
+            Vector.init(
+                i -> {
+                    let carried = Vector.get(Vector.get(i, perm), o);
+                    Int32.modulo(carried + Vector.get(i, delta), 3)
+                },
+                8
+            );
         twistOf(repeat(Move.amount(move), twistUnrank(r), step))
 
     ///
@@ -217,10 +230,14 @@ mod CubeSolve.Table.Standard {
         let face = Move.face(move);
         let perm = Move.edgePermutation(face);
         let delta = Move.edgeFlip(face);
-        let step = o -> Vector.init(i -> {
-            let carried = Vector.get(Vector.get(i, perm), o);
-            Int32.modulo(carried + Vector.get(i, delta), 2)
-        }, 12);
+        let step = o ->
+            Vector.init(
+                i -> {
+                    let carried = Vector.get(Vector.get(i, perm), o);
+                    Int32.modulo(carried + Vector.get(i, delta), 2)
+                },
+                12
+            );
         flipOf(repeat(Move.amount(move), flipUnrank(r), step))
 
     ///
@@ -236,7 +253,7 @@ mod CubeSolve.Table.Standard {
             let cameFromSlice = i -> Vector.memberOf(Vector.get(i, perm), occupied);
             Vector.range(0, 12) |> Vector.filter(cameFromSlice)
         };
-        Orbit64.Rank.combRank(repeat(Move.amount(move), sliceUnrank(r), step))
+        Rank.combRank(repeat(Move.amount(move), sliceUnrank(r), step))
 
     ///
     /// The move with index `m`.
@@ -258,11 +275,11 @@ mod CubeSolve.Table.Standard {
     pub enum Tables {
         case Tables({
             twistMoves = TableView,
-            flipMoves = TableView,
+            flipMoves  = TableView,
             sliceMoves = TableView,
             twistSlice = TableView,
-            flipSlice = TableView,
-            flipTwist = TableView
+            flipSlice  = TableView,
+            flipTwist  = TableView
         })
     }
 
@@ -310,21 +327,24 @@ mod CubeSolve.Table.Standard {
             fm <- flipMoves();
             sm <- sliceMoves();
             ts <- pairPruning(
-                { moves = tm, count = twistCount(), goal = 0 },
-                { moves = sm, count = sliceCount(), goal = solvedSlice() });
+                {moves = tm, count = twistCount(), goal = 0},
+                {moves = sm, count = sliceCount(), goal = solvedSlice()}
+            );
             fs <- pairPruning(
-                { moves = fm, count = flipCount(), goal = 0 },
-                { moves = sm, count = sliceCount(), goal = solvedSlice() });
+                {moves = fm, count = flipCount(), goal = 0},
+                {moves = sm, count = sliceCount(), goal = solvedSlice()}
+            );
             ft <- pairPruning(
-                { moves = fm, count = flipCount(), goal = 0 },
-                { moves = tm, count = twistCount(), goal = 0 })
+                {moves = fm, count = flipCount(), goal = 0},
+                {moves = tm, count = twistCount(), goal = 0}
+            )
         ) yield Tables({
             twistMoves = tm,
-            flipMoves = fm,
+            flipMoves  = fm,
             sliceMoves = sm,
             twistSlice = ts,
-            flipSlice = fs,
-            flipTwist = ft
+            flipSlice  = fs,
+            flipTwist  = ft
         })
 
     ///
@@ -335,8 +355,8 @@ mod CubeSolve.Table.Standard {
     /// not-reached marker.
     ///
     def pairPruning(
-        first: { moves = TableView, count = Int32, goal = Int32 },
-        second: { moves = TableView, count = Int32, goal = Int32 }
+        first: {moves = TableView, count = Int32, goal = Int32},
+        second: {moves = TableView, count = Int32, goal = Int32}
     ): Result[String, TableView] =
         let k = moveCount();
         let firstMoves = first#moves;
@@ -345,15 +365,16 @@ mod CubeSolve.Table.Standard {
         Table.distancesFrom(
             {
                 states = first#count * secondCount,
-                goal = first#goal * secondCount + second#goal,
-                moves = k,
-                bits = 4
+                goal   = first#goal * secondCount + second#goal,
+                moves  = k,
+                bits   = 4
             },
             (s, m) -> {
                 let a = Table.get(s / secondCount * k + m, firstMoves);
                 let b = Table.get(Int32.modulo(s, secondCount) * k + m, secondMoves);
                 a * secondCount + b
-            })
+            }
+        )
 
     ///
     /// Build every phase-one table, reading from the cache where it can.
@@ -363,22 +384,37 @@ mod CubeSolve.Table.Standard {
             tm <- keep("standard.twistMoves", () -> twistMoves());
             fm <- keep("standard.flipMoves", () -> flipMoves());
             sm <- keep("standard.sliceMoves", () -> sliceMoves());
-            ts <- keep("standard.twistSlice", () -> pairPruning(
-                { moves = tm, count = twistCount(), goal = 0 },
-                { moves = sm, count = sliceCount(), goal = solvedSlice() }));
-            fs <- keep("standard.flipSlice", () -> pairPruning(
-                { moves = fm, count = flipCount(), goal = 0 },
-                { moves = sm, count = sliceCount(), goal = solvedSlice() }));
-            ft <- keep("standard.flipTwist", () -> pairPruning(
-                { moves = fm, count = flipCount(), goal = 0 },
-                { moves = tm, count = twistCount(), goal = 0 }))
+            ts <- keep(
+                "standard.twistSlice",
+                () ->
+                    pairPruning(
+                        {moves = tm, count = twistCount(), goal = 0},
+                        {moves = sm, count = sliceCount(), goal = solvedSlice()}
+                    )
+            );
+            fs <- keep(
+                "standard.flipSlice",
+                () ->
+                    pairPruning(
+                        {moves = fm, count = flipCount(), goal = 0},
+                        {moves = sm, count = sliceCount(), goal = solvedSlice()}
+                    )
+            );
+            ft <- keep(
+                "standard.flipTwist",
+                () ->
+                    pairPruning(
+                        {moves = fm, count = flipCount(), goal = 0},
+                        {moves = tm, count = twistCount(), goal = 0}
+                    )
+            )
         ) yield Tables({
             twistMoves = tm,
-            flipMoves = fm,
+            flipMoves  = fm,
             sliceMoves = sm,
             twistSlice = ts,
-            flipSlice = fs,
-            flipTwist = ft
+            flipSlice  = fs,
+            flipTwist  = ft
         })
 
     ///
@@ -388,10 +424,14 @@ mod CubeSolve.Table.Standard {
         key: String,
         build: Unit -> Result[String, TableView]
     ): Result[String, TableView] \ Cache.Store =
-        Cache.table(key, Codec.header({
-            table = key,
-            convention = CubeSolve.convention(),
-            generator = CubeSolve.generator()
-        }), build)
+        Cache.table(
+            key,
+            Codec.header({
+                table      = key,
+                convention = CubeSolve.convention(),
+                generator  = CubeSolve.generator()
+            }),
+            build
+        )
 
 }

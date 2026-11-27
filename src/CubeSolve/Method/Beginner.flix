@@ -17,13 +17,21 @@
 /// against: a step that claims to finish a stage must leave the cube at that
 /// stage or further, and never earlier.
 ///
-mod CubeSolve.Method.Beginner {
+pub mod CubeSolve.Method.Beginner {
 
-    use CubeSolve.Method.Beginner.Stage.{Nothing, Cross, FirstLayer, TwoLayers,
-        TopCross, TopEdgesPlaced, TopCornersPlaced, Solved}
+    use CubeSolve.Model.Pieces.Coord
+    use CubeSolve.Method.Beginner.Stage.{
+        Nothing,
+        Cross,
+        FirstLayer,
+        TwoLayers,
+        TopCross,
+        TopEdgesPlaced,
+        TopCornersPlaced,
+        Solved
+    }
     use CubeSolve.Method.LastLayer
     use CubeSolve.Model.Cube
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// How far up the ladder a cube has got.
@@ -54,8 +62,14 @@ mod CubeSolve.Method.Beginner {
     /// The stages in order, which is the order they are worked through.
     ///
     pub def ladder(): List[Stage] =
-        Cross :: FirstLayer :: TwoLayers :: TopCross :: TopEdgesPlaced
-            :: TopCornersPlaced :: Solved :: Nil
+        Cross
+            :: FirstLayer
+            :: TwoLayers
+            :: TopCross
+            :: TopEdgesPlaced
+            :: TopCornersPlaced
+            :: Solved
+            :: Nil
 
     ///
     /// The furthest stage `c` satisfies.
@@ -75,8 +89,8 @@ mod CubeSolve.Method.Beginner {
             false
         else
             match Cube.orbits(c) {
-                case CornerCoord(cp, co) :: MidgeCoord(ep, eo) :: Nil =>
-                    holds(s, { corners = (cp, co), edges = (ep, eo) }, c)
+                case Coord.CornerCoord(cp, co) :: Coord.MidgeCoord(ep, eo) :: Nil =>
+                    holds(s, {corners = (cp, co), edges = (ep, eo)}, c)
                 case _ => false
             }
 
@@ -88,7 +102,7 @@ mod CubeSolve.Method.Beginner {
     ///
     type alias Orbits = {
         corners = (Vector[Int32], Vector[Int32]),
-        edges = (Vector[Int32], Vector[Int32])
+        edges   = (Vector[Int32], Vector[Int32])
     }
 
     def holds(s: Stage, o: Orbits, c: Cube.Cube): Bool = match s {
@@ -153,21 +167,17 @@ mod CubeSolve.Method.Beginner {
         perm: Vector[Int32],
         ori: Vector[Int32]
     ): Bool =
-        Vector.range(start, stop) |> Vector.forAll(i ->
-            Vector.get(i, perm) == i and Vector.get(i, ori) == 0)
+        Vector.range(start, stop)
+            |> Vector.forAll(
+                i ->
+                    Vector.get(i, perm) == i and Vector.get(i, ori) == 0
+            )
 
     ///
     /// Whether every slot in the range holds its own piece, however turned.
     ///
     def home(start: Int32, stop: Int32, perm: Vector[Int32]): Bool =
         Vector.range(start, stop) |> Vector.forAll(i -> Vector.get(i, perm) == i)
-
-
-
-
-
-
-
 
     ///
     /// What is left to do at each stage, in words.

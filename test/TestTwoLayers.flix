@@ -4,7 +4,7 @@
 /// **The states are the recorded handoffs, decoded from their tokens.** The
 /// corpus in `docs/architecture.md` was measured on cubes reached by solving a
 /// random scramble down to its first layer, and each was recorded by its
-/// canonical token. Decoding those is the same starting position without
+/// V2 color token. Decoding those is the same starting position without
 /// re-running the first-layer search to get there, so this test measures the
 /// step it is about and nothing else.
 ///
@@ -13,10 +13,9 @@
 /// steered by, so a fault they shared would satisfy it. The ladder reads the
 /// cube, and the ladder is what the public stage boundary means.
 ///
-mod TestTwoLayers {
+pub mod TestTwoLayers {
 
     use CubeSolve.Solve.IdaStar
-
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Holding
@@ -33,13 +32,14 @@ mod TestTwoLayers {
     /// Node counts rather than seconds: a machine's speed is not a property of
     /// the search.
     ///
-    def corpus(): Vector[(String, Int64)] = Vector#{
-        // seed 70000, depth 11, naive 4,148,363 nodes
-        ("AJmiz2F3jagE", 2074181i64),
-        // seed 70006, depth 12, naive 84,458,590 nodes -- the state the paired
-        // projection was added for
-        ("AKuGw6tcoYcE", 42229295i64)
-    }
+    def corpus(): Vector[(String, Int64)] =
+        Vector#{
+            // seed 70000, depth 11, naive 4,148,363 nodes
+            ("EzRJ3OExtEA", 2074181i64),
+            // seed 70006, depth 12, naive 84,458,590 nodes -- the state the paired
+            // projection was added for
+            ("FW_we-wUMEH", 42229295i64)
+        }
 
     ///
     /// Every recorded handoff is finished, and reaches the `TwoLayers` rung.
@@ -49,15 +49,20 @@ mod TestTwoLayers {
     ///
     @Test
     def everyRecordedHandoffReachesTheTwoLayersRung(): Unit \ Assert + IO =
-        if (Slow.skip("TestTwoLayers.everyRecordedHandoffReachesTheTwoLayersRung",
-                "builds the 3.2M-state pair table and solves the handoff corpus"))
+        if (Slow.skip(
+            "TestTwoLayers.everyRecordedHandoffReachesTheTwoLayersRung",
+            "builds the 3.2M-state pair table and solves the handoff corpus"
+        ))
             ()
         else {
             match TwoLayers.build() {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the tables should build")
                 case Ok(tl) =>
-                    corpus() |> Vector.forEach(match (token, ceiling) ->
-                        check(tl, token, ceiling));
+                    corpus()
+                        |> Vector.forEach(
+                            match (token, ceiling) ->
+                                check(tl, token, ceiling)
+                        );
                     pairTableIsClosed(tl)
             }
         }
@@ -67,11 +72,12 @@ mod TestTwoLayers {
     ///
     def check(tl: TwoLayers.Tables, token: String, ceiling: Int64): Unit \ Assert =
         match Holding.ofToken(3, token) {
-            case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "decoding ${token}")
+            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "decoding ${token}")
             case Ok(begun) =>
                 Assert.assertTrueWithMsg(
                     Beginner.isComplete(Beginner.Stage.FirstLayer, begun),
-                    "${token} should be a first-layer handoff");
+                    "${token} should be a first-layer handoff"
+                );
                 finish(tl, token, ceiling, begun)
         }
 
@@ -86,20 +92,24 @@ mod TestTwoLayers {
     ): Unit \ Assert =
         match TwoLayers.found(tl, begun, IdaStar.unbounded()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "token ${token}")
-            case Ok(f)  =>
-                Assert.assertTrueWithMsg(TwoLayers.nodesOf(f) <= ceiling,
+            case Ok(f) =>
+                Assert.assertTrueWithMsg(
+                    TwoLayers.nodesOf(f) <= ceiling,
                     "${token}: ${TwoLayers.nodesOf(f)} nodes, over the ${ceiling} "
                         + "this stratum allows -- the paired projection has stopped "
-                        + "paying for itself");
+                        + "paying for itself"
+                );
                 match Cube.applyAll(TwoLayers.movesOf(f), begun) {
-                    case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "replay")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replay")
                     case Ok(after) =>
                         Assert.assertTrueWithMsg(
                             Beginner.isComplete(Beginner.Stage.TwoLayers, after),
-                            "${token}: the answer did not reach the TwoLayers rung");
+                            "${token}: the answer did not reach the TwoLayers rung"
+                        );
                         Assert.assertTrueWithMsg(
                             Beginner.isComplete(Beginner.Stage.FirstLayer, after),
-                            "${token}: the first layer was not restored")
+                            "${token}: the first layer was not restored"
+                        )
                 }
         }
 
@@ -116,16 +126,26 @@ mod TestTwoLayers {
     ///
     def pairTableIsClosed(tl: TwoLayers.Tables): Unit \ Assert =
         let paired = TwoLayers.pairedTable(tl);
-        Assert.assertEqWithMsg(expected = TwoLayers.pairedStateCount(),
-            CubeSolve.Table.entries(paired), "one entry per pair state");
-        Assert.assertEqWithMsg(expected = 0,
+        Assert.assertEqWithMsg(
+            expected = TwoLayers.pairedStateCount(),
+            CubeSolve.Table.entries(paired),
+            "one entry per pair state"
+        );
+        Assert.assertEqWithMsg(
+            expected = 0,
             CubeSolve.Table.get(TwoLayers.pairedSolvedIndex(), paired),
-            "the solved pair is nought moves from solved");
+            "the solved pair is nought moves from solved"
+        );
         let deepest = Vector.range(0, TwoLayers.pairedStateCount())
-            |> Vector.foldLeft((w, i) ->
-                Int32.max(w, CubeSolve.Table.get(i, paired)), 0);
-        Assert.assertTrueWithMsg(deepest > 0 and deepest < 20,
+            |> Vector.foldLeft(
+                (w, i) ->
+                    Int32.max(w, CubeSolve.Table.get(i, paired)),
+                0
+            );
+        Assert.assertTrueWithMsg(
+            deepest > 0 and deepest < 20,
             "the deepest pair state is ${deepest} moves out, outside anything "
-                + "this projection should reach")
+                + "this projection should reach"
+        )
 
 }

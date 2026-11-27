@@ -21,7 +21,7 @@
 /// question chose a backing rather than deciding whether the architecture
 /// worked.
 ///
-mod CubeSolve.Table {
+pub mod CubeSolve.Table {
 
     use CubeSolve.Table.TableView.TableView
     use CubeSolve.Table.Cache
@@ -84,8 +84,11 @@ mod CubeSolve.Table {
     def getWide(i: Int32, width: Int32, payload: Vector[Int8]): Int32 =
         let at = i * width;
         Vector.range(0, width)
-            |> Vector.foldLeft((acc, b) ->
-                Int32.bitwiseOr(acc, Int32.leftShift(byteAt(at + b, payload), b * 8)), 0)
+            |> Vector.foldLeft(
+                (acc, b) ->
+                    Int32.bitwiseOr(acc, Int32.leftShift(byteAt(at + b, payload), b * 8)),
+                0
+            )
 
     ///
     /// Byte `at` of `payload`, as `0` to `255`.
@@ -134,11 +137,13 @@ mod CubeSolve.Table {
     /// see `emptyPayload`.
     ///
     pub def ofValues(bits: Int32, values: Vector[Int32]): Result[String, TableView] =
-        checkWidth(bits) |> Result.flatMap(_ ->
-            match Vector.findLeft(v -> not fits(bits, v), values) {
-                case Some(bad) => Err(outOfRange(bits, bad))
-                case None      => Ok(packValues(bits, values))
-            })
+        checkWidth(bits)
+            |> Result.flatMap(
+                _ -> match Vector.findLeft(v -> not fits(bits, v), values) {
+                    case Some(bad) => Err(outOfRange(bits, bad))
+                    case None      => Ok(packValues(bits, values))
+                }
+            )
 
     ///
     /// Whether `v` can be stored in `bits` bits.
@@ -159,8 +164,10 @@ mod CubeSolve.Table {
         if (bits == 2 or bits == 4 or bits == 8 or bits == 16 or bits == 32)
             Ok(())
         else
-            Err("${bits} bits per entry is not supported: an entry occupies 2, 4, "
-                + "8, 16 or 32 bits, so that entries and bytes divide each other")
+            Err(
+                "${bits} bits per entry is not supported: an entry occupies 2, 4, "
+                    + "8, 16 or 32 bits, so that entries and bytes divide each other"
+            )
 
     ///
     /// `values` packed, having already been checked.
@@ -168,8 +175,11 @@ mod CubeSolve.Table {
     def packValues(bits: Int32, values: Vector[Int32]): TableView = region rc {
         let count = Vector.length(values);
         let payload = emptyPayload(rc, bits, count);
-        Vector.range(0, count) |> Vector.forEach(i ->
-            putEntry(payload, bits, i, Vector.get(i, values)));
+        Vector.range(0, count)
+            |> Vector.forEach(
+                i ->
+                    putEntry(payload, bits, i, Vector.get(i, values))
+            );
         TableView(bits, count, Array.toVector(payload))
     }
 
@@ -251,9 +261,12 @@ mod CubeSolve.Table {
     def getWideFrom(payload: Array[Int8, r], width: Int32, i: Int32): Int32 \ r =
         let at = i * width;
         Vector.range(0, width)
-            |> Vector.foldLeft((acc, b) ->
-                let byte = Int32.bitwiseAnd(Int8.toInt32(Array.get(at + b, payload)), 255);
-                Int32.bitwiseOr(acc, Int32.leftShift(byte, b * 8)), 0)
+            |> Vector.foldLeft(
+                (acc, b) ->
+                    let byte = Int32.bitwiseAnd(Int8.toInt32(Array.get(at + b, payload)), 255);
+                    Int32.bitwiseOr(acc, Int32.leftShift(byte, b * 8)),
+                0
+            )
 
     ///
     /// Write `value` as entry `i` of `payload`.
@@ -282,8 +295,11 @@ mod CubeSolve.Table {
     ///
     def putWide(payload: Array[Int8, r], width: Int32, i: Int32, value: Int32): Unit \ r =
         let at = i * width;
-        Vector.range(0, width) |> Vector.forEach(b ->
-            Array.put(narrow(Int32.rightShift(value, b * 8)), at + b, payload))
+        Vector.range(0, width)
+            |> Vector.forEach(
+                b ->
+                    Array.put(narrow(Int32.rightShift(value, b * 8)), at + b, payload)
+            )
 
     ///
     /// A byte's worth of bits as an `Int8`.
@@ -305,13 +321,18 @@ mod CubeSolve.Table {
         count: Int32,
         payload: Array[Int8, r]
     ): Result[String, TableView] \ r =
-        checkWidth(bits) |> Result.flatMap(_ ->
-            let needed = payloadBytes(bits, count);
-            if (Array.length(payload) != needed)
-                Err("a payload for ${count} entries of ${bits} bits is ${needed} "
-                    + "bytes, but this one is ${Array.length(payload)}")
-            else
-                Ok(TableView(bits, count, Array.toVector(payload))))
+        checkWidth(bits)
+            |> Result.flatMap(
+                _ ->
+                    let needed = payloadBytes(bits, count);
+                    if (Array.length(payload) != needed)
+                        Err(
+                            "a payload for ${count} entries of ${bits} bits is ${needed} "
+                                + "bytes, but this one is ${Array.length(payload)}"
+                        )
+                    else
+                        Ok(TableView(bits, count, Array.toVector(payload)))
+            )
 
     // ---------- the checked flat index ----------
 
@@ -325,15 +346,19 @@ mod CubeSolve.Table {
     ///
     pub def flatIndex(row: Int32, stride: Int32, column: Int32): Result[String, Int32] =
         if (row < 0 or stride < 0 or column < 0)
-            Err("a flat index is built from non-negative parts, but this one is "
-                + "row ${row}, stride ${stride}, column ${column}")
+            Err(
+                "a flat index is built from non-negative parts, but this one is "
+                    + "row ${row}, stride ${stride}, column ${column}"
+            )
         else
             let wide = Int32.toInt64(row) * Int32.toInt64(stride) + Int32.toInt64(column);
             match Int64.tryToInt32(wide) {
                 case Some(i) => Ok(i)
-                case None    =>
-                    Err("row ${row} x stride ${stride} + ${column} is ${wide}, past the "
-                        + "${Int32.maxValue()} elements a JVM array can hold")
+                case None =>
+                    Err(
+                        "row ${row} x stride ${stride} + ${column} is ${wide}, past the "
+                            + "${Int32.maxValue()} elements a JVM array can hold"
+                    )
             }
 
     // ---------- breadth-first construction ----------
@@ -345,8 +370,8 @@ mod CubeSolve.Table {
     type alias Sweep[r: Region] = {
         distances = Array[Int8, r],
         successor = (Int32, Int32) -> Int32,
-        moves = Int32,
-        bits = Int32
+        moves     = Int32,
+        bits      = Int32
     }
 
     ///
@@ -364,15 +389,15 @@ mod CubeSolve.Table {
     /// histograms in the tests are what check that it did.
     ///
     pub def distancesFrom(
-        shape: { states = Int32, goal = Int32, moves = Int32, bits = Int32 },
+        shape: {states = Int32, goal = Int32, moves = Int32, bits = Int32},
         successor: (Int32, Int32) -> Int32
     ): Result[String, TableView] =
         region rc {
             let sweep = {
                 distances = filledPayload(rc, shape#bits, shape#states, widest(shape#bits)),
                 successor = successor,
-                moves = shape#moves,
-                bits = shape#bits
+                moves     = shape#moves,
+                bits      = shape#bits
             };
             let frontier = Array.repeat(rc, shape#states, 0);
             let next = Array.repeat(rc, shape#states, 0);
@@ -412,11 +437,13 @@ mod CubeSolve.Table {
         let bits = sweep#bits;
         let marker = widest(bits);
         def eachState(i, written) =
-            if (i >= count) written
+            if (i >= count)
+                written
             else {
                 let s = Array.get(i, frontier);
                 def eachMove(m, w) =
-                    if (m >= sweep#moves) w
+                    if (m >= sweep#moves)
+                        w
                     else {
                         let t = (sweep#successor)(s, m);
                         if (getEntry(sweep#distances, bits, t) == marker) {
@@ -450,15 +477,15 @@ mod CubeSolve.Table {
     /// that size the memory it wants is free.
     ///
     pub def distancesBySweep(
-        shape: { states = Int32, goal = Int32, moves = Int32, bits = Int32 },
+        shape: {states = Int32, goal = Int32, moves = Int32, bits = Int32},
         successor: (Int32, Int32) -> Int32
     ): Result[String, TableView] =
         region rc {
             let sweep = {
                 distances = filledPayload(rc, shape#bits, shape#states, widest(shape#bits)),
                 successor = successor,
-                moves = shape#moves,
-                bits = shape#bits
+                moves     = shape#moves,
+                bits      = shape#bits
             };
             putEntry(sweep#distances, shape#bits, shape#goal, 0);
             sweepLayers(sweep, shape#states, 0);
@@ -479,12 +506,14 @@ mod CubeSolve.Table {
         let bits = sweep#bits;
         let marker = widest(bits);
         def eachState(i, written) =
-            if (i >= states) written
+            if (i >= states)
+                written
             else if (getEntry(sweep#distances, bits, i) != depth)
                 eachState(i + 1, written)
             else {
                 def eachMove(m, w) =
-                    if (m >= sweep#moves) w
+                    if (m >= sweep#moves)
+                        w
                     else {
                         let t = (sweep#successor)(i, m);
                         if (getEntry(sweep#distances, bits, t) == marker) {
@@ -511,10 +540,14 @@ mod CubeSolve.Table {
         key: String,
         build: Unit -> Result[String, TableView]
     ): Result[String, TableView] \ Cache.Store =
-        Cache.table(key, Codec.header({
-            table = key,
-            convention = CubeSolve.convention(),
-            generator = CubeSolve.generator()
-        }), build)
+        Cache.table(
+            key,
+            Codec.header({
+                table      = key,
+                convention = CubeSolve.convention(),
+                generator  = CubeSolve.generator()
+            }),
+            build
+        )
 
 }

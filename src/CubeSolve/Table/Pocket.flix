@@ -27,14 +27,14 @@
 /// space, because a move acts on the projection without reference to what was
 /// projected away. See `CubeSolve.Solve.IdaStar`.
 ///
-mod CubeSolve.Table.Pocket {
+pub mod CubeSolve.Table.Pocket {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Table
     use CubeSolve.Table.TableView
-    use Orbit64.Coord.Coord.CornerCoord
     use CubeSolve.Table.Pocket.Tables.Tables
     use CubeSolve.Table.Cache
     use CubeSolve.Table.Codec
@@ -92,10 +92,14 @@ mod CubeSolve.Table.Pocket {
     /// The Lehmer rank of a permutation of `0..6`.
     ///
     pub def permRank(q: Vector[Int32]): Int32 =
-        Vector.range(0, 7) |> Vector.foldLeft((acc, i) ->
-            let later = Vector.range(i + 1, 7);
-            let smaller = Vector.count(j -> Vector.get(j, q) < Vector.get(i, q), later);
-            acc * (7 - i) + smaller, 0)
+        Vector.range(0, 7)
+            |> Vector.foldLeft(
+                (acc, i) ->
+                    let later = Vector.range(i + 1, 7);
+                    let smaller = Vector.count(j -> Vector.get(j, q) < Vector.get(i, q), later);
+                    acc * (7 - i) + smaller,
+                0
+            )
 
     ///
     /// The permutation of `0..6` with Lehmer rank `r`.
@@ -103,7 +107,8 @@ mod CubeSolve.Table.Pocket {
     pub def permUnrank(r: Int32): Vector[Int32] = region rc {
         let digits = Array.repeat(rc, 7, 0);
         def digitsOf(i, rest) =
-            if (i < 0) ()
+            if (i < 0)
+                ()
             else {
                 Array.put(Int32.modulo(rest, 7 - i), i, digits);
                 digitsOf(i - 1, rest / (7 - i))
@@ -135,8 +140,12 @@ mod CubeSolve.Table.Pocket {
     /// sum to zero mod three.
     ///
     pub def oriRank(o: Vector[Int32]): Int32 =
-        Vector.range(0, 6) |> Vector.foldLeft((acc, i) ->
-            acc + Vector.get(i, o) * Int32.pow(base = 3, i), 0)
+        Vector.range(0, 6)
+            |> Vector.foldLeft(
+                (acc, i) ->
+                    acc + Vector.get(i, o) * Int32.pow(base = 3, i),
+                0
+            )
 
     ///
     /// The seven twists with orientation coordinate `r`.
@@ -159,12 +168,14 @@ mod CubeSolve.Table.Pocket {
     ///
     pub def encode(c: Cube): Result[String, Int32] =
         if (Cube.size(c) != 2)
-            Err("the pocket coordinate describes a 2x2x2, not a ${Cube.size(c)}x"
-                + "${Cube.size(c)}x${Cube.size(c)}")
+            Err(
+                "the pocket coordinate describes a 2x2x2, not a ${Cube.size(c)}x"
+                    + "${Cube.size(c)}x${Cube.size(c)}"
+            )
         else
             match Cube.orbits(c) {
-                case CornerCoord(cp, co) :: Nil => encodeCorners(cp, co)
-                case _ => Err("a 2x2x2 has exactly one orbit, its corners")
+                case Coord.CornerCoord(cp, co) :: Nil => encodeCorners(cp, co)
+                case _                                => Err("a 2x2x2 has exactly one orbit, its corners")
             }
 
     ///
@@ -172,12 +183,17 @@ mod CubeSolve.Table.Pocket {
     ///
     def encodeCorners(cp: Vector[Int32], co: Vector[Int32]): Result[String, Int32] =
         if (Vector.get(6, cp) != 6 or Vector.get(6, co) != 0)
-            Err("this coordinate holds the DBL corner still, but here it is piece "
-                + "${Vector.get(6, cp)} twisted ${Vector.get(6, co)}: rotate the "
-                + "cube so that DBL is home before indexing it")
+            Err(
+                "this coordinate holds the DBL corner still, but here it is piece "
+                    + "${Vector.get(6, cp)} twisted ${Vector.get(6, co)}: rotate the "
+                    + "cube so that DBL is home before indexing it"
+            )
         else
-            let q = Vector.init(i ->
-                movableIndexOf(Vector.get(Vector.get(i, movableSlots()), cp)), 7);
+            let q = Vector.init(
+                i ->
+                    movableIndexOf(Vector.get(Vector.get(i, movableSlots()), cp)),
+                7
+            );
             let o = Vector.init(i -> Vector.get(Vector.get(i, movableSlots()), co), 7);
             Table.flatIndex(permRank(q), oriCount(), oriRank(o))
 
@@ -191,12 +207,20 @@ mod CubeSolve.Table.Pocket {
             let q = permUnrank(i / oriCount());
             let o = oriUnrank(Int32.modulo(i, oriCount()));
             // q holds movable indices; movableSlots turns one back into a slot.
-            let cp = Vector.init(s ->
-                if (s == 6) 6
-                else Vector.get(Vector.get(movableIndexOf(s), q), movableSlots()), 8);
-            let co = Vector.init(s ->
-                if (s == 6) 0 else Vector.get(movableIndexOf(s), o), 8);
-            Cube.ofOrbits(2, CornerCoord(cp, co) :: Nil)
+            let cp = Vector.init(
+                s ->
+                    if (s == 6)
+                        6
+                    else
+                        Vector.get(Vector.get(movableIndexOf(s), q), movableSlots()),
+                8
+            );
+            let co = Vector.init(
+                s ->
+                    if (s == 6) 0 else Vector.get(movableIndexOf(s), o),
+                8
+            );
+            Cube.ofOrbits(2, Coord.CornerCoord(cp, co) :: Nil)
 
     // ---------- move tables ----------
 
@@ -217,9 +241,15 @@ mod CubeSolve.Table.Pocket {
     ///
     pub def permMoves(): Result[String, TableView] = region rc {
         let payload = Table.emptyPayload(rc, 16, permCount() * moveCount());
-        Vector.range(0, permCount()) |> Vector.forEach(r ->
-            Vector.range(0, moveCount()) |> Vector.forEach(m ->
-                Table.putEntry(payload, 16, r * moveCount() + m, turnedPerm(r, m))));
+        Vector.range(0, permCount())
+            |> Vector.forEach(
+                r ->
+                    Vector.range(0, moveCount())
+                        |> Vector.forEach(
+                            m ->
+                                Table.putEntry(payload, 16, r * moveCount() + m, turnedPerm(r, m))
+                        )
+            );
         Table.ofPayload(16, permCount() * moveCount(), payload)
     }
 
@@ -228,9 +258,15 @@ mod CubeSolve.Table.Pocket {
     ///
     pub def oriMoves(): Result[String, TableView] = region rc {
         let payload = Table.emptyPayload(rc, 16, oriCount() * moveCount());
-        Vector.range(0, oriCount()) |> Vector.forEach(r ->
-            Vector.range(0, moveCount()) |> Vector.forEach(m ->
-                Table.putEntry(payload, 16, r * moveCount() + m, turnedOri(r, m))));
+        Vector.range(0, oriCount())
+            |> Vector.forEach(
+                r ->
+                    Vector.range(0, moveCount())
+                        |> Vector.forEach(
+                            m ->
+                                Table.putEntry(payload, 16, r * moveCount() + m, turnedOri(r, m))
+                        )
+            );
         Table.ofPayload(16, oriCount() * moveCount(), payload)
     }
 
@@ -250,9 +286,12 @@ mod CubeSolve.Table.Pocket {
     /// the slot the turn brings there.
     ///
     def movePerm(perm: Vector[Int32], q: Vector[Int32]): Vector[Int32] =
-        Vector.init(i ->
-            let slot = Vector.get(i, movableSlots());
-            Vector.get(movableIndexOf(Vector.get(slot, perm)), q), 7)
+        Vector.init(
+            i ->
+                let slot = Vector.get(i, movableSlots());
+                Vector.get(movableIndexOf(Vector.get(slot, perm)), q),
+            7
+        )
 
     ///
     /// The orientation index after move `m` is applied to index `r`.
@@ -269,10 +308,13 @@ mod CubeSolve.Table.Pocket {
     /// One quarter turn applied to a movable-corner twist vector.
     ///
     def moveOri(perm: Vector[Int32], delta: Vector[Int32], o: Vector[Int32]): Vector[Int32] =
-        Vector.init(i ->
-            let slot = Vector.get(i, movableSlots());
-            let carried = Vector.get(movableIndexOf(Vector.get(slot, perm)), o);
-            Int32.modulo(carried + Vector.get(slot, delta), 3), 7)
+        Vector.init(
+            i ->
+                let slot = Vector.get(i, movableSlots());
+                let carried = Vector.get(movableIndexOf(Vector.get(slot, perm)), o);
+                Int32.modulo(carried + Vector.get(slot, delta), 3),
+            7
+        )
 
     ///
     /// `step` applied `k` times to `x`.
@@ -291,10 +333,10 @@ mod CubeSolve.Table.Pocket {
     ///
     pub enum Tables {
         case Tables({
-            permMoves = TableView,
-            oriMoves = TableView,
-            distances = TableView,
-            oriDistances = TableView,
+            permMoves     = TableView,
+            oriMoves      = TableView,
+            distances     = TableView,
+            oriDistances  = TableView,
             permDistances = TableView
         })
     }
@@ -341,10 +383,10 @@ mod CubeSolve.Table.Pocket {
             oriD <- quotientDistancesOf(om, oriCount());
             permD <- quotientDistancesOf(pm, permCount())
         ) yield Tables({
-            permMoves = pm,
-            oriMoves = om,
-            distances = full,
-            oriDistances = oriD,
+            permMoves     = pm,
+            oriMoves      = om,
+            distances     = full,
+            oriDistances  = oriD,
             permDistances = permD
         })
 
@@ -356,12 +398,13 @@ mod CubeSolve.Table.Pocket {
     ///
     def fullDistances(pm: TableView, om: TableView): Result[String, TableView] =
         Table.distancesFrom(
-            { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 4 },
+            {states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 4},
             (s, m) -> {
                 let perm = Table.get(s / oriCount() * moveCount() + m, pm);
                 let ori = Table.get(Int32.modulo(s, oriCount()) * moveCount() + m, om);
                 perm * oriCount() + ori
-            })
+            }
+        )
 
     ///
     /// Distance to solved in a quotient with its own move table.
@@ -376,8 +419,9 @@ mod CubeSolve.Table.Pocket {
     ///
     pub def quotientDistancesOf(moves: TableView, states: Int32): Result[String, TableView] =
         Table.distancesFrom(
-            { states = states, goal = 0, moves = moveCount(), bits = 4 },
-            (s, m) -> Table.get(s * moveCount() + m, moves))
+            {states = states, goal = 0, moves = moveCount(), bits = 4},
+            (s, m) -> Table.get(s * moveCount() + m, moves)
+        )
 
     ///
     /// Build every 2x2x2 table, reading from the cache where it can.
@@ -393,10 +437,10 @@ mod CubeSolve.Table.Pocket {
             oriD <- keep("pocket.oriDistances", () -> quotientDistancesOf(om, oriCount()));
             permD <- keep("pocket.permDistances", () -> quotientDistancesOf(pm, permCount()))
         ) yield Tables({
-            permMoves = pm,
-            oriMoves = om,
-            distances = full,
-            oriDistances = oriD,
+            permMoves     = pm,
+            oriMoves      = om,
+            distances     = full,
+            oriDistances  = oriD,
             permDistances = permD
         })
 
@@ -418,9 +462,9 @@ mod CubeSolve.Table.Pocket {
     ///
     pub def headerFor(key: String): Codec.Header =
         Codec.header({
-            table = key,
+            table      = key,
             convention = CubeSolve.convention(),
-            generator = CubeSolve.generator()
+            generator  = CubeSolve.generator()
         })
 
 }

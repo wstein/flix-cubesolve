@@ -27,17 +27,18 @@
 /// bound that couples corners to edges -- which neither `CPerm x MPerm` nor
 /// `EPerm x MPerm` does.
 ///
-mod CubeSolve.Table.Domino {
+pub mod CubeSolve.Table.Domino {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
     use CubeSolve.Model.Move
+    use orbit64::Orbit64.Rank
     use CubeSolve.Table
     use CubeSolve.Table.TableView
     use CubeSolve.Table.Domino.Tables.Tables
     use CubeSolve.Table.Cache
     use CubeSolve.Table.Codec
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The number of corner permutations.
@@ -114,7 +115,8 @@ mod CubeSolve.Table.Domino {
     pub def permUnrank(r: Int32): Vector[Int32] = region rc {
         let digits = Array.repeat(rc, 8, 0);
         def digitsOf(i, rest) =
-            if (i < 0) ()
+            if (i < 0)
+                ()
             else {
                 Array.put(Int32.modulo(rest, 8 - i), i, digits);
                 digitsOf(i - 1, rest / (8 - i))
@@ -155,7 +157,8 @@ mod CubeSolve.Table.Domino {
     pub def slicePermUnrank(r: Int32): Vector[Int32] = region rc {
         let digits = Array.repeat(rc, 4, 0);
         def digitsOf(i, rest) =
-            if (i < 0) ()
+            if (i < 0)
+                ()
             else {
                 Array.put(Int32.modulo(rest, 4 - i), i, digits);
                 digitsOf(i - 1, rest / (4 - i))
@@ -170,9 +173,12 @@ mod CubeSolve.Table.Domino {
     ///
     pub def parityOf(p: Vector[Int32]): Int32 =
         let n = Vector.length(p);
-        let inversions = Vector.range(0, n) |> Vector.map(i ->
-            Vector.range(i + 1, n)
-                |> Vector.count(j -> Vector.get(i, p) > Vector.get(j, p)))
+        let inversions = Vector.range(0, n)
+            |> Vector.map(
+                i ->
+                    Vector.range(i + 1, n)
+                        |> Vector.count(j -> Vector.get(i, p) > Vector.get(j, p))
+            )
             |> Vector.sum;
         Int32.modulo(inversions, 2)
 
@@ -184,7 +190,7 @@ mod CubeSolve.Table.Domino {
     ///
     pub def combOf(cp: Vector[Int32]): Int32 =
         let tetrad = Vector.range(0, 8) |> Vector.filter(i -> Vector.get(i, cp) < 4);
-        parityOf(cp) * 70 + Orbit64.Rank.combRank(tetrad)
+        parityOf(cp) * 70 + Rank.combRank(tetrad)
 
     // ---------- coordinates of a cube ----------
 
@@ -197,12 +203,14 @@ mod CubeSolve.Table.Domino {
     ///
     pub def coordsOf(c: Cube): Result[String, (Int32, Int32, Int32)] =
         if (Cube.size(c) != 3)
-            Err("the phase-two coordinates describe a 3x3x3, not a "
-                + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}")
+            Err(
+                "the phase-two coordinates describe a 3x3x3, not a "
+                    + "${Cube.size(c)}x${Cube.size(c)}x${Cube.size(c)}"
+            )
         else
             match Cube.orbits(c) {
-                case CornerCoord(cp, _) :: MidgeCoord(ep, _) :: Nil => splitEdges(cp, ep)
-                case _ => Err("a 3x3x3 has a corner orbit and a midge orbit, in that order")
+                case Coord.CornerCoord(cp, _) :: Coord.MidgeCoord(ep, _) :: Nil => splitEdges(cp, ep)
+                case _                                                          => Err("a 3x3x3 has a corner orbit and a midge orbit, in that order")
             }
 
     ///
@@ -219,11 +227,15 @@ mod CubeSolve.Table.Domino {
         let inU = x -> x >= 0 and x < 8;
         let inSlice = x -> x >= 0 and x < 4;
         if (not Vector.forAll(inU, outer))
-            Err("this cube is not in the domino group: a slice edge is sitting in "
-                + "the U or D layer, so phase one has not finished")
+            Err(
+                "this cube is not in the domino group: a slice edge is sitting in "
+                    + "the U or D layer, so phase one has not finished"
+            )
         else if (not Vector.forAll(inSlice, inner))
-            Err("this cube is not in the domino group: a U or D edge is sitting in "
-                + "the slice, so phase one has not finished")
+            Err(
+                "this cube is not in the domino group: a U or D edge is sitting in "
+                    + "the slice, so phase one has not finished"
+            )
         else
             Ok((permRank(cp), permRank(outer), slicePermRank(inner)))
 
@@ -233,7 +245,7 @@ mod CubeSolve.Table.Domino {
     pub def isSolved(c: Cube): Bool =
         match coordsOf(c) {
             case Ok((cperm, eperm, mperm)) => cperm == 0 and eperm == 0 and mperm == 0
-            case Err(_) => false
+            case Err(_)                    => false
         }
 
     // ---------- move tables ----------
@@ -245,9 +257,15 @@ mod CubeSolve.Table.Domino {
         region rc {
             let entries = states * moveCount();
             let payload = Table.emptyPayload(rc, 16, entries);
-            Vector.range(0, states) |> Vector.forEach(r ->
-                Vector.range(0, moveCount()) |> Vector.forEach(m ->
-                    Table.putEntry(payload, 16, r * moveCount() + m, after(r, m))));
+            Vector.range(0, states)
+                |> Vector.forEach(
+                    r ->
+                        Vector.range(0, moveCount())
+                            |> Vector.forEach(
+                                m ->
+                                    Table.putEntry(payload, 16, r * moveCount() + m, after(r, m))
+                            )
+                );
             Table.ofPayload(16, entries, payload)
         }
 
@@ -275,35 +293,44 @@ mod CubeSolve.Table.Domino {
     /// The corner permutation table: `40320 x 10`.
     ///
     pub def cornerPermMoves(): Result[String, TableView] =
-        movesOver(cornerPermCount(), (r, m) -> {
-            let move = moveOfIndex(m);
-            let perm = composed(Move.cornerPermutation(Move.face(move)), Move.amount(move));
-            let p = permUnrank(r);
-            permRank(Vector.init(i -> Vector.get(Vector.get(i, perm), p), 8))
-        })
+        movesOver(
+            cornerPermCount(),
+            (r, m) -> {
+                let move = moveOfIndex(m);
+                let perm = composed(Move.cornerPermutation(Move.face(move)), Move.amount(move));
+                let p = permUnrank(r);
+                permRank(Vector.init(i -> Vector.get(Vector.get(i, perm), p), 8))
+            }
+        )
 
     ///
     /// The U/D-edge permutation table: `40320 x 10`.
     ///
     pub def edgePermMoves(): Result[String, TableView] =
-        movesOver(edgePermCount(), (r, m) -> {
-            let move = moveOfIndex(m);
-            let perm = composed(Move.edgePermutation(Move.face(move)), Move.amount(move));
-            let p = permUnrank(r);
-            permRank(Vector.init(i -> Vector.get(Vector.get(i, perm), p), 8))
-        })
+        movesOver(
+            edgePermCount(),
+            (r, m) -> {
+                let move = moveOfIndex(m);
+                let perm = composed(Move.edgePermutation(Move.face(move)), Move.amount(move));
+                let p = permUnrank(r);
+                permRank(Vector.init(i -> Vector.get(Vector.get(i, perm), p), 8))
+            }
+        )
 
     ///
     /// The slice-edge permutation table: `24 x 10`.
     ///
     pub def slicePermMoves(): Result[String, TableView] =
-        movesOver(slicePermCount(), (r, m) -> {
-            let move = moveOfIndex(m);
-            let perm = composed(Move.edgePermutation(Move.face(move)), Move.amount(move));
-            let p = slicePermUnrank(r);
-            let cameFrom = i -> Vector.get(Vector.get(i + 8, perm) - 8, p);
-            slicePermRank(Vector.init(cameFrom, 4))
-        })
+        movesOver(
+            slicePermCount(),
+            (r, m) -> {
+                let move = moveOfIndex(m);
+                let perm = composed(Move.edgePermutation(Move.face(move)), Move.amount(move));
+                let p = slicePermUnrank(r);
+                let cameFrom = i -> Vector.get(Vector.get(i + 8, perm) - 8, p);
+                slicePermRank(Vector.init(cameFrom, 4))
+            }
+        )
 
     ///
     /// The CComb table: `140 x 10`.
@@ -316,12 +343,15 @@ mod CubeSolve.Table.Domino {
     ///
     pub def combMoves(): Result[String, TableView] =
         let representative = representatives();
-        movesOver(combCount(), (r, m) -> {
-            let move = moveOfIndex(m);
-            let perm = composed(Move.cornerPermutation(Move.face(move)), Move.amount(move));
-            let start = permUnrank(Vector.get(r, representative));
-            combOf(Vector.init(i -> Vector.get(Vector.get(i, perm), start), 8))
-        })
+        movesOver(
+            combCount(),
+            (r, m) -> {
+                let move = moveOfIndex(m);
+                let perm = composed(Move.cornerPermutation(Move.face(move)), Move.amount(move));
+                let start = permUnrank(Vector.get(r, representative));
+                combOf(Vector.init(i -> Vector.get(Vector.get(i, perm), start), 8))
+            }
+        )
 
     ///
     /// One corner-permutation rank per CComb value.
@@ -329,7 +359,8 @@ mod CubeSolve.Table.Domino {
     def representatives(): Vector[Int32] = region rc {
         let found = Array.repeat(rc, combCount(), -1);
         def scan(r) =
-            if (r >= cornerPermCount()) ()
+            if (r >= cornerPermCount())
+                ()
             else {
                 let c = combOf(permUnrank(r));
                 if (Array.get(c, found) < 0) Array.put(r, c, found) else ();
@@ -349,8 +380,11 @@ mod CubeSolve.Table.Domino {
     pub def combOfCornerPerm(): Result[String, TableView] =
         region rc {
             let payload = Table.emptyPayload(rc, 16, cornerPermCount());
-            Vector.range(0, cornerPermCount()) |> Vector.forEach(r ->
-                Table.putEntry(payload, 16, r, combOf(permUnrank(r))));
+            Vector.range(0, cornerPermCount())
+                |> Vector.forEach(
+                    r ->
+                        Table.putEntry(payload, 16, r, combOf(permUnrank(r)))
+                );
             Table.ofPayload(16, cornerPermCount(), payload)
         }
 
@@ -361,13 +395,13 @@ mod CubeSolve.Table.Domino {
     ///
     pub enum Tables {
         case Tables({
-            cornerPermMoves = TableView,
-            edgePermMoves = TableView,
-            slicePermMoves = TableView,
-            combMoves = TableView,
+            cornerPermMoves  = TableView,
+            edgePermMoves    = TableView,
+            slicePermMoves   = TableView,
+            combMoves        = TableView,
             combOfCornerPerm = TableView,
-            cornerSlice = TableView,
-            edgeComb = TableView
+            cornerSlice      = TableView,
+            edgeComb         = TableView
         })
     }
 
@@ -420,19 +454,21 @@ mod CubeSolve.Table.Domino {
             cb <- combMoves();
             lookup <- combOfCornerPerm();
             cs <- pairPruning(
-                { moves = cp, count = cornerPermCount() },
-                { moves = sp, count = slicePermCount() });
+                {moves = cp, count = cornerPermCount()},
+                {moves = sp, count = slicePermCount()}
+            );
             ec <- pairPruning(
-                { moves = ep, count = edgePermCount() },
-                { moves = cb, count = combCount() })
+                {moves = ep, count = edgePermCount()},
+                {moves = cb, count = combCount()}
+            )
         ) yield Tables({
-            cornerPermMoves = cp,
-            edgePermMoves = ep,
-            slicePermMoves = sp,
-            combMoves = cb,
+            cornerPermMoves  = cp,
+            edgePermMoves    = ep,
+            slicePermMoves   = sp,
+            combMoves        = cb,
             combOfCornerPerm = lookup,
-            cornerSlice = cs,
-            edgeComb = ec
+            cornerSlice      = cs,
+            edgeComb         = ec
         })
 
     ///
@@ -443,20 +479,21 @@ mod CubeSolve.Table.Domino {
     /// enough that the difference does not matter.
     ///
     def pairPruning(
-        first: { moves = TableView, count = Int32 },
-        second: { moves = TableView, count = Int32 }
+        first: {moves = TableView, count = Int32},
+        second: {moves = TableView, count = Int32}
     ): Result[String, TableView] =
         let k = moveCount();
         let firstMoves = first#moves;
         let secondMoves = second#moves;
         let secondCount = second#count;
         Table.distancesFrom(
-            { states = first#count * secondCount, goal = 0, moves = k, bits = 8 },
+            {states = first#count * secondCount, goal = 0, moves = k, bits = 8},
             (s, m) -> {
                 let a = Table.get(s / secondCount * k + m, firstMoves);
                 let b = Table.get(Int32.modulo(s, secondCount) * k + m, secondMoves);
                 a * secondCount + b
-            })
+            }
+        )
 
     ///
     /// Build every phase-two table, reading from the cache where it can.
@@ -468,20 +505,30 @@ mod CubeSolve.Table.Domino {
             sp <- keep("domino.slicePermMoves", () -> slicePermMoves());
             cb <- keep("domino.combMoves", () -> combMoves());
             lookup <- keep("domino.combOfCornerPerm", () -> combOfCornerPerm());
-            cs <- keep("domino.cornerSlice", () -> pairPruning(
-                { moves = cp, count = cornerPermCount() },
-                { moves = sp, count = slicePermCount() }));
-            ec <- keep("domino.edgeComb", () -> pairPruning(
-                { moves = ep, count = edgePermCount() },
-                { moves = cb, count = combCount() }))
+            cs <- keep(
+                "domino.cornerSlice",
+                () ->
+                    pairPruning(
+                        {moves = cp, count = cornerPermCount()},
+                        {moves = sp, count = slicePermCount()}
+                    )
+            );
+            ec <- keep(
+                "domino.edgeComb",
+                () ->
+                    pairPruning(
+                        {moves = ep, count = edgePermCount()},
+                        {moves = cb, count = combCount()}
+                    )
+            )
         ) yield Tables({
-            cornerPermMoves = cp,
-            edgePermMoves = ep,
-            slicePermMoves = sp,
-            combMoves = cb,
+            cornerPermMoves  = cp,
+            edgePermMoves    = ep,
+            slicePermMoves   = sp,
+            combMoves        = cb,
             combOfCornerPerm = lookup,
-            cornerSlice = cs,
-            edgeComb = ec
+            cornerSlice      = cs,
+            edgeComb         = ec
         })
 
     ///
@@ -491,10 +538,14 @@ mod CubeSolve.Table.Domino {
         key: String,
         build: Unit -> Result[String, TableView]
     ): Result[String, TableView] \ Cache.Store =
-        Cache.table(key, Codec.header({
-            table = key,
-            convention = CubeSolve.convention(),
-            generator = CubeSolve.generator()
-        }), build)
+        Cache.table(
+            key,
+            Codec.header({
+                table      = key,
+                convention = CubeSolve.convention(),
+                generator  = CubeSolve.generator()
+            }),
+            build
+        )
 
 }

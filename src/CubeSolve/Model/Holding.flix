@@ -31,7 +31,7 @@
 ///   relation has not been established for those sizes either. `identityOf`
 ///   returns `None`, which is honest rather than a guess.
 ///
-mod CubeSolve.Model.Holding {
+pub mod CubeSolve.Model.Holding {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
@@ -51,13 +51,19 @@ mod CubeSolve.Model.Holding {
     /// differently.
     ///
     pub def identityOf(c: Cube.Cube): Option[String] = match Cube.size(c) {
-        case 2 => smallest(reorientations()
-            |> Vector.toList
-            |> List.filterMap(e -> tokenAfter(snd(e), c)))
-        case 3 => smallest(Rotation.all()
-            |> Vector.toList
-            |> List.filterMap(r ->
-                Cube.conjugate(r, c) |> Result.flatMap(Facelets.token) |> Result.toOption))
+        case 2 => smallest(
+            reorientations()
+                |> Vector.toList
+                |> List.filterMap(e -> tokenAfter(snd(e), c))
+        )
+        case 3 => smallest(
+            Rotation.all()
+                |> Vector.toList
+                |> List.filterMap(
+                    r ->
+                        Cube.conjugate(r, c) |> Result.flatMap(Facelets.token) |> Result.toOption
+                )
+        )
         case _ => None
     }
 
@@ -86,7 +92,7 @@ mod CubeSolve.Model.Holding {
     ///
     /// The cube a token describes.
     ///
-    /// `Orbit64.decode` inverts the encoding `Facelets.token` uses, so this
+    /// `Pieces.decode` inverts the encoding `Facelets.token` uses, so this
     /// round-trips any token that came from one. The cube comes back in the
     /// canonical frame: a token records the state, not the whole-cube rotation
     /// the original was sitting at, and that part is not recoverable.
@@ -96,7 +102,7 @@ mod CubeSolve.Model.Holding {
     /// is.
     ///
     pub def ofToken(n: Int32, token: String): Result[String, Cube.Cube] =
-        Orbit64.decode(n, token) |> Result.flatMap(os -> Cube.ofOrbits(n, os))
+        CubeSolve.Model.Pieces.decode(n, token) |> Result.flatMap(os -> Cube.ofOrbits(n, os))
 
     ///
     /// The moves that reach the holding `r` names, if it is one of the 24.
@@ -132,11 +138,12 @@ mod CubeSolve.Model.Holding {
     ///
     /// The generators of the re-holding group, with the moves that make them.
     ///
-    def generators(): List[(Rotation.Rotation, String)] = List#{
-        (Rotation.x(), "R L'"),
-        (Rotation.y(), "U D'"),
-        (Rotation.z(), "F B'")
-    }
+    def generators(): List[(Rotation.Rotation, String)] =
+        List#{
+            (Rotation.x(), "R L'"),
+            (Rotation.y(), "U D'"),
+            (Rotation.z(), "F B'")
+        }
     ///
     /// `found` closed under the generators.
     ///

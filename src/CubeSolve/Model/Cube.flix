@@ -11,7 +11,7 @@
 /// is invalid, and a search bug that corrupts a coordinate would validate
 /// itself if the coordinate were asked. So legality is always decided here.
 ///
-mod CubeSolve.Model.Cube {
+pub mod CubeSolve.Model.Cube {
 
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
@@ -21,13 +21,12 @@ mod CubeSolve.Model.Cube {
     use CubeSolve.Model.Orbits
     use CubeSolve.Model.Rotation
     use CubeSolve.Model.Stickers
-    use Orbit64.Coord.Coord
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord, WingCoord, CenterCoord}
+    use CubeSolve.Model.Pieces.Coord
 
     ///
     /// An `n x n x n` in a known frame.
     ///
-    /// `orbits` is in `Orbit64.Orbit.layout` order, which is the order the
+    /// `orbits` is in `CubeSolve.Model.Pieces.layout` order, which is the order the
     /// codec packs them and the only thing that tells two centre orbits apart.
     ///
     /// `orientation` is the whole-cube rotation this state is expressed in, one
@@ -61,7 +60,7 @@ mod CubeSolve.Model.Cube {
     pub def orientation(c: Cube): Rotation.Rotation = let Cube(_, o, _) = c; o
 
     ///
-    /// The orbit coordinates, in `Orbit64.Orbit.layout` order.
+    /// The orbit coordinates, in `CubeSolve.Model.Pieces.layout` order.
     ///
     pub def orbits(c: Cube): List[Coord] = let Cube(_, _, os) = c; os
 
@@ -76,7 +75,7 @@ mod CubeSolve.Model.Cube {
         if (n < 2)
             Err(noSuchSize(n))
         else
-            Ok(Cube(n, Rotation.identity(), Orbit64.solved(n)))
+            Ok(Cube(n, Rotation.identity(), CubeSolve.Model.Pieces.solved(n)))
 
     ///
     /// What to say about a size with nothing to permute.
@@ -94,14 +93,16 @@ mod CubeSolve.Model.Cube {
     /// a 5x5x5's two centre orbits are told apart by nothing else.
     ///
     pub def ofOrbits(n: Int32, orbits: List[Coord]): Result[String, Cube] =
-        let expected = Orbit64.Orbit.layout(n);
+        let expected = CubeSolve.Model.Pieces.layout(n);
         if (List.isEmpty(expected))
             Err(noSuchSize(n))
-        else if (List.map(Orbit64.Coord.kind, orbits) != expected)
-            Err("a ${n}x${n}x${n} has the orbits ${expected}, but these are "
-                + "${List.map(Orbit64.Coord.kind, orbits)}")
+        else if (List.map(CubeSolve.Model.Pieces.kind, orbits) != expected)
+            Err(
+                "a ${n}x${n}x${n} has the orbits ${expected}, but these are "
+                    + "${List.map(CubeSolve.Model.Pieces.kind, orbits)}"
+            )
         else
-            match List.filterMap(Orbit64.Coord.faultOf, orbits) {
+            match List.filterMap(CubeSolve.Model.Pieces.faultOf, orbits) {
                 case why :: _ => Err(why)
                 case Nil      => Ok(Cube(n, Rotation.identity(), orbits))
             }
@@ -115,7 +116,7 @@ mod CubeSolve.Model.Cube {
     /// a solver that insisted otherwise would demand rotations at the end of
     /// every solution.
     ///
-    pub def isSolved(c: Cube): Bool = orbits(c) == Orbit64.solved(size(c))
+    pub def isSolved(c: Cube): Bool = orbits(c) == CubeSolve.Model.Pieces.solved(size(c))
 
     // ---------- turning ----------
 
@@ -179,9 +180,9 @@ mod CubeSolve.Model.Cube {
     /// `c` after one step of a written sequence.
     ///
     pub def applyOp(op: Notation.Op, c: Cube): Result[String, Cube] = match op {
-        case Layer(m) => apply(m, c)
+        case Layer(m)        => apply(m, c)
         case Inner(m, depth) => applyInner(m, depth, c)
-        case Frame(r) => Ok(rotate(r, c))
+        case Frame(r)        => Ok(rotate(r, c))
     }
 
     ///
@@ -213,9 +214,6 @@ mod CubeSolve.Model.Cube {
     ///
     pub def reframeSolution(ms: List[Move.Move], c: Cube): List[Move.Move] =
         ms |> List.map(m -> Rotation.reframe(m, orientation(c)))
-
-
-
 
     ///
     /// `c` as it would be recorded from a frame turned by `r`.
@@ -263,8 +261,8 @@ mod CubeSolve.Model.Cube {
             Err(Orbits.centresDoNotCompose())
         else
             let corners =
-                CornerCoord(Rotation.cornerPermutation(r), Rotation.cornerTwist(r));
-            let midges = MidgeCoord(Rotation.edgePermutation(r), Rotation.edgeFlip(r));
+                Coord.CornerCoord(Rotation.cornerPermutation(r), Rotation.cornerTwist(r));
+            let midges = Coord.MidgeCoord(Rotation.edgePermutation(r), Rotation.edgeFlip(r));
             let os = if (n == 2) corners :: Nil else corners :: midges :: Nil;
             Ok(Cube(n, Rotation.identity(), os))
 
@@ -280,16 +278,15 @@ mod CubeSolve.Model.Cube {
         // list: two cubes with different orbits would otherwise compose into one
         // missing an orbit, which is a wrong cube rather than a refusal.
         if (List.length(orbits(first)) != List.length(orbits(second)))
-            Err("these two cubes do not have the same orbits, so they do not "
-                + "compose: ${size(first)}x${size(first)}x${size(first)} against "
-                + "${size(second)}x${size(second)}x${size(second)}")
+            Err(
+                "these two cubes do not have the same orbits, so they do not "
+                    + "compose: ${size(first)}x${size(first)}x${size(first)} against "
+                    + "${size(second)}x${size(second)}x${size(second)}"
+            )
         else
             List.zip(orbits(first), orbits(second))
                 |> Result.traverse(Orbits.afterOrbit)
                 |> Result.map(os -> Cube(size(first), orientation(first), os))
-
-
-
 
     ///
     /// The state that undoes `c`.

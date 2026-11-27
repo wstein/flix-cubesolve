@@ -31,7 +31,7 @@
 /// `CubeSolve.Model.Notation` stays strict and flat and knows nothing about any
 /// of this. It parses algorithms; this parses documents.
 ///
-mod CubeSolve.Method.Plan {
+pub mod CubeSolve.Method.Plan {
 
     use CubeSolve.Model.Notation
 
@@ -43,9 +43,9 @@ mod CubeSolve.Method.Plan {
     /// as a skip.
     ///
     pub type alias Step = {
-        label = String,
+        label    = String,
         sequence = String,
-        ops = List[Notation.Op]
+        ops      = List[Notation.Op]
     }
 
     ///
@@ -53,30 +53,31 @@ mod CubeSolve.Method.Plan {
     ///
     pub type alias Plan = {
         scramble = Option[String],
-        steps = List[Step]
+        steps    = List[Step]
     }
 
     ///
     /// A plan of steps, with no scramble recorded.
     ///
-    pub def of(steps: List[Step]): Plan = { scramble = None, steps = steps }
+    pub def of(steps: List[Step]): Plan = {scramble = None, steps = steps}
 
     ///
     /// `p` with `scramble` recorded as the context it started from.
     ///
     pub def startingFrom(p: Plan, scramble: String): Plan =
-        { scramble = Some(scramble), steps = p#steps }
+        {scramble = Some(scramble), steps = p#steps}
 
     ///
     /// One step, from moves and a label.
     ///
     pub def step(n: Int32, label: String, sequence: String): Result[String, Step] =
         if (String.isEmpty(String.trim(sequence)))
-            Ok({ label = label, sequence = "", ops = Nil })
+            Ok({label = label, sequence = "", ops = Nil})
         else
             Notation.parse(n, sequence)
-                |> Result.map(ops ->
-                    { label = label, sequence = String.trim(sequence), ops = ops })
+                |> Result.map(
+                    ops -> {label = label, sequence = String.trim(sequence), ops = ops}
+                )
 
     ///
     /// Every operation the plan performs, in order.
@@ -107,10 +108,12 @@ mod CubeSolve.Method.Plan {
     pub def render(p: Plan): String =
         let lines = p#steps |> List.map(renderStep);
         match p#scramble {
-            case None    => List.join(String.lineSeparator(), lines)
+            case None => List.join(String.lineSeparator(), lines)
             case Some(s) =>
-                List.join(String.lineSeparator(),
-                    List.append("Scramble: ${s}" :: "" :: Nil, lines))
+                List.join(
+                    String.lineSeparator(),
+                    List.append("Scramble: ${s}" :: "" :: Nil, lines)
+                )
         }
 
     ///
@@ -130,10 +133,16 @@ mod CubeSolve.Method.Plan {
     pub def parse(n: Int32, text: String): Result[String, Plan] =
         let lines = String.splitOn(substr = String.lineSeparator(), text);
         lines
-            |> List.foldLeft((acc, line) -> Result.flatMap(sofar -> take(n, sofar, line), acc),
-                Ok(of(Nil)))
-            |> Result.map(done -> { scramble = done#scramble,
-                steps = List.reverse(done#steps) })
+            |> List.foldLeft(
+                (acc, line) -> Result.flatMap(sofar -> take(n, sofar, line), acc),
+                Ok(of(Nil))
+            )
+            |> Result.map(
+                done -> {
+                    scramble = done#scramble,
+                    steps    = List.reverse(done#steps)
+                }
+            )
 
     ///
     /// One line folded into the plan so far.
@@ -147,11 +156,15 @@ mod CubeSolve.Method.Plan {
             Ok(sofar)
         else
             match scrambleOf(moves, label) {
-                case Some(s) => Ok({ scramble = Some(s), steps = sofar#steps })
-                case None    =>
+                case Some(s) => Ok({scramble = Some(s), steps = sofar#steps})
+                case None =>
                     step(n, label, moves)
-                        |> Result.map(st -> { scramble = sofar#scramble,
-                            steps = st :: sofar#steps })
+                        |> Result.map(
+                            st -> {
+                                scramble = sofar#scramble,
+                                steps    = st :: sofar#steps
+                            }
+                        )
             }
 
     ///

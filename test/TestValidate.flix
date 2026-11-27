@@ -1,46 +1,52 @@
-mod TestValidate {
+pub mod TestValidate {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Validate
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     /// `v` with entries `i` and `j` exchanged.
     def swap(i: Int32, j: Int32, v: Vector[Int32]): Vector[Int32] =
-        Vector.init(k ->
-            if (k == i) Vector.get(j, v)
-            else if (k == j) Vector.get(i, v)
-            else Vector.get(k, v), Vector.length(v))
+        Vector.init(
+            k ->
+                if (k == i)
+                    Vector.get(j, v)
+                else if (k == j)
+                    Vector.get(i, v)
+                else
+                    Vector.get(k, v),
+            Vector.length(v)
+        )
 
     /// A 3x3x3 built from the given orbits, however illegal.
-    def cube3(corners: Orbit64.Coord.Coord, midges: Orbit64.Coord.Coord): Cube.Cube \ Assert =
+    def cube3(corners: CubeSolve.Model.Pieces.Coord, midges: CubeSolve.Model.Pieces.Coord): Cube.Cube \ Assert =
         match Cube.ofOrbits(3, corners :: midges :: Nil) {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected a cube");
                 unreachable!()
         }
 
-    def solvedCorners(): Orbit64.Coord.Coord =
-        CornerCoord(Vector.range(0, 8), Vector.repeat(8, 0))
+    def solvedCorners(): CubeSolve.Model.Pieces.Coord =
+        Coord.CornerCoord(Vector.range(0, 8), Vector.repeat(8, 0))
 
-    def solvedMidges(): Orbit64.Coord.Coord =
-        MidgeCoord(Vector.range(0, 12), Vector.repeat(12, 0))
+    def solvedMidges(): CubeSolve.Model.Pieces.Coord =
+        Coord.MidgeCoord(Vector.range(0, 12), Vector.repeat(12, 0))
 
     /// Corners solved except that slots `i` and `j` hold each other's piece.
-    def cornersSwapped(i: Int32, j: Int32): Orbit64.Coord.Coord =
-        CornerCoord(swap(i, j, Vector.range(0, 8)), Vector.repeat(8, 0))
+    def cornersSwapped(i: Int32, j: Int32): CubeSolve.Model.Pieces.Coord =
+        Coord.CornerCoord(swap(i, j, Vector.range(0, 8)), Vector.repeat(8, 0))
 
     /// Midges solved except that slots `i` and `j` hold each other's piece.
-    def midgesSwapped(i: Int32, j: Int32): Orbit64.Coord.Coord =
-        MidgeCoord(swap(i, j, Vector.range(0, 12)), Vector.repeat(12, 0))
+    def midgesSwapped(i: Int32, j: Int32): CubeSolve.Model.Pieces.Coord =
+        Coord.MidgeCoord(swap(i, j, Vector.range(0, 12)), Vector.repeat(12, 0))
 
     /// One corner twisted in place, which no cube can be.
-    def oneCornerTwisted(): Orbit64.Coord.Coord =
-        CornerCoord(Vector.range(0, 8), Vector.init(i -> if (i == 0) 1 else 0, 8))
+    def oneCornerTwisted(): CubeSolve.Model.Pieces.Coord =
+        Coord.CornerCoord(Vector.range(0, 8), Vector.init(i -> if (i == 0) 1 else 0, 8))
 
     /// One edge flipped in place, which no cube can be.
-    def oneEdgeFlipped(): Orbit64.Coord.Coord =
-        MidgeCoord(Vector.range(0, 12), Vector.init(i -> if (i == 0) 1 else 0, 12))
+    def oneEdgeFlipped(): CubeSolve.Model.Pieces.Coord =
+        Coord.MidgeCoord(Vector.range(0, 12), Vector.init(i -> if (i == 0) 1 else 0, 12))
 
     // ---------- what turning can reach ----------
 
@@ -53,13 +59,17 @@ mod TestValidate {
     @Test
     def everyStateReachedByTurningIsReachable(): Unit \ Assert =
         let walk = "R U2 F' L D B2 R' U L2 D' F B U' R2 D F2 L' B' U D2";
-        List.forEach(n ->
-            match Cube.solved(n) |> Result.flatMap(c -> Cube.applyNotation(walk, c)) {
+        List.forEach(
+            n -> match Cube.solved(n) |> Result.flatMap(c -> Cube.applyNotation(walk, c)) {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "walk applies")
-                case Ok(c)  => Assert.assertEqWithMsg(
-                    expected = None, Validate.faultOf(c), "a turned cube is reachable")
+                case Ok(c) => Assert.assertEqWithMsg(
+                    expected = None,
+                    Validate.faultOf(c),
+                    "a turned cube is reachable"
+                )
             },
-            2 :: 3 :: Nil)
+            2 :: 3 :: Nil
+        )
 
     // ---------- the 3x3x3 parity coupling ----------
 
@@ -79,13 +89,15 @@ mod TestValidate {
     @Test
     def swappingTwoEdgesAloneIsUnreachableOnAThreeCube(): Unit \ Assert =
         Assert.assertFalse(
-            Validate.isReachable(cube3(solvedCorners(), midgesSwapped(0, 1))))
+            Validate.isReachable(cube3(solvedCorners(), midgesSwapped(0, 1)))
+        )
 
     /// Both swapped together is reachable: the parities agree again.
     @Test
     def swappingTwoCornersAndTwoEdgesIsReachable(): Unit \ Assert =
         Assert.assertTrue(
-            Validate.isReachable(cube3(cornersSwapped(0, 1), midgesSwapped(0, 1))))
+            Validate.isReachable(cube3(cornersSwapped(0, 1), midgesSwapped(0, 1)))
+        )
 
     /// The same swap on a 2x2x2 is perfectly reachable. A face turn there is a
     /// 4-cycle of corners with nothing to pair it against, so corner parity is
@@ -120,7 +132,7 @@ mod TestValidate {
     def unimplementedSizesAreNotSilentlyDeclaredReachable(): Unit \ Assert =
         match Cube.solved(4) |> Result.map(Validate.faultOf) {
             case Ok(Some(w)) => Assert.assertTrue(String.contains(substr = "4x4x4", w))
-            case _ => Assert.assertTrueWithMsg(false, "should refuse to certify a 4x4x4")
+            case _           => Assert.assertTrueWithMsg(false, "should refuse to certify a 4x4x4")
         }
 
 }

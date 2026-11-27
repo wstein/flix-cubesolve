@@ -8,7 +8,7 @@
 /// tables here -- which is what makes agreement between them a second
 /// derivation rather than a restatement.
 ///
-mod CubeSolve.Model.Facelets {
+pub mod CubeSolve.Model.Facelets {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
@@ -22,20 +22,20 @@ mod CubeSolve.Model.Facelets {
     /// *direction* -- a table with every cycle reversed satisfies every group
     /// law and fails here.
     ///
-    /// The rendering is of the *arrangement*, in the canonical frame -- the
-    /// cube as it would look rotated back upright. The frame itself is reported
-    /// by `orientation`, which is the only place it lives. Splitting the two is
-    /// not a shortcut: orbit64's own format excludes the fixed centres for
-    /// exactly this reason, so "arrangement plus frame" is the whole state.
+    /// The rendering is of the *arrangement*. Odd cubes are read in the
+    /// canonical pose, where the fixed centers are the frame. Even cubes are
+    /// read in the framed pose, so a moved corner stays where the engine put
+    /// it. The whole-cube orientation on `Cube` is separate and is not written
+    /// into the token.
     ///
     pub def of(c: Cube): Result[String, Vector[Int32]] =
-        Orbit64.Net.toFacelets(Cube.size(c), Cube.orbits(c))
+        CubeSolve.Model.Pieces.toFacelets(Cube.size(c), Cube.orbits(c))
 
     ///
     /// The cube those facelet colours describe.
     ///
     pub def toCube(n: Int32, fs: Vector[Int32]): Result[String, Cube] =
-        Orbit64.Net.fromFacelets(n, fs) |> Result.flatMap(os -> Cube.ofOrbits(n, os))
+        CubeSolve.Model.Pieces.fromFacelets(n, fs) |> Result.flatMap(os -> Cube.ofOrbits(n, os))
 
     ///
     /// `c` as a canonical URL-safe token.
@@ -45,7 +45,6 @@ mod CubeSolve.Model.Facelets {
     /// it.
     ///
     pub def token(c: Cube): Result[String, String] =
-        Orbit64.encode(Cube.size(c), Cube.orbits(c))
-
+        CubeSolve.Model.Pieces.encode(Cube.size(c), Cube.orbits(c))
 
 }

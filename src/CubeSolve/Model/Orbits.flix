@@ -9,12 +9,11 @@
 /// also carried the permutation arithmetic, the sticker geometry and the facelet
 /// interchange would be the module everything else reaches through.
 ///
-mod CubeSolve.Model.Orbits {
+pub mod CubeSolve.Model.Orbits {
 
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
-    use Orbit64.Coord.Coord
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord, WingCoord, CenterCoord}
+    use CubeSolve.Model.Pieces.Coord
 
     ///
     /// One orbit after `k` clockwise quarter turns of `f`.
@@ -25,14 +24,14 @@ mod CubeSolve.Model.Orbits {
         k: Int32,
         o: Coord
     ): Result[String, Coord] = match o {
-        case CornerCoord(p, t) =>
+        case Coord.CornerCoord(p, t) =>
             let step = turnOriented(Move.cornerPermutation(f), Move.cornerTwist(f), 3);
             let (p1, t1) = repeatTurn(k, (p, t), step);
-            Ok(CornerCoord(p1, t1))
-        case MidgeCoord(p, t) =>
+            Ok(Coord.CornerCoord(p1, t1))
+        case Coord.MidgeCoord(p, t) =>
             let step = turnOriented(Move.edgePermutation(f), Move.edgeFlip(f), 2);
             let (p1, t1) = repeatTurn(k, (p, t), step);
-            Ok(MidgeCoord(p1, t1))
+            Ok(Coord.MidgeCoord(p1, t1))
         case _ => Err(noTableForThisOrbit(n))
     }
 
@@ -74,25 +73,28 @@ mod CubeSolve.Model.Orbits {
         let slots = Vector.length(perm);
         match (p, t) ->
             let moved = Vector.init(i -> Vector.get(Vector.get(i, perm), p), slots);
-            let turned = Vector.init(i -> {
-                let carried = Vector.get(Vector.get(i, perm), t);
-                Int32.modulo(carried + Vector.get(i, delta), modulus)
-            }, slots);
+            let turned = Vector.init(
+                i -> {
+                    let carried = Vector.get(Vector.get(i, perm), t);
+                    Int32.modulo(carried + Vector.get(i, delta), modulus)
+                },
+                slots
+            );
             (moved, turned)
 
     ///
     /// One orbit of a composition.
     ///
     pub def afterOrbit(pair: (Coord, Coord)): Result[String, Coord] = match pair {
-        case (CornerCoord(pa, oa), CornerCoord(pb, ob)) =>
+        case (Coord.CornerCoord(pa, oa), Coord.CornerCoord(pb, ob)) =>
             let (p, o) = combine(pa, oa, pb, ob, 3);
-            Ok(CornerCoord(p, o))
-        case (MidgeCoord(pa, oa), MidgeCoord(pb, ob)) =>
+            Ok(Coord.CornerCoord(p, o))
+        case (Coord.MidgeCoord(pa, oa), Coord.MidgeCoord(pb, ob)) =>
             let (p, o) = combine(pa, oa, pb, ob, 2);
-            Ok(MidgeCoord(p, o))
-        case (WingCoord(pa), WingCoord(pb)) =>
-            Ok(WingCoord(Vector.map(i -> Vector.get(i, pa), pb)))
-        case (CenterCoord(_), CenterCoord(_)) => Err(centresDoNotCompose())
+            Ok(Coord.MidgeCoord(p, o))
+        case (Coord.WingCoord(pa), Coord.WingCoord(pb)) =>
+            Ok(Coord.WingCoord(Vector.map(i -> Vector.get(i, pa), pb)))
+        case (Coord.CenterCoord(_), Coord.CenterCoord(_)) => Err(centresDoNotCompose())
         case _ => Err("these two cubes do not have the same orbits")
     }
 
@@ -108,10 +110,13 @@ mod CubeSolve.Model.Orbits {
     ): (Vector[Int32], Vector[Int32]) =
         let n = Vector.length(pa);
         let moved = Vector.init(i -> Vector.get(Vector.get(i, pb), pa), n);
-        let turned = Vector.init(i -> {
-            let carried = Vector.get(Vector.get(i, pb), oa);
-            Int32.modulo(carried + Vector.get(i, ob), modulus)
-        }, n);
+        let turned = Vector.init(
+            i -> {
+                let carried = Vector.get(Vector.get(i, pb), oa);
+                Int32.modulo(carried + Vector.get(i, ob), modulus)
+            },
+            n
+        );
         (moved, turned)
 
     ///
@@ -122,14 +127,14 @@ mod CubeSolve.Model.Orbits {
     /// twist it acquired on the way out it must lose on the way back.
     ///
     pub def invertOrbit(o: Coord): Result[String, Coord] = match o {
-        case CornerCoord(p, t) =>
+        case Coord.CornerCoord(p, t) =>
             let (q, u) = invertOriented(p, t, 3);
-            Ok(CornerCoord(q, u))
-        case MidgeCoord(p, t) =>
+            Ok(Coord.CornerCoord(q, u))
+        case Coord.MidgeCoord(p, t) =>
             let (q, u) = invertOriented(p, t, 2);
-            Ok(MidgeCoord(q, u))
-        case WingCoord(p)  => Ok(WingCoord(invertPermutation(p)))
-        case CenterCoord(_) => Err(centresDoNotCompose())
+            Ok(Coord.MidgeCoord(q, u))
+        case Coord.WingCoord(p) => Ok(Coord.WingCoord(invertPermutation(p)))
+        case Coord.CenterCoord(_) => Err(centresDoNotCompose())
     }
 
     ///
@@ -142,10 +147,13 @@ mod CubeSolve.Model.Orbits {
     ): (Vector[Int32], Vector[Int32]) =
         let n = Vector.length(p);
         let inverted = invertPermutation(p);
-        let twist = Vector.init(i -> {
-            let came = Vector.get(i, inverted);
-            Int32.modulo(modulus - Vector.get(came, t), modulus)
-        }, n);
+        let twist = Vector.init(
+            i -> {
+                let came = Vector.get(i, inverted);
+                Int32.modulo(modulus - Vector.get(came, t), modulus)
+            },
+            n
+        );
         (inverted, twist)
 
     ///

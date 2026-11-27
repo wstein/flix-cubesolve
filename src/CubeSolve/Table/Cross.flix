@@ -19,15 +19,15 @@
 /// tables exist because its successors are the hot loop of a search that runs
 /// tens of millions of steps. This one runs a few thousand.
 ///
-mod CubeSolve.Table.Cross {
+pub mod CubeSolve.Table.Cross {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
     use CubeSolve.Table
     use CubeSolve.Table.Cache
     use CubeSolve.Table.TableView
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The four edge pieces the cross is made of: `DR DF DL DB`, slots 4 to 7.
@@ -68,7 +68,7 @@ mod CubeSolve.Table.Cross {
     ///
     pub def encode(c: Cube.Cube): Result[String, Int32] =
         match Cube.orbits(c) {
-            case CornerCoord(_, _) :: MidgeCoord(ep, eo) :: Nil =>
+            case Coord.CornerCoord(_, _) :: Coord.MidgeCoord(ep, eo) :: Nil =>
                 let places = crossPieces() |> Vector.map(p -> slotOf(p, ep));
                 if (Vector.exists(s -> s < 0, places))
                     Err("this cube is missing a cross edge, which cannot happen")
@@ -100,16 +100,23 @@ mod CubeSolve.Table.Cross {
             let idx = List.indexOf(slot, free) |> Option.getWithDefault(0);
             (sofar * (slotCount() - i) + idx, List.filter(x -> x != slot, free))
         };
-        let (placed, _) = Vector.range(0, 4) |> Vector.foldLeft(step,
-            (0, List.range(0, slotCount())));
+        let (placed, _) = Vector.range(0, 4)
+            |> Vector.foldLeft(
+                step,
+                (0, List.range(0, slotCount()))
+            );
         placed * 16 + flipBits(flips)
 
     ///
     /// Four flips as four bits.
     ///
     def flipBits(flips: Vector[Int32]): Int32 =
-        Vector.range(0, 4) |> Vector.foldLeft((acc, i) ->
-            acc + Int32.leftShift(Vector.get(i, flips), i), 0)
+        Vector.range(0, 4)
+            |> Vector.foldLeft(
+                (acc, i) ->
+                    acc + Int32.leftShift(Vector.get(i, flips), i),
+                0
+            )
 
     ///
     /// The slots and flips a coordinate stands for.
@@ -142,8 +149,11 @@ mod CubeSolve.Table.Cross {
             let slot = List.nth(d, free) |> Option.getWithDefault(0);
             (List.filter(x -> x != slot, free), List.append(out, slot :: Nil))
         };
-        let (_, places) = digits |> List.foldLeft(step,
-            (List.range(0, slotCount()), Nil));
+        let (_, places) = digits
+            |> List.foldLeft(
+                step,
+                (List.range(0, slotCount()), Nil)
+            );
         List.toVector(places)
 
     ///
@@ -170,8 +180,8 @@ mod CubeSolve.Table.Cross {
     ///
     pub def successor(index: Int32, m: Int32): Int32 =
         match Move.ofIndex(m) {
-            case None      => index
-            case Some(mv)  =>
+            case None => index
+            case Some(mv) =>
                 let (places, flips) = unrank(index);
                 let (moved, turned) = turn(Move.face(mv), Move.amount(mv), places, flips);
                 rank(moved, turned)
@@ -191,13 +201,17 @@ mod CubeSolve.Table.Cross {
         else
             let perm = Move.edgePermutation(f);
             let delta = Move.edgeFlip(f);
-            let landing = s -> Vector.range(0, slotCount())
-                |> Vector.findLeft(i -> Vector.get(i, perm) == s)
-                |> Option.getWithDefault(s);
+            let landing = s ->
+                Vector.range(0, slotCount())
+                    |> Vector.findLeft(i -> Vector.get(i, perm) == s)
+                    |> Option.getWithDefault(s);
             let moved = places |> Vector.map(landing);
             let added = i -> Vector.get(Vector.get(i, moved), delta);
-            let turnedFlips = Vector.range(0, 4) |> Vector.map(i ->
-                Int32.modulo(Vector.get(i, flips) + added(i), 2));
+            let turnedFlips = Vector.range(0, 4)
+                |> Vector.map(
+                    i ->
+                        Int32.modulo(Vector.get(i, flips) + added(i), 2)
+                );
             turn(f, k - 1, moved, turnedFlips)
 
     ///
@@ -209,8 +223,9 @@ mod CubeSolve.Table.Cross {
     ///
     pub def build(): Result[String, TableView] =
         Table.distancesFrom(
-            { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 4 },
-            successor)
+            {states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 4},
+            successor
+        )
 
     ///
     /// The same table, read from the cache when one is there.

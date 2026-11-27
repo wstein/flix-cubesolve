@@ -12,7 +12,7 @@
 /// method and another way by the other would be a difference with no meaning
 /// behind it.
 ///
-mod CubeSolve.Method.Steps {
+pub mod CubeSolve.Method.Steps {
 
     use CubeSolve.Method
     use CubeSolve.Method.Plan
@@ -30,7 +30,7 @@ mod CubeSolve.Method.Steps {
     /// a different face, and the sequence stops solving. A step therefore keeps
     /// what it was given.
     ///
-    pub type alias Step = { name = String, sequence = String }
+    pub type alias Step = {name = String, sequence = String}
 
     ///
     /// A step, or the failure of the search behind it, named for the step.
@@ -44,7 +44,7 @@ mod CubeSolve.Method.Steps {
         found: Result[String, List[Move.Move]]
     ): Result[String, Step] =
         found
-            |> Result.map(ms -> { name = name, sequence = Move.showAll(Move.compact(ms)) })
+            |> Result.map(ms -> {name = name, sequence = Move.showAll(Move.compact(ms))})
             |> Result.mapErr(why -> "${name}: ${why}")
 
     ///
@@ -67,7 +67,7 @@ mod CubeSolve.Method.Steps {
             |> Result.map(Plan.of)
 
     def ofStage(s: Method.Stage): Step =
-        { name = labelFor(s), sequence = Notation.compact(s#sequence) }
+        {name = labelFor(s), sequence = Notation.compact(s#sequence)}
 
     def labelFor(s: Method.Stage): String =
         if (s#caseName == "skip")

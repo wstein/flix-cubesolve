@@ -12,7 +12,7 @@
 /// situations, which is the list the corpus must cover rather than however many
 /// records happen to exist.
 ///
-mod TestRoutineClosure {
+pub mod TestRoutineClosure {
 
     use CubeSolve.Method.Beginner.Routines
     use CubeSolve.Method.Beginner.Spec
@@ -24,12 +24,18 @@ mod TestRoutineClosure {
     ///
     @Test
     def everyCornerSituationHasOneRoutine(): Unit \ Assert =
-        Spec.cornerSituations() |> List.forEach(s -> {
-            let matching = Routines.all() |> List.filter(r -> r#situation == s);
-            Assert.assertEqWithMsg(expected = 1, List.length(matching),
-                "${s} should have exactly one routine, and has "
-                    + "${List.length(matching)}")
-        })
+        Spec.cornerSituations()
+            |> List.forEach(
+                s -> {
+                    let matching = Routines.all() |> List.filter(r -> r#situation == s);
+                    Assert.assertEqWithMsg(
+                        expected = 1,
+                        List.length(matching),
+                        "${s} should have exactly one routine, and has "
+                            + "${List.length(matching)}"
+                    )
+                }
+            )
 
     ///
     /// And every corner routine answers a declared situation.
@@ -41,9 +47,14 @@ mod TestRoutineClosure {
     @Test
     def everyCornerRoutineAnswersADeclaredSituation(): Unit \ Assert =
         let declared = Spec.cornerSituations();
-        Routines.cornerInsertions() |> List.forEach(r ->
-            Assert.assertTrueWithMsg(List.memberOf(r#situation, declared),
-                "'${r#name}' answers ${r#situation}, which the stage never asks for"))
+        Routines.cornerInsertions()
+            |> List.forEach(
+                r ->
+                    Assert.assertTrueWithMsg(
+                        List.memberOf(r#situation, declared),
+                        "'${r#name}' answers ${r#situation}, which the stage never asks for"
+                    )
+            )
 
     ///
     /// Each recorded setup classifies to the situation it was recorded for.
@@ -57,19 +68,26 @@ mod TestRoutineClosure {
         match Cube.solved(3) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) =>
-                Routines.cornerInsertions() |> List.forEach(r ->
-                    match Cube.applyNotation(r#setup, solved) {
-                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "setup")
-                        case Ok(c)  => match Spec.classifyCorner(c) {
-                            case CornerStep.Insert(s) =>
-                                Assert.assertEqWithMsg(expected = r#situation, s,
-                                    "'${r#name}': its own setup classifies as ${s}")
-                            case other =>
-                                Assert.assertTrueWithMsg(false,
-                                    "'${r#name}': its own setup classifies as ${other}, "
-                                        + "so the executor would not select it")
+                Routines.cornerInsertions()
+                    |> List.forEach(
+                        r -> match Cube.applyNotation(r#setup, solved) {
+                            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "setup")
+                            case Ok(c) => match Spec.classifyCorner(c) {
+                                case CornerStep.Insert(s) =>
+                                    Assert.assertEqWithMsg(
+                                        expected = r#situation,
+                                        s,
+                                        "'${r#name}': its own setup classifies as ${s}"
+                                    )
+                                case other =>
+                                    Assert.assertTrueWithMsg(
+                                        false,
+                                        "'${r#name}': its own setup classifies as ${other}, "
+                                            + "so the executor would not select it"
+                                    )
+                            }
                         }
-                    })
+                    )
         }
 
     ///
@@ -84,9 +102,11 @@ mod TestRoutineClosure {
         match Cube.solved(3) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) =>
-                Assert.assertEqWithMsg(expected = CornerStep.AlreadyDone,
+                Assert.assertEqWithMsg(
+                    expected = CornerStep.AlreadyDone,
                     Spec.classifyCorner(solved),
-                    "a solved cube's DFR corner needs no routine")
+                    "a solved cube's DFR corner needs no routine"
+                )
         }
 
     ///
@@ -96,12 +116,14 @@ mod TestRoutineClosure {
     def anUnreadyCubeIsRefusedByName(): Unit \ Assert =
         match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation("D", c)) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "turning D")
-            case Ok(c)  => match Spec.classifyCorner(c) {
+            case Ok(c) => match Spec.classifyCorner(c) {
                 case CornerStep.NotReady(_) => ()
                 case other =>
-                    Assert.assertTrueWithMsg(false,
+                    Assert.assertTrueWithMsg(
+                        false,
                         "a cube with the cross broken classified as ${other} rather "
-                            + "than saying the stage below it is not done")
+                            + "than saying the stage below it is not done"
+                    )
             }
         }
 
@@ -110,15 +132,29 @@ mod TestRoutineClosure {
     ///
     @Test
     def theMiddleFamilyIsAlsoAPartition(): Unit \ Assert =
-        let declared = List.range(0, 4) |> List.flatMap(slot ->
-            List.range(0, 2) |> List.map(f -> Spec.Situation.MiddleInsert(slot, f)));
-        declared |> List.forEach(s -> {
-            let matching = Routines.all() |> List.filter(r -> r#situation == s);
-            Assert.assertEqWithMsg(expected = 1, List.length(matching),
-                "${s} should have exactly one routine, and has "
-                    + "${List.length(matching)}")
-        });
-        Routines.middleInsertions() |> List.forEach(r ->
-            Assert.assertTrueWithMsg(List.memberOf(r#situation, declared),
-                "'${r#name}' answers ${r#situation}, which the stage never asks for"))
+        let declared = List.range(0, 4)
+            |> List.flatMap(
+                slot ->
+                    List.range(0, 2) |> List.map(f -> Spec.Situation.MiddleInsert(slot, f))
+            );
+        declared
+            |> List.forEach(
+                s -> {
+                    let matching = Routines.all() |> List.filter(r -> r#situation == s);
+                    Assert.assertEqWithMsg(
+                        expected = 1,
+                        List.length(matching),
+                        "${s} should have exactly one routine, and has "
+                            + "${List.length(matching)}"
+                    )
+                }
+            );
+        Routines.middleInsertions()
+            |> List.forEach(
+                r ->
+                    Assert.assertTrueWithMsg(
+                        List.memberOf(r#situation, declared),
+                        "'${r#name}' answers ${r#situation}, which the stage never asks for"
+                    )
+            )
 }

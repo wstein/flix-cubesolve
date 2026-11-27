@@ -1,7 +1,8 @@
 ///
 /// Why the two-phase solver stops where it does on a hard cube.
 ///
-/// `A_VAs734dSkb` has a seventeen-move solution. This solver answers it in
+/// `fqgWd78OpbE` (the cube the retired V1 token `A_VAs734dSkb` named) has a
+/// seventeen-move solution. This solver answers it in
 /// nineteen at every budget, and the reason is structural rather than a matter
 /// of spending more.
 ///
@@ -30,14 +31,14 @@
 /// different search -- IDA* over the whole cube against pattern databases --
 /// which this engine does not have and which would not be `Solve.Standard`.
 ///
-mod TestTwoPhaseCeiling {
+pub mod TestTwoPhaseCeiling {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Holding
     use CubeSolve.Model.Move
     use CubeSolve.Table.Standard
 
-    def token(): String = "A_VAs734dSkb"
+    def token(): String = "fqgWd78OpbE"
 
     ///
     /// A seventeen-move solution for it, from outside this engine.
@@ -60,16 +61,21 @@ mod TestTwoPhaseCeiling {
     def aShorterSolutionExistsAndTwoPhaseCannotExpressIt(): Unit \ Assert =
         match Holding.ofToken(3, token()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "the token")
-            case Ok(c)  =>
+            case Ok(c) =>
                 match Cube.applyNotation(seventeen(), c) {
-                    case Err(e)   => Assert.assertEqWithMsg(expected = "", e, "replaying")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replaying")
                     case Ok(done) =>
-                        Assert.assertTrueWithMsg(Cube.isSolved(done),
-                            "the recorded seventeen should solve the cube")
+                        Assert.assertTrueWithMsg(
+                            Cube.isSolved(done),
+                            "the recorded seventeen should solve the cube"
+                        )
                 };
-                Assert.assertEqWithMsg(expected = 17, entersDominoAfter(c),
+                Assert.assertEqWithMsg(
+                    expected = 17,
+                    entersDominoAfter(c),
                     "the seventeen reaches the domino group only at its end, so "
-                        + "phase one would have to be all of it")
+                        + "phase one would have to be all of it"
+                )
         }
 
     ///
@@ -80,10 +86,12 @@ mod TestTwoPhaseCeiling {
             case Err(_) => -1
             case Ok(ms) =>
                 Vector.range(0, List.length(ms) + 1)
-                    |> Vector.findLeft(k -> match Cube.applyAll(List.take(k, ms), c) {
-                        case Ok(st) => Standard.isPhase1Solved(st)
-                        case Err(_) => false
-                    })
+                    |> Vector.findLeft(
+                        k -> match Cube.applyAll(List.take(k, ms), c) {
+                            case Ok(st) => Standard.isPhase1Solved(st)
+                            case Err(_) => false
+                        }
+                    )
                     |> Option.getWithDefault(-1)
         }
 }

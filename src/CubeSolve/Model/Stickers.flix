@@ -11,9 +11,9 @@
 /// See `docs/conventions.md` for the layout: faces `U R F D L B` numbered 0 to
 /// 5, cells row-major from each face's top-left as drawn in the unfolded net.
 ///
-mod CubeSolve.Model.Stickers {
+pub mod CubeSolve.Model.Stickers {
 
-    use Orbit64.Coord.Coord
+    use CubeSolve.Model.Pieces.Coord
 
     ///
     /// `orbits` after `k` clockwise quarter turns of face `f`, by unfolding the
@@ -35,8 +35,8 @@ mod CubeSolve.Model.Stickers {
         orbits: List[Coord]
     ): Result[String, List[Coord]] =
         forM (
-            before <- Orbit64.Net.toFacelets(n, orbits);
-            folded <- Orbit64.Net.fromFacelets(n, turn(n, f, k, before))
+            before <- CubeSolve.Model.Pieces.toFacelets(n, orbits);
+            folded <- CubeSolve.Model.Pieces.fromFacelets(n, turn(n, f, k, before))
         ) yield folded
 
     /// `orbits` after turning an inner layer `depth` in from face `f`.
@@ -52,8 +52,8 @@ mod CubeSolve.Model.Stickers {
         orbits: List[Coord]
     ): Result[String, List[Coord]] =
         forM (
-            before <- Orbit64.Net.toFacelets(n, orbits);
-            folded <- Orbit64.Net.fromFacelets(n, turnInner(n, f, depth, k, before))
+            before <- CubeSolve.Model.Pieces.toFacelets(n, orbits);
+            folded <- CubeSolve.Model.Pieces.fromFacelets(n, turnInner(n, f, depth, k, before))
         ) yield folded
 
     ///
@@ -108,14 +108,17 @@ mod CubeSolve.Model.Stickers {
     /// top-left.
     ///
     def spinFace(n: Int32, f: Int32, fs: Vector[Int32]): Vector[Int32] =
-        Vector.range(0, Vector.length(fs)) |> Vector.map(i ->
-            if (i / (n * n) != f)
-                Vector.get(i, fs)
-            else
-                let cell = Int32.modulo(i, n * n);
-                let r = cell / n;
-                let c = Int32.modulo(cell, n);
-                Vector.get(f * n * n + (n - 1 - c) * n + r, fs))
+        Vector.range(0, Vector.length(fs))
+            |> Vector.map(
+                i ->
+                    if (i / (n * n) != f)
+                        Vector.get(i, fs)
+                    else
+                        let cell = Int32.modulo(i, n * n);
+                        let r = cell / n;
+                        let c = Int32.modulo(cell, n);
+                        Vector.get(f * n * n + (n - 1 - c) * n + r, fs)
+            )
 
     ///
     /// Move each strip's stickers onto the next strip round.
@@ -129,8 +132,11 @@ mod CubeSolve.Model.Stickers {
             |> List.flatten
             |> List.map(p -> (snd(p), Vector.get(fst(p), fs)))
             |> List.toMap;
-        Vector.range(0, Vector.length(fs)) |> Vector.map(i ->
-            Map.getWithDefault(i, Vector.get(i, fs), moves))
+        Vector.range(0, Vector.length(fs))
+            |> Vector.map(
+                i ->
+                    Map.getWithDefault(i, Vector.get(i, fs), moves)
+            )
 
     ///
     /// The `i`th strip, or nothing sensible if there is no such strip.
@@ -235,36 +241,54 @@ mod CubeSolve.Model.Stickers {
     }
 
     def aroundUpInner(n: Int32, d: Int32): List[List[Int32]] =
-        row(n, 2, d) :: row(n, 4, d)
-            :: row(n, 5, d) :: row(n, 1, d) :: Nil
+        row(n, 2, d)
+            :: row(n, 4, d)
+            :: row(n, 5, d)
+            :: row(n, 1, d)
+            :: Nil
 
     def aroundDownInner(n: Int32, d: Int32): List[List[Int32]] = {
         let last = n - 1 - d;
-        row(n, 2, last) :: row(n, 1, last)
-            :: row(n, 5, last) :: row(n, 4, last) :: Nil
+        row(n, 2, last)
+            :: row(n, 1, last)
+            :: row(n, 5, last)
+            :: row(n, 4, last)
+            :: Nil
     }
 
     def aroundRightInner(n: Int32, d: Int32): List[List[Int32]] = {
         let last = n - 1 - d;
-        col(n, 2, last) :: col(n, 0, last) :: back(col(n, 5, d))
-            :: col(n, 3, last) :: Nil
+        col(n, 2, last)
+            :: col(n, 0, last)
+            :: back(col(n, 5, d))
+            :: col(n, 3, last)
+            :: Nil
     }
 
     def aroundLeftInner(n: Int32, d: Int32): List[List[Int32]] = {
         let last = n - 1 - d;
-        col(n, 2, d) :: col(n, 3, d)
-            :: back(col(n, 5, last)) :: col(n, 0, d) :: Nil
+        col(n, 2, d)
+            :: col(n, 3, d)
+            :: back(col(n, 5, last))
+            :: col(n, 0, d)
+            :: Nil
     }
 
     def aroundFrontInner(n: Int32, d: Int32): List[List[Int32]] =
         let last = n - 1 - d;
-        row(n, 0, last) :: col(n, 1, d) :: back(row(n, 3, d))
-            :: back(col(n, 4, last)) :: Nil
+        row(n, 0, last)
+            :: col(n, 1, d)
+            :: back(row(n, 3, d))
+            :: back(col(n, 4, last))
+            :: Nil
 
     def aroundBackInner(n: Int32, d: Int32): List[List[Int32]] =
         let last = n - 1 - d;
-        back(row(n, 0, d)) :: col(n, 4, d) :: row(n, 3, last)
-            :: back(col(n, 1, last)) :: Nil
+        back(row(n, 0, d))
+            :: col(n, 4, d)
+            :: row(n, 3, last)
+            :: back(col(n, 1, last))
+            :: Nil
 
     ///
     /// Row `r` of face `f`, left to right as drawn.

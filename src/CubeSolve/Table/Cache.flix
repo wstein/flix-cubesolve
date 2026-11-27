@@ -17,7 +17,7 @@
 /// is *not* silent is which of those happened: `reasonToRebuild` returns it, so
 /// a caller that wants to warn can.
 ///
-mod CubeSolve.Table.Cache {
+pub mod CubeSolve.Table.Cache {
 
     use CubeSolve.Table.Codec
     use CubeSolve.Table.TableView
@@ -68,8 +68,11 @@ mod CubeSolve.Table.Cache {
     /// The table the cache holds under `key`, if it is usable.
     ///
     pub def cached(key: String, wanted: Codec.Header): Option[TableView] \ Store =
-        Store.load(key) |> Option.flatMap(bytes ->
-            Codec.expect(wanted, bytes) |> Result.toOption)
+        Store.load(key)
+            |> Option.flatMap(
+                bytes ->
+                    Codec.expect(wanted, bytes) |> Result.toOption
+            )
 
     ///
     /// Why the cache could not supply `key`, or nothing when it could.
@@ -101,13 +104,16 @@ mod CubeSolve.Table.Cache {
         wanted: Codec.Header,
         build: Unit -> Result[String, TableView] \ ef
     ): Result[String, TableView] \ ef + Store =
-        build() |> Result.map(t -> {
-            match Codec.encode(wanted, t) {
-                case Ok(bytes) => Store.save(key, bytes)
-                case Err(_)    => ()
-            };
-            t
-        })
+        build()
+            |> Result.map(
+                t -> {
+                    match Codec.encode(wanted, t) {
+                        case Ok(bytes) => Store.save(key, bytes)
+                        case Err(_)    => ()
+                    };
+                    t
+                }
+            )
 
     // ---------- handlers ----------
 
@@ -119,7 +125,7 @@ mod CubeSolve.Table.Cache {
     ///
     pub def withoutCache(f: Unit -> a \ ef): a \ ef - Store =
         run { f() } with handler Store {
-            def load(_, k) = k(None)
+            def load(_, k)    = k(None)
             def save(_, _, k) = k(())
         }
 
@@ -151,15 +157,16 @@ mod CubeSolve.Table.Cache {
     /// cannot store is a slow cache; a cache that stores unsafely is a wrong
     /// answer.
     ///
-    pub def onFilesystem(directory: String, f: Unit -> a \ ef): a \
-        (ef - Store) + FileExists + ReadBytes + WriteBytes + MoveFile + MkTempDir =
+    pub def onFilesystem(directory: String, f: Unit -> a \ ef): a \ (ef - Store) + FileExists + ReadBytes + WriteBytes + MoveFile + MkTempDir =
         let staging = Fs.MkTempDir.mkTempDir("cubesolve-cache-") |> Result.toOption;
         run { f() } with handler Store {
             def load(key, k) = k(readFile(pathOf(directory, key)))
-            def save(key, bytes, k) = k(match staging {
-                case None      => ()
-                case Some(dir) => writeAtomically(dir, key, pathOf(directory, key), bytes)
-            })
+            def save(key, bytes, k) = k(
+                match staging {
+                    case None      => ()
+                    case Some(dir) => writeAtomically(dir, key, pathOf(directory, key), bytes)
+                }
+            )
         }
 
     ///
@@ -191,12 +198,14 @@ mod CubeSolve.Table.Cache {
         let staged = "${dir}/${key}";
         match Fs.WriteBytes.writeBytes(bytes, staged) {
             case Err(_) => ()
-            case Ok(_)  =>
+            case Ok(_) =>
                 Fs.MoveFile.moveWith(
                     src = staged,
                     path,
                     Set#{Fs.MoveOption.AtomicMove, Fs.MoveOption.ReplaceExisting}
-                ) |> Result.toOption |> Option.getWithDefault(())
+                )
+                    |> Result.toOption
+                    |> Option.getWithDefault(())
         }
 
 }

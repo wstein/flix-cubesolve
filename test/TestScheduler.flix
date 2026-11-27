@@ -14,7 +14,7 @@
 /// the sixth answers in sixteen, for sixty-seven probes. A `default` that
 /// stopped after two views never saw it.
 ///
-mod TestScheduler {
+pub mod TestScheduler {
 
     use CubeSolve.Model.Holding
     use CubeSolve.Model.Sized
@@ -23,8 +23,8 @@ mod TestScheduler {
     ///
     /// The pattern whose sixth view is the one that matters.
     ///
-    def blackMamba(): String = "A2HhlM-xDXSo"
-
+    /// The V2 token of the holding the retired V1 token `A2HhlM-xDXSo` named.
+    def blackMamba(): String = "bDv0JY7hrip"
 
     ///
     /// The documented bound for `Black mamba` is checked by
@@ -47,22 +47,32 @@ mod TestScheduler {
     ///
     @Test
     def cheapViewsKeepGoingPastTheViewTarget(): Unit \ Assert + IO =
-        if (Slow.skip("TestScheduler.cheapViewsKeepGoingPastTheViewTarget",
-                "builds the phase tables and searches every view"))
+        if (Slow.skip(
+            "TestScheduler.cheapViewsKeepGoingPastTheViewTarget",
+            "builds the phase tables and searches every view"
+        ))
             ()
         else
-            match (Standard.buildTables(),
-                   Holding.ofToken(3, blackMamba()) |> Result.flatMap(Sized.standardOf)) {
+            match (
+                Standard.buildTables(),
+                Holding.ofToken(3, blackMamba()) |> Result.flatMap(Sized.standardOf)
+            ) {
                 case (Ok(t), Ok(c)) =>
                     let hungry = Standard.budget({
-                        minViews = 2, probeFloor = 100000, probeMax = 400000,
-                        maxDepth = 25, handovers = 300, phase1Depth = 12
+                        minViews    = 2,
+                        probeFloor  = 100000,
+                        probeMax    = 400000,
+                        maxDepth    = 25,
+                        handovers   = 300,
+                        phase1Depth = 12
                     });
                     let out = Standard.solveWithOutcome(t, hungry, c);
-                    Assert.assertTrueWithMsg(out#viewsTried > 2,
+                    Assert.assertTrueWithMsg(
+                        out#viewsTried > 2,
                         "a floor of 100000 probes is far above what two views cost, "
                             + "so the search should have carried on past two and it "
-                            + "stopped at ${out#viewsTried}")
+                            + "stopped at ${out#viewsTried}"
+                    )
                 case (Err(e), _) => Assert.assertEqWithMsg(expected = "", e, "the tables")
                 case (_, Err(e)) => Assert.assertEqWithMsg(expected = "", e, "the token")
             }

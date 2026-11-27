@@ -13,7 +13,7 @@
 /// pieces somewhere different. That gives states this corpus has never seen,
 /// reached without asserting anything about how they were built.
 ///
-mod TestRoutinesInContext {
+pub mod TestRoutinesInContext {
 
     use CubeSolve.Method.Beginner.Routines
     use CubeSolve.Method.Beginner.Spec
@@ -30,16 +30,21 @@ mod TestRoutinesInContext {
         let holds = Spec.caseHolds(r#situation);
         let ms = Spec.alphabet(r#situation);
         let ones = ms |> Vector.toList |> List.map(m -> (Move.show(m), m));
-        let pair = (an, a) -> ones |> List.map(match (bn, b) ->
-            ("${an} ${bn}", a :: b :: Nil));
+        let pair = (an, a) ->
+            ones
+                |> List.map(
+                    match (bn, b) -> ("${an} ${bn}", a :: b :: Nil)
+                );
         let twos = ones |> List.flatMap(match (an, a) -> pair(an, a));
         let singles = ones |> List.map(match (n, m) -> (n, m :: Nil));
         let candidates = List.append(singles, twos);
         candidates
-            |> List.filterMap(match (name, seq) -> match Cube.applyAll(seq, caseCube) {
-                case Ok(after) if holds(after) => Some((name, after))
-                case _                         => None
-            })
+            |> List.filterMap(
+                match (name, seq) -> match Cube.applyAll(seq, caseCube) {
+                    case Ok(after) if holds(after) => Some((name, after))
+                    case _                         => None
+                }
+            )
 
     ///
     /// Every routine, in every compatible state reachable two moves away.
@@ -49,26 +54,34 @@ mod TestRoutinesInContext {
         match Cube.solved(3) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) =>
-                Routines.all() |> List.forEach(r ->
-                    match Cube.applyNotation(r#setup, solved) {
-                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "setup")
-                        case Ok(caseCube) => inEachOf(r, compatible(r, caseCube))
-                    })
+                Routines.all()
+                    |> List.forEach(
+                        r -> match Cube.applyNotation(r#setup, solved) {
+                            case Err(e)       => Assert.assertEqWithMsg(expected = "", e, "setup")
+                            case Ok(caseCube) => inEachOf(r, compatible(r, caseCube))
+                        }
+                    )
         }
 
     def inEachOf(r: Routines.Routine, states: List[(String, Cube.Cube)]): Unit \ Assert =
         let s = r#situation;
-        states |> List.forEach(match (how, start) ->
-            match Cube.applyNotation(r#sequence, start) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${r#name}' replay")
-                case Ok(done) =>
-                    Assert.assertTrueWithMsg(Spec.achieves(s)(done),
-                        "'${r#name}' after '${how}': ${Spec.achievesWritten(s)} should "
-                            + "hold, and does not");
-                    Assert.assertTrueWithMsg(Spec.preserves(s)(done),
-                        "'${r#name}' after '${how}': it must leave "
-                            + "${Spec.preservesWritten(s)} alone, and did not")
-            })
+        states
+            |> List.forEach(
+                match (how, start) -> match Cube.applyNotation(r#sequence, start) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${r#name}' replay")
+                    case Ok(done) =>
+                        Assert.assertTrueWithMsg(
+                            Spec.achieves(s)(done),
+                            "'${r#name}' after '${how}': ${Spec.achievesWritten(s)} should "
+                                + "hold, and does not"
+                        );
+                        Assert.assertTrueWithMsg(
+                            Spec.preserves(s)(done),
+                            "'${r#name}' after '${how}': it must leave "
+                                + "${Spec.preservesWritten(s)} alone, and did not"
+                        )
+                }
+            )
 
     ///
     /// The states being checked are not all the recorded one.
@@ -82,15 +95,19 @@ mod TestRoutinesInContext {
         match Cube.solved(3) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) =>
-                Routines.all() |> List.forEach(r ->
-                    match Cube.applyNotation(r#setup, solved) {
-                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "setup")
-                        case Ok(caseCube) =>
-                            let found = compatible(r, caseCube);
-                            Assert.assertTrueWithMsg(not List.isEmpty(found),
-                                "'${r#name}' has no compatible state other than its own "
-                                    + "setup, so the context test proves nothing for it")
-                    })
+                Routines.all()
+                    |> List.forEach(
+                        r -> match Cube.applyNotation(r#setup, solved) {
+                            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "setup")
+                            case Ok(caseCube) =>
+                                let found = compatible(r, caseCube);
+                                Assert.assertTrueWithMsg(
+                                    not List.isEmpty(found),
+                                    "'${r#name}' has no compatible state other than its own "
+                                        + "setup, so the context test proves nothing for it"
+                                )
+                        }
+                    )
         }
 
     ///
@@ -108,10 +125,18 @@ mod TestRoutinesInContext {
         // Each of these inserts the piece correctly and then lifts a bottom
         // corner out of the layer with `L U L'`, which the `L` layer reaches and
         // the target piece does not.
-        wrongOne("corner", Spec.Situation.CornerInsertion(0, 1), "R U' R'",
-            "R U R' L U L'");
-        wrongOne("middle", Spec.Situation.MiddleInsert(3, 0),
-            "R U R' U' F' U' F", "F' U F U R U' R' L U L'")
+        wrongOne(
+            "corner",
+            Spec.Situation.CornerInsertion(0, 1),
+            "R U' R'",
+            "R U R' L U L'"
+        );
+        wrongOne(
+            "middle",
+            Spec.Situation.MiddleInsert(3, 0),
+            "R U R' U' F' U' F",
+            "F' U F U R U' R' L U L'"
+        )
 
     ///
     /// One deliberately wrong sequence, from the case its situation names.
@@ -125,17 +150,23 @@ mod TestRoutinesInContext {
         match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(setup, c)) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "${what} setup")
             case Ok(caseCube) =>
-                Assert.assertTrueWithMsg(Spec.caseHolds(s)(caseCube),
-                    "${what}: the setup should reach the case being spoiled");
+                Assert.assertTrueWithMsg(
+                    Spec.caseHolds(s)(caseCube),
+                    "${what}: the setup should reach the case being spoiled"
+                );
                 match Cube.applyNotation(wrong, caseCube) {
                     case Err(e) => Assert.assertEqWithMsg(expected = "", e, "${what} wrong")
                     case Ok(done) =>
-                        Assert.assertTrueWithMsg(Spec.achieves(s)(done),
+                        Assert.assertTrueWithMsg(
+                            Spec.achieves(s)(done),
                             "${what}: the wrong sequence should still reach the rung, or "
-                                + "it tests nothing about preservation");
-                        Assert.assertTrueWithMsg(not Spec.preserves(s)(done),
+                                + "it tests nothing about preservation"
+                        );
+                        Assert.assertTrueWithMsg(
+                            not Spec.preserves(s)(done),
                             "${what}: '${wrong}' breaks a lower rung and preservation "
-                                + "must refuse it")
+                                + "must refuse it"
+                        )
                 }
         }
 

@@ -8,7 +8,7 @@
 /// first and loses the count without complaining, which is why this is grammar
 /// and not a tidying pass.
 ///
-mod TestNotationGroups {
+pub mod TestNotationGroups {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
@@ -37,9 +37,11 @@ mod TestNotationGroups {
         agree("(M z)4", "M z M z M z M z");
         agree("(L2 F2 R2 B2)3", "L2 F2 R2 B2 L2 F2 R2 B2 L2 F2 R2 B2");
         agree("(M2 U2)2 z (M2 U2)2", "M2 U2 M2 U2 z M2 U2 M2 U2");
-        agree("((M' U)4 x' z)3",
+        agree(
+            "((M' U)4 x' z)3",
             "M' U M' U M' U M' U x' z M' U M' U M' U M' U x' z "
-                + "M' U M' U M' U M' U x' z")
+                + "M' U M' U M' U M' U x' z"
+        )
 
     ///
     /// Nested groups, and a count on a group that already contains one.
@@ -58,8 +60,10 @@ mod TestNotationGroups {
     ///
     @Test
     def bracketsWithoutACountAreOnlyGrouping(): Unit \ Assert =
-        agree("(R U R' U') R' F R2 U' R' U' R U R' F'",
-            "R U R' U' R' F R2 U' R' U' R U R' F'");
+        agree(
+            "(R U R' U') R' F R2 U' R' U' R U R' F'",
+            "R U R' U' R' F R2 U' R' U' R U R' F'"
+        );
         agree("(R U R' U')", "R U R' U'");
         agree("(y) R U R' U'", "y R U R' U'")
 
@@ -90,24 +94,27 @@ mod TestNotationGroups {
     ///
     @Test
     def invertingAGroupWithRotationsIsItsUndo(): Unit \ Assert =
-        Vector#{"(y R U' M x)", "(M' U)4 x' z", "(r U R' F) (y2)", "(R U R' U')2"}
-            |> Vector.forEach(alg ->
+        Vector#{"(y R U' M x)", "(M' U)4 x' z", "(r U R' F) (y2)", "(R U R' U')2"} |> Vector.forEach(
+            alg ->
                 Assert.assertTrueWithMsg(
                     sameCube("${alg} (${alg})'", ""),
-                    "'${alg}' followed by its inverse should solve"))
+                    "'${alg}' followed by its inverse should solve"
+                )
+        )
 
     ///
     /// Malformed writing is refused, and the refusal says which fault it is.
     ///
     @Test
     def malformedNotationIsRefusedByName(): Unit \ Assert =
-        let refusedWith = (alg, expected) ->
-            match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
-                case Ok(_)    => Assert.assertTrueWithMsg(false, "'${alg}' should be refused")
-                case Err(why) =>
-                    Assert.assertTrueWithMsg(String.contains(substr = expected, why),
-                        "'${alg}' should be refused for ${expected}, not: ${why}")
-            };
+        let refusedWith = (alg, expected) -> match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
+            case Ok(_) => Assert.assertTrueWithMsg(false, "'${alg}' should be refused")
+            case Err(why) =>
+                Assert.assertTrueWithMsg(
+                    String.contains(substr = expected, why),
+                    "'${alg}' should be refused for ${expected}, not: ${why}"
+                )
+        };
         refusedWith("(R U", "unmatched '('");
         refusedWith("R U)", "unmatched ')'");
         refusedWith("()", "empty");
@@ -147,10 +154,11 @@ mod TestNotationGroups {
             ("Ga-PLL, optimal HTM 12", "(y) F B U2 F' B' L' U R' U2 L U' R"),
             ("Ga-PLL, speed, counted", "(y) R2' u (R' U R' U' R) u' R2 (y') R' U R"),
             ("Gb-PLL, speed", "(y2) L' U' L (y') R2' u (R' U R U' R) u' R2")
-        } |> Vector.forEach(match (name, alg) ->
-            match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
+        } |> Vector.forEach(
+            match (name, alg) -> match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
                 case Ok(_)  => ()
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "${name}: '${alg}'")
-            })
+            }
+        )
 
 }

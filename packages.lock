@@ -1,0 +1,6 @@
+[lock]
+version = 1
+
+[packages."github:wstein/flix-orbit64"."1.0.0"]
+toml    = "sha256:9b5efbb6636eb3b00b02929169806a2c909209b3a110eab24ba93cad33e7f268"
+fpkg    = "sha256:3b3e58698f0c5b509a2a73fedd621f02a34445b012bb46d569cb1acbdee106c2"

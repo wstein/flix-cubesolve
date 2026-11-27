@@ -22,7 +22,7 @@
 /// evidence and cut the worst case to 13.2 million; the figures are in
 /// `docs/architecture.md`.
 ///
-mod CubeSolve.Solve.TwoLayers {
+pub mod CubeSolve.Solve.TwoLayers {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -122,13 +122,18 @@ mod CubeSolve.Solve.TwoLayers {
             corners <- FirstLayer.encode(c);
             middles <- MiddleEdges.encode(c);
             _ <- CornerEdgePair.encode(c);
-            f <- IdaStar.search(phase(t), Packed.pack(cross, corners, middles),
-                    searchDepth(), maxNodes)
-                |> Result.mapErr(_ ->
-                    "no first two layers within ${searchDepth()} moves: this state "
-                        + "needs a longer search than this step allows")
+            f <- IdaStar.search(
+                phase(t),
+                Packed.pack(cross, corners, middles),
+                searchDepth(),
+                maxNodes
+            )
+                |> Result.mapErr(
+                    _ ->
+                        "no first two layers within ${searchDepth()} moves: this state "
+                            + "needs a longer search than this step allows"
+                )
         ) yield f
-
 
     ///
     /// The phase the search runs.
@@ -139,15 +144,18 @@ mod CubeSolve.Solve.TwoLayers {
             step,
             s -> best(t, s),
             isGoal,
-            Move.htmPruningAllows)
+            Move.htmPruningAllows
+        )
 
     ///
     /// One move applied to all three coordinates at once.
     ///
     def step(s: Int64, m: Int32): Int64 =
-        Packed.pack(Cross.successor(Packed.crossOf(s), m),
+        Packed.pack(
+            Cross.successor(Packed.crossOf(s), m),
             FirstLayer.successor(Packed.cornersOf(s), m),
-            MiddleEdges.successor(Packed.middlesOf(s), m))
+            MiddleEdges.successor(Packed.middlesOf(s), m)
+        )
 
     ///
     /// The largest of the four lower bounds.
@@ -160,7 +168,8 @@ mod CubeSolve.Solve.TwoLayers {
         let Tables.Tables(cross, corners, middles, paired) = t;
         Int32.max(
             Int32.max(atCross(s, cross), atCorners(s, corners)),
-            Int32.max(atMiddles(s, middles), atPair(s, paired)))
+            Int32.max(atMiddles(s, middles), atPair(s, paired))
+        )
 
     ///
     /// What the cross projection says from here.

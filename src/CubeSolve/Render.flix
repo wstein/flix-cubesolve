@@ -6,7 +6,7 @@
 /// keeps the layout testable without a terminal, and it is why the coloured form
 /// can be checked by stripping the escapes and comparing against the plain one.
 ///
-mod CubeSolve.Render {
+pub mod CubeSolve.Render {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
@@ -118,31 +118,54 @@ mod CubeSolve.Render {
         let uTop = uIndent + "┌" + String.repeat(n - 1, "───┬") + "───┐";
         let uInner = uIndent + "├" + String.repeat(n - 1, "───┼") + "───┤";
         let topMid = "┌" + String.repeat(n - 1, "───┬") + "───┼"
-            + String.repeat(n - 1, "───┼") + "───┼"
-            + String.repeat(2 * n - 1, "───┬") + "───┐";
+            + String.repeat(n - 1, "───┼")
+            + "───┼"
+            + String.repeat(2 * n - 1, "───┬")
+            + "───┐";
         let midInner = "├" + String.repeat(4 * n - 1, "───┼") + "───┤";
         let botMid = "└" + String.repeat(n - 1, "───┴") + "───┼"
-            + String.repeat(n - 1, "───┼") + "───┼"
-            + String.repeat(2 * n - 1, "───┴") + "───┘";
+            + String.repeat(n - 1, "───┼")
+            + "───┼"
+            + String.repeat(2 * n - 1, "───┴")
+            + "───┘";
         let dBot = uIndent + "└" + String.repeat(n - 1, "───┴") + "───┘";
-        Facelets.of(c) |> Result.map(fs -> {
-            let uRows = List.range(0, n) |> List.flatMap(row -> {
-                let top = if (row == 0) uTop else uInner;
-                top :: (uIndent + "│" + rowOf(n, sticker, fs, 0, row)) :: Nil
-            });
-            let midRows = List.range(0, n) |> List.flatMap(row -> {
-                let top = if (row == 0) topMid else midInner;
-                top :: ("│" + ((4 :: 2 :: 1 :: 5 :: Nil)
-                    |> List.map(f -> rowOf(n, sticker, fs, f, row))
-                    |> List.join(""))) :: Nil
-            });
-            let dRows = List.range(0, n) |> List.flatMap(row -> {
-                let bot = if (row == n - 1) dBot else uInner;
-                (uIndent + "│" + rowOf(n, sticker, fs, 3, row)) :: bot :: Nil
-            });
-            List.append(uRows, List.append(midRows, botMid :: dRows))
-                |> List.join(String.lineSeparator())
-        })
+        Facelets.of(c)
+            |> Result.map(
+                fs -> {
+                    let uRows = List.range(0, n)
+                        |> List.flatMap(
+                            row -> {
+                                let top = if (row == 0) uTop else uInner;
+                                top :: (uIndent + "│" + rowOf(n, sticker, fs, 0, row)) :: Nil
+                            }
+                        );
+                    let midRows = List.range(0, n)
+                        |> List.flatMap(
+                            row -> {
+                                let top = if (row == 0) topMid else midInner;
+                                top
+                                    :: (
+                                        "│"
+                                            + (
+                                                (4 :: 2 :: 1 :: 5 :: Nil)
+                                                    |> List.map(f -> rowOf(n, sticker, fs, f, row))
+                                                    |> List.join("")
+                                            )
+                                    )
+                                    :: Nil
+                            }
+                        );
+                    let dRows = List.range(0, n)
+                        |> List.flatMap(
+                            row -> {
+                                let bot = if (row == n - 1) dBot else uInner;
+                                (uIndent + "│" + rowOf(n, sticker, fs, 3, row)) :: bot :: Nil
+                            }
+                        );
+                    List.append(uRows, List.append(midRows, botMid :: dRows))
+                        |> List.join(String.lineSeparator())
+                }
+            )
 
     ///
     /// One row of one face.
@@ -179,8 +202,11 @@ mod CubeSolve.Render {
         if (isNet) {
             let n = totalRows / 3;
             let netResult = forM (
-                intRows <- dataRows |> Result.traverse(row ->
-                    row |> Result.traverse(faceOf) |> Result.map(List.toVector));
+                intRows <- dataRows
+                    |> Result.traverse(
+                        row ->
+                            row |> Result.traverse(faceOf) |> Result.map(List.toVector)
+                    );
                 fs <- buildFacelets(n, intRows);
                 cube <- Facelets.toCube(n, fs)
             ) yield cube;
@@ -203,7 +229,7 @@ mod CubeSolve.Render {
                     ints <- tokens |> Result.traverse(faceOf);
                     cube <- Facelets.toCube(n, List.toVector(ints))
                 ) yield cube
-            case None    => Err("invalid net: unrecognized row structure or token count (${total})")
+            case None => Err("invalid net: unrecognized row structure or token count (${total})")
         }
 
     ///
@@ -307,11 +333,13 @@ mod CubeSolve.Render {
             Nil
         else
             String.words(clean)
-                |> List.flatMap(word ->
-                    if (String.length(word) == 1)
-                        word :: Nil
-                    else
-                        String.toList(word) |> List.map(Char.toString))
+                |> List.flatMap(
+                    word ->
+                        if (String.length(word) == 1)
+                            word :: Nil
+                        else
+                            String.toList(word) |> List.map(Char.toString)
+                )
                 |> List.filter(t -> Result.isOk(faceOf(t)))
 
     ///
@@ -327,29 +355,48 @@ mod CubeSolve.Render {
             |> List.forAll(r -> Vector.length(Vector.get(2 * n + r, vRows)) == n);
         if (not (validU and validMid and validD))
             Err("invalid row length in net for ${n}x${n}x${n} cube")
-        else region rc {
-            let arr = Array.repeat(rc, 6 * n * n, 0);
-            List.range(0, n) |> List.forEach(r -> {
-                let uRow = Vector.get(r, vRows);
-                List.range(0, n) |> List.forEach(c ->
-                    Array.put(Vector.get(c, uRow), 0 * n * n + r * n + c, arr))
-            });
-            List.range(0, n) |> List.forEach(r -> {
-                let midRow = Vector.get(n + r, vRows);
-                let off = r * n;
-                List.range(0, n) |> List.forEach(c -> {
-                    Array.put(Vector.get(c, midRow), 4 * n * n + off + c, arr);
-                    Array.put(Vector.get(n + c, midRow), 2 * n * n + off + c, arr);
-                    Array.put(Vector.get(2 * n + c, midRow), 1 * n * n + off + c, arr);
-                    Array.put(Vector.get(3 * n + c, midRow), 5 * n * n + off + c, arr)
-                })
-            });
-            List.range(0, n) |> List.forEach(r -> {
-                let dRow = Vector.get(2 * n + r, vRows);
-                List.range(0, n) |> List.forEach(c ->
-                    Array.put(Vector.get(c, dRow), 3 * n * n + r * n + c, arr))
-            });
-            Ok(Array.toVector(arr))
-        }
+        else
+            region rc {
+                let arr = Array.repeat(rc, 6 * n * n, 0);
+                List.range(0, n)
+                    |> List.forEach(
+                        r -> {
+                            let uRow = Vector.get(r, vRows);
+                            List.range(0, n)
+                                |> List.forEach(
+                                    c ->
+                                        Array.put(Vector.get(c, uRow), 0 * n * n + r * n + c, arr)
+                                )
+                        }
+                    );
+                List.range(0, n)
+                    |> List.forEach(
+                        r -> {
+                            let midRow = Vector.get(n + r, vRows);
+                            let off = r * n;
+                            List.range(0, n)
+                                |> List.forEach(
+                                    c -> {
+                                        Array.put(Vector.get(c, midRow), 4 * n * n + off + c, arr);
+                                        Array.put(Vector.get(n + c, midRow), 2 * n * n + off + c, arr);
+                                        Array.put(Vector.get(2 * n + c, midRow), 1 * n * n + off + c, arr);
+                                        Array.put(Vector.get(3 * n + c, midRow), 5 * n * n + off + c, arr)
+                                    }
+                                )
+                        }
+                    );
+                List.range(0, n)
+                    |> List.forEach(
+                        r -> {
+                            let dRow = Vector.get(2 * n + r, vRows);
+                            List.range(0, n)
+                                |> List.forEach(
+                                    c ->
+                                        Array.put(Vector.get(c, dRow), 3 * n * n + r * n + c, arr)
+                                )
+                        }
+                    );
+                Ok(Array.toVector(arr))
+            }
 
 }

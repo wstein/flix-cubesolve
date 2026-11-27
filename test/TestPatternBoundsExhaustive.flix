@@ -1,4 +1,4 @@
-mod TestPatternBoundsExhaustive {
+pub mod TestPatternBoundsExhaustive {
 
     use CubeSolve.Solve.Standard
 
@@ -29,9 +29,11 @@ mod TestPatternBoundsExhaustive {
         match Sys.Env.handle(_ -> Sys.Env.getVar("CUBESOLVE_EXHAUSTIVE"))(()) {
             case Some("1") => runIt()
             case _ =>
-                println("TestPatternBoundsExhaustive: SKIPPED -- all 110 patterns take "
-                    + "about two minutes. Run with CUBESOLVE_EXHAUSTIVE=1 to include "
-                    + "it; CI runs it on main and before releases.")
+                println(
+                    "TestPatternBoundsExhaustive: SKIPPED -- all 110 patterns take "
+                        + "about two minutes. Run with CUBESOLVE_EXHAUSTIVE=1 to include "
+                        + "it; CI runs it on main and before releases."
+                )
         }
 
     ///
@@ -40,14 +42,24 @@ mod TestPatternBoundsExhaustive {
     def runIt(): Unit \ Assert =
         let (comparable, longer, worst) =
             PatternBoundCheck.check(
-                PatternBoundCheck.tables(), Standard.defaultBudget(), Vector#{});
-        Assert.assertEqWithMsg(expected = 102, comparable,
-            "102 of the 110 are published in face turns and so document a count");
-        Assert.assertTrueWithMsg(longer <= 29,
+                PatternBoundCheck.tables(),
+                Standard.defaultBudget(),
+                Vector#{}
+            );
+        Assert.assertEqWithMsg(
+            expected = 102,
+            comparable,
+            "102 of the 110 are published in face turns and so document a count"
+        );
+        Assert.assertTrueWithMsg(
+            longer <= 29,
             "the solver is longer than the published algorithm on ${longer} "
-                + "patterns, up from the recorded 29");
-        Assert.assertTrueWithMsg(worst <= 7,
+                + "patterns, up from the recorded 29"
+        );
+        Assert.assertTrueWithMsg(
+            worst <= 7,
             "the solver's worst excess over a published algorithm is ${worst} "
-                + "moves, over the recorded 7")
+                + "moves, over the recorded 7"
+        )
 
 }
