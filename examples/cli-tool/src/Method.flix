@@ -8,11 +8,11 @@
 ///
 mod Method {
 
-    use CubeSolve.Method.Oll
-    use CubeSolve.Method.Pll
-    use CubeSolve.Method.Profile
-    use CubeSolve.Method.Profile.Status.{Chosen, FellBack}
-    use CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Method.Oll
+    use cubesolve::CubeSolve.Method.Pll
+    use cubesolve::CubeSolve.Method.Profile
+    use cubesolve::CubeSolve.Method.Profile.Status.{Chosen, FellBack}
+    use cubesolve::CubeSolve.Model.Cube
 
     ///
     /// `pll <scramble>` -- which PLL case this is, and how to finish it.

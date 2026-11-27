@@ -3,6 +3,8 @@
 ///
 mod JsonOut {
 
+    use cubesolve::CubeSolve
+
     use Util.Json.Json
     use Util.Json.Json.{JString, JObject, JArray, JNull, JBool, JNumber}
 

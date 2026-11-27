@@ -7,11 +7,12 @@
 ///
 mod Corpus {
 
-    use CubeSolve.Model.Cube
-    use CubeSolve.Model.Move
-    use CubeSolve.Model.Rotation
-    use CubeSolve.Patterns
-    use CubeSolve.Render
+    use cubesolve::CubeSolve
+    use cubesolve::CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Model.Move
+    use cubesolve::CubeSolve.Model.Rotation
+    use cubesolve::CubeSolve.Patterns
+    use cubesolve::CubeSolve.Render
 
     ///
     /// The cube as a colored face-letter net in box-drawing format, plus Orbit64 token.

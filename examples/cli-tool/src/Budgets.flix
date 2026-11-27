@@ -15,7 +15,7 @@
 ///
 mod Budgets {
 
-    use CubeSolve.Solve.Standard
+    use cubesolve::CubeSolve.Solve.Standard
 
     ///
     /// A named budget.
