@@ -23,9 +23,9 @@ project with `./flixw examples run cli-tool -- <args>`:
 ./flixw examples run cli-tool -- solve --json "R U R' U'"
 ./flixw examples run cli-tool -- show "M2 E2 S2"
 ./flixw examples run cli-tool -- show --json "M2 E2 S2"
-./flixw examples run cli-tool -- show --size 4 "AH0Hmo16YfPV7lTF3_VGkq_Ontg"
-./flixw examples run cli-tool -- show "https://cubesolve.org/#FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN"
-./flixw examples run cli-tool -- identify --json "AAAAAAAAAAf_"
+./flixw examples run cli-tool -- show --size 4 "AAAAAAAAAAAAAAAAAAAAAAAAAAA"
+./flixw examples run cli-tool -- show "https://cubesolve.org/#AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+./flixw examples run cli-tool -- identify --json "AAAAAAAAAAA"
 ./flixw examples run cli-tool -- scramble --json
 ./flixw examples run cli-tool -- patterns --json --size 2
 ./flixw examples run cli-tool -- help
@@ -40,12 +40,12 @@ project with `./flixw examples run cli-tool -- <args>`:
 # Or directly with your own Flix install:
 cd examples/cli-tool
 flix run -- solve "R U R' U'"
-flix run -- show --json "AAAAAAAAAAf_"
+flix run -- show --json "AAAAAAAAAAA"
 ```
 
 All commands accepting cube inputs autodetect the input format:
 - **Move notations**: Face turns (`R`, `U`), slice moves (`M`, `E`, `S`, `2D`), wide turns (`Rw`, `2-4Fw`), and reorientations (`x`, `y`, `z`).
-- **Orbit64 tokens**: State tokens (`[A-Za-z0-9_-]`) with automatic size detection (2x2: 8 chars, 3x3: 12 chars, 4x4: 27 chars, 5x5: 42 chars).
+- **Orbit64 V2 tokens**: State tokens (`[A-Za-z0-9_-]`) with automatic size detection from the length this engine writes (framed on even cubes, canonical on odd): 2x2: 5 chars, 3x3: 11 chars, 4x4: 27 chars, 5x5: 42 chars. A solved cube whose entry starts at offset zero is `A` repeated to that length.
 - **URLs**: `https://cubesolve.org/#...` links containing tokens.
 
 `show` renders a face-letter net through the dependency-free

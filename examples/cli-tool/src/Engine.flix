@@ -7,13 +7,14 @@
 ///
 mod Engine {
 
-    use CubeSolve.Model.Cube
-    use CubeSolve.Model.Move
-    use CubeSolve.Model.Random
-    use CubeSolve.Model.Sized
-    use CubeSolve.Patterns
-    use CubeSolve.Solve.Standard
-    use CubeSolve.Table
+    use cubesolve::CubeSolve
+    use cubesolve::CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Model.Move
+    use cubesolve::CubeSolve.Model.Random
+    use cubesolve::CubeSolve.Model.Sized
+    use cubesolve::CubeSolve.Patterns
+    use cubesolve::CubeSolve.Solve.Standard
+    use cubesolve::CubeSolve.Table
 
     ///
     /// A solution for `c`, with colored net, move count, metric, method, and pattern DB recognition.

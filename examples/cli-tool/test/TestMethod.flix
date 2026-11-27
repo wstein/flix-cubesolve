@@ -8,9 +8,9 @@
 ///
 mod TestMethod {
 
-    use CubeSolve.Method.Profile
-    use CubeSolve.Method.Profile.Profile.{SourceFirst, NoRotations}
-    use CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Method.Profile
+    use cubesolve::CubeSolve.Method.Profile.Profile.{SourceFirst, NoRotations}
+    use cubesolve::CubeSolve.Model.Cube
 
     def made(size: Int32, alg: String): Cube.Cube \ Assert =
         match Cube.solved(size) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {

@@ -8,6 +8,8 @@
 ///
 mod TestArgs {
 
+    use cubesolve::CubeSolve
+
     use Args.Needs.{Turning, Solving, Corpus}
 
     ///
@@ -98,16 +100,17 @@ mod TestArgs {
         let resNot = Args.onCube(3, "R" :: "U" :: "R'" :: "U'" :: Nil, inspect);
         Assert.assertEq(expected = Ok("size=3,cubeSize=3"), resNot);
 
-        // 3x3 Orbit64 Token
-        let resTok3 = Args.onCube(3, "AAAAAAAAAAf_" :: Nil, inspect);
+        // Tokens come from the library, so the test follows the V2 lengths
+        // rather than a string frozen from the previous format.
+        let resTok3 = Args.onCube(3, solvedToken(3) :: Nil, inspect);
         Assert.assertEq(expected = Ok("size=3,cubeSize=3"), resTok3);
 
-        // 4x4 Orbit64 Token (auto-detected size 4 without --size)
-        let resTok4 = Args.onCube(3, "AH0Hmo16YfPV7lTF3_VGkq_Ontg" :: Nil, inspect);
+        // 4x4 token (auto-detected size 4 without --size)
+        let resTok4 = Args.onCube(3, solvedToken(4) :: Nil, inspect);
         Assert.assertEq(expected = Ok("size=4,cubeSize=4"), resTok4);
 
-        // URL containing 5x5 token
-        let url = "https://cubesolve.org/#FAMMxrnAODxtJQkle0CmnHZ3c8_Wiv8A78pj8T9iIN";
+        // URL containing a 5x5 token
+        let url = "https://cubesolve.org/#${solvedToken(5)}";
         let resUrl = Args.onCube(3, url :: Nil, inspect);
         Assert.assertEq(expected = Ok("size=5,cubeSize=5"), resUrl);
 
@@ -115,16 +118,36 @@ mod TestArgs {
         Assert.assertErr(Args.onCube(3, Nil, inspect))
     }
 
-    /// Solving an unreachable cube state returns an Err with the reachability reason.
+    /// A solved cube's V2 color token, in the pose the engine writes.
+    def solvedToken(n: Int32): String =
+        CubeSolve.Model.Cube.solved(n)
+            |> Result.flatMap(CubeSolve.Model.Facelets.token)
+            |> Result.getWithDefault("")
+
+    /// Solving a cube whose corner and edge permutations have opposite parity
+    /// returns that reason. A V2 token cannot carry the state: the codec
+    /// refuses it, so the cube is built from its orbits.
     @Test
-    def unreachableTokenIsRejectedWhenSolving(): Unit \ {Assert, IO} = {
-        let solving = (n, c) -> Engine.solveCube(Budgets.standard(), n, c);
-        let res = Args.onCube(3, "AK-bRtpiQ000" :: Nil, solving);
-        match res {
-            case Ok(_) => Assert.assertTrueWithMsg(false, "unreachable cube should fail to solve")
-            case Err(why) => Assert.assertTrue(String.contains(substr = "parity", why))
+    def unreachableCubeIsRejectedWhenSolving(): Unit \ {Assert, IO} =
+        let corners = CubeSolve.Model.Pieces.Coord.CornerCoord(
+            Vector#{1, 0, 2, 3, 4, 5, 6, 7},
+            Vector#{0, 0, 0, 0, 0, 0, 0, 0}
+        );
+        let edges = CubeSolve.Model.Pieces.Coord.MidgeCoord(
+            Vector#{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+            Vector#{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+        );
+        match CubeSolve.Model.Cube.ofOrbits(3, corners :: edges :: Nil) {
+            case Err(why) =>
+                Assert.assertTrueWithMsg(false, "the swapped-corner cube is a legal coordinate: ${why}")
+            case Ok(c) =>
+                match Engine.solveCube(Budgets.standard(), 3, c) {
+                    case Ok(_) =>
+                        Assert.assertTrueWithMsg(false, "unreachable cube should fail to solve")
+                    case Err(why) =>
+                        Assert.assertTrue(String.contains(substr = "parity", why))
+                }
         }
-    }
 
     /// `--budget` is read, defaults to `default`, and refuses an unknown name.
     ///

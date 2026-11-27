@@ -1,7 +1,7 @@
 mod TestCorpus {
 
-    use CubeSolve.Model.Cube
-    use CubeSolve.Render
+    use cubesolve::CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Render
 
     /// `show` includes the rendered colored net and the Orbit64 token.
     @Test

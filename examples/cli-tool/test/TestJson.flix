@@ -1,6 +1,7 @@
 mod TestJson {
 
-    use CubeSolve.Model.Cube
+    use cubesolve::CubeSolve
+    use cubesolve::CubeSolve.Model.Cube
 
     def made(n: Int32, notation: String): Cube.Cube =
         match Cube.solved(n) {
@@ -71,9 +72,9 @@ mod TestJson {
     /// Test scramble JSON format.
     @Test
     def scrambleFormatProducesExpectedFields(): Unit \ Assert = {
-        let json = JsonOut.scramble(3, "R U R'", "AAAAAAAAAAf_", 20, 15, "R" :: "U" :: "R'" :: Nil);
+        let json = JsonOut.scramble(3, "R U R'", "AAAAAAAAAAA", 20, 15, "R" :: "U" :: "R'" :: Nil);
         Assert.assertTrue(String.contains(substr = "\"command\":\"scramble\"", json));
-        Assert.assertTrue(String.contains(substr = "\"token\":\"AAAAAAAAAAf_\"", json));
+        Assert.assertTrue(String.contains(substr = "\"token\":\"AAAAAAAAAAA\"", json));
         Assert.assertTrue(String.contains(substr = "\"atMostMoves\":20", json))
     }
 

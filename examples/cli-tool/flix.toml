@@ -1,15 +1,15 @@
 [package]
-name        = "cubesolve"
-description = "Demo command line for cubesolve: solve, scramble, draw and identify NxNxN cubes"
-version     = "0.1.0"
-repository  = "github:wstein/flix-cubesolve"
-flix        = "0.75.3"
-license     = "AGPL-3.0-or-later"
-authors     = ["Werner Stein"]
+version    = "0.1.0"
+repository = "github:wstein/flix-cubesolve"
+# Flix 0.80 allows only version, repository, and flix in this table.
+flix       = "0.80.0"
 
 [dependencies]
 # unrestricted: CubeSolve.Model.Random.secureSeed uses java.security.SecureRandom
 # directly, which the default "plain" security context forbids for a dependency.
 # This is the sibling package this example exists to prove works, not a
 # third-party unknown, so granting it is the deliberate choice here.
-"github:wstein/flix-cubesolve" = { version = "0.4.5", security = "unrestricted" }
+#
+# 0.5.0 is the Orbit64 V2 build. It is not published yet, so the consumer job
+# skips it; the local overlay qualifies this checkout in its place.
+"github:wstein/flix-cubesolve" = { version = "0.5.0", mount = "cubesolve", security = "unrestricted" }

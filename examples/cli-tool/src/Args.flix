@@ -8,8 +8,9 @@
 mod Args {
 
     use Args.Needs.{Turning, Solving, Corpus}
-    use CubeSolve.Method.Profile
-    use CubeSolve.Model.Cube
+    use cubesolve::CubeSolve
+    use cubesolve::CubeSolve.Method.Profile
+    use cubesolve::CubeSolve.Model.Cube
 
     ///
     /// What a command needs of a cube size before it can run.
@@ -150,12 +151,12 @@ mod Args {
             case Nil => Ok((None, Nil))
             case opt :: rest if opt == flag =>
                 match rest {
-                    case val :: remaining => Ok((Some(val), remaining))
+                    case value :: remaining => Ok((Some(value), remaining))
                     case Nil              => Err("missing value for option '${flag}'")
                 }
             case opt :: rest if String.startsWith(prefix = flag + "=", opt) =>
-                let val = String.drop(String.length(flag) + 1, opt);
-                Ok((Some(val), rest))
+                let value = String.drop(String.length(flag) + 1, opt);
+                Ok((Some(value), rest))
             case other :: rest =>
                 match extractOption(flag, rest) {
                     case Ok((foundOpt, remaining)) => Ok((foundOpt, other :: remaining))
@@ -246,7 +247,7 @@ mod Args {
     ): Result[String, String] \ ef =
         let written = String.trim(List.join(" ", rest));
         if (String.isEmpty(written))
-            Err("give move notation or a state token, for example: R U R' U' or AAAAAAAAAAf_")
+            Err("give move notation or a state token, for example: R U R' U' or AAAAAAAAAAA")
         else
             parseCube(size, written)
                 |> Result.flatMap(c -> k(Cube.size(c), c))
@@ -264,9 +265,12 @@ mod Args {
         } else trimmed
     }
 
+    /// Lengths of the color tokens this engine writes: framed on even cubes,
+    /// canonical on odd cubes. A length shared with another pose still names
+    /// the size; decoding then checks the pose.
     def autodetectSize(token: String): Option[Int32] = match String.length(token) {
-        case 8  => Some(2)
-        case 12 => Some(3)
+        case 5  => Some(2)
+        case 11 => Some(3)
         case 27 => Some(4)
         case 42 => Some(5)
         case _  => None

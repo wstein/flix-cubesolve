@@ -21,7 +21,7 @@
 ///
 mod Methods {
 
-    use CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Model.Cube
 
     ///
     /// The method asked for.

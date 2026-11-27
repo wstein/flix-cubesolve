@@ -3,8 +3,8 @@
 ///
 mod RenderNet {
 
-    use CubeSolve.Model.Cube
-    use CubeSolve.Model.Facelets
+    use cubesolve::CubeSolve.Model.Cube
+    use cubesolve::CubeSolve.Model.Facelets
 
     /// The net as face letters in box-drawing format.
     pub def net(c: Cube.Cube): Result[String, String] =

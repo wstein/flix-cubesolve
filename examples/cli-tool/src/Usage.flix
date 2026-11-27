@@ -8,6 +8,8 @@
 ///
 mod Usage {
 
+    use cubesolve::CubeSolve
+
     ///
     /// How to use this.
     ///

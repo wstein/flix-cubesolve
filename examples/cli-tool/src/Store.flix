@@ -8,8 +8,8 @@
 ///
 mod Store {
 
-    use CubeSolve.Table.Cache
-    use CubeSolve.Table.Cache.Disk
+    use cubesolve::CubeSolve.Table.Cache
+    use cubesolve::CubeSolve.Table.Cache.Disk
 
     ///
     /// Do `f` with the table cache on disk.

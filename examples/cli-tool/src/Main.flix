@@ -1,6 +1,6 @@
 use Args.Needs.{Turning, Solving, Corpus}
-use CubeSolve.Method.Profile
-use CubeSolve.Model.Cube
+use cubesolve::CubeSolve.Method.Profile
+use cubesolve::CubeSolve.Model.Cube
 
 ///
 /// A command line over cubesolve, and the demonstration that it is usable.
