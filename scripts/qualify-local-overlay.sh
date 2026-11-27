@@ -78,7 +78,9 @@ echo "==> Running example test suite against local package overlay"
 
 echo "==> Testing CLI solve execution inside the same overlay environment"
 SOLVE_OUTPUT="$(cd "${TMP_DIR}" && ./flixw run -- solve "R U R' U'")"
-if ! echo "${SOLVE_OUTPUT}" | grep -q "4 moves (HTM)"; then
+# grep -q exits at the first match. In a pipeline under pipefail that
+# reports echo's SIGPIPE instead of the match, so a hit looks like a miss.
+if ! grep -qF "4 moves (HTM)" <<< "${SOLVE_OUTPUT}"; then
     echo "FAIL: Expected '4 moves (HTM)' in output, got:" >&2
     echo "${SOLVE_OUTPUT}" >&2
     exit 1
@@ -120,7 +122,7 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
     cp "${FPKG}" "${C2}/lib/flix-cubesolve.fpkg"
     # Note: cubesolve is NOT seeded in lib/github/wstein/flix-cubesolve/ in C2
     C2_OUT="$(cd "${C2}" && ./flixw check 2>&1 || true)"
-    if ! echo "${C2_OUT}" | grep -Eq "wstein/flix-cubesolve|project wstein/flix-cubesolve"; then
+    if ! grep -qF "wstein/flix-cubesolve" <<< "${C2_OUT}"; then
         echo "FAIL: Case 2 did not attempt to resolve the declared manifest dependency" >&2
         exit 1
     fi
@@ -139,7 +141,7 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
         echo "FAIL: Case 3 unexpectedly compiled without manifest dependency" >&2
         exit 1
     fi
-    if ! echo "${C3_OUT}" | grep -q "CubeSolve"; then
+    if ! grep -qF "CubeSolve" <<< "${C3_OUT}"; then
         echo "FAIL: Case 3 failure was not due to missing CubeSolve namespace. Output:" >&2
         echo "${C3_OUT}" >&2
         exit 1
@@ -157,7 +159,7 @@ if [ "${CHARACTERIZE}" -eq 1 ]; then
     cp "${FPKG}" "${C4}/lib/github/wstein/flix-cubesolve/0.0.1/flix-cubesolve-0.0.1.fpkg"
     cp "${ROOT_DIR}/flix.toml" "${C4}/lib/github/wstein/flix-cubesolve/0.0.1/flix-cubesolve-0.0.1.toml"
     C4_OUT="$(cd "${C4}" && ./flixw check 2>&1 || true)"
-    if echo "${C4_OUT}" | grep -q "Cached \`wstein/flix-cubesolve.toml\` (v0.0.1)"; then
+    if grep -qF "Cached \`wstein/flix-cubesolve.toml\` (v0.0.1)" <<< "${C4_OUT}"; then
         echo "FAIL: Case 4 accepted mismatched package version from cache" >&2
         exit 1
     fi
