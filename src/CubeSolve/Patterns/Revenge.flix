@@ -55,20 +55,18 @@ pub mod CubeSolve.Patterns.Revenge {
                 "speedsolving",
                 "Rw2 Lw2 U2 D2 Fw2 Bw2"
             ),
-            // `r2 l2 u2 d2 f2 b2` and `2R2 2L2 2U2 2D2 2F2 2B2` produce the same
-            // facelets, so these two cannot both take that V2 token. The strings
-            // are the previous tokens; the replay check does not cover them.
+            // On a 4x4x4 the parser reads lowercase `r` as the inner slice, the
+            // same layer as `2R`, so `r2 l2 u2 d2 f2 b2` and
+            // `2R2 2L2 2U2 2D2 2F2 2B2` are one cube: corners and the 2x2 centers
+            // keep the face color, and the edge wings take the opposite color.
+            // The wide spelling `Rw2 Lw2 Uw2 Dw2 Fw2 Bw2` solves the cube, so
+            // those lowercase letters are not a second pattern. One row, and the
+            // token is the replay of this algorithm.
             Pattern(
                 "Small Checkerboard",
-                "AAAAAAAgAAAAAABQAAAAAACAAAA",
+                "AAAAAMa_lfp4E4qBbYb4i5RLLMw",
                 "speedsolving",
                 "r2 l2 u2 d2 f2 b2"
-            ),
-            Pattern(
-                "Center Spots",
-                "AAAAAAAQAAAAAAAgAAAAAAAAAAA",
-                "speedsolving",
-                "2R2 2L2 2U2 2D2 2F2 2B2"
             ),
             Pattern(
                 "Cube in a Cube",
