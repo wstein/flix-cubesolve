@@ -112,7 +112,9 @@ jobs:
       # `flix.toml` goes up alongside the package because the resolver fetches
       # both: it reads the manifest to learn what the package needs before it
       # downloads the package itself. A release carrying only the `.fpkg` looks
-      # complete and still fails to resolve.
+      # complete and still fails to resolve. Since Flix 0.80 the resolver asks
+      # for both by fixed name, `package.fpkg` and `flix.toml`, which are also
+      # the names `build-pkg` writes them under.
       # Published as a prerelease, and promoted by `promote` once the full
       # suite and the example have both passed against it. A `github:`
       # dependency resolves a prerelease by exact version, so anyone who names
@@ -128,7 +130,7 @@ jobs:
             --verify-tag \
             --generate-notes \
             --prerelease \
-            artifact/flix-cubesolve.fpkg \
+            artifact/package.fpkg \
             artifact/flix.toml
           echo "published ${GITHUB_REF_NAME} as a prerelease; the full suite decides whether it is promoted"
 

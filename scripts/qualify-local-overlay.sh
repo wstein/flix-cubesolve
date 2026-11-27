@@ -33,7 +33,10 @@ fi
 echo "==> Building fresh root package artifact"
 ./flixw build-pkg > /dev/null
 
-FPKG="${ROOT_DIR}/artifact/flix-cubesolve.fpkg"
+# Flix 0.80 writes the package under a fixed name, the same name a release
+# publishes. The resolver cache still stores it as <repo>-<version>.fpkg;
+# seed_local_package does that rename.
+FPKG="${ROOT_DIR}/artifact/package.fpkg"
 if [ ! -f "${FPKG}" ]; then
     echo "FAIL: Expected package artifact not found at ${FPKG}" >&2
     exit 1
