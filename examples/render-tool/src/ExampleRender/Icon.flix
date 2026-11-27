@@ -1,7 +1,7 @@
 ///
 /// Standalone 3D isometric cube icon and image renderer.
 ///
-mod ExampleRender.Icon {
+pub mod ExampleRender.Icon {
 
     import java.awt.Color
     import java.awt.Graphics2D

@@ -1,3 +1,3 @@
 /// Example-only QR and PNG rendering helpers.
-mod ExampleRender {
+pub mod ExampleRender {
 }

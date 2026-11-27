@@ -1,7 +1,7 @@
 ///
 /// QR code generation and UTF-8 graphic rendering powered by ZXing Core.
 ///
-mod ExampleRender.Qr {
+pub mod ExampleRender.Qr {
 
     import com.google.zxing.BarcodeFormat
     import com.google.zxing.EncodeHintType
