@@ -1,5 +1,5 @@
 [package]
-version    = "0.4.5"
+version    = "0.5.0"
 repository = "github:wstein/flix-cubesolve"
 # Exactly x.y.z, three integers. The compiler checks the shape; flixw enforces
 # it as the floor the lock satisfies. Flix 0.80 accepts only version, repository
