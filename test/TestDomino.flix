@@ -1,4 +1,4 @@
-mod TestDomino {
+pub mod TestDomino {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Table
@@ -8,7 +8,7 @@ mod TestDomino {
     /// between them, so this is built once and asserted against thoroughly.
     def phase2(): Domino.Tables \ Assert =
         match Domino.build() {
-            case Ok(p)  => p
+            case Ok(p) => p
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected the phase-two tables");
                 unreachable!()
@@ -20,16 +20,27 @@ mod TestDomino {
     /// really produces permutations.
     @Test
     def permutationRanksRoundTrip(): Unit \ Assert =
-        Vector.range(0, Domino.cornerPermCount()) |> Vector.forEach(r -> {
-            let p = Domino.permUnrank(r);
-            Assert.assertEqWithMsg(expected = r, Domino.permRank(p), "permutation ${r}")
-        });
-        Vector.range(0, 8) |> Vector.forEach(i ->
-            Assert.assertTrue(Vector.memberOf(i, Domino.permUnrank(40319))));
-        Vector.range(0, Domino.slicePermCount()) |> Vector.forEach(r ->
-            Assert.assertEqWithMsg(
-                expected = r, Domino.slicePermRank(Domino.slicePermUnrank(r)),
-                "slice permutation ${r}"))
+        Vector.range(0, Domino.cornerPermCount())
+            |> Vector.forEach(
+                r -> {
+                    let p = Domino.permUnrank(r);
+                    Assert.assertEqWithMsg(expected = r, Domino.permRank(p), "permutation ${r}")
+                }
+            );
+        Vector.range(0, 8)
+            |> Vector.forEach(
+                i ->
+                    Assert.assertTrue(Vector.memberOf(i, Domino.permUnrank(40319)))
+            );
+        Vector.range(0, Domino.slicePermCount())
+            |> Vector.forEach(
+                r ->
+                    Assert.assertEqWithMsg(
+                        expected = r,
+                        Domino.slicePermRank(Domino.slicePermUnrank(r)),
+                        "slice permutation ${r}"
+                    )
+            )
 
     /// CComb is parity times seventy plus a tetrad rank, and every one of the
     /// 140 values is actually taken by some permutation -- otherwise the table
@@ -38,12 +49,18 @@ mod TestDomino {
     def everyCombValueIsReachedBySomePermutation(): Unit \ Assert =
         let seen = region rc {
             let hit = Array.repeat(rc, Domino.combCount(), false);
-            Vector.range(0, Domino.cornerPermCount()) |> Vector.forEach(r ->
-                Array.put(true, Domino.combOf(Domino.permUnrank(r)), hit));
+            Vector.range(0, Domino.cornerPermCount())
+                |> Vector.forEach(
+                    r ->
+                        Array.put(true, Domino.combOf(Domino.permUnrank(r)), hit)
+                );
             Array.toVector(hit)
         };
-        Vector.range(0, Domino.combCount()) |> Vector.forEach(c ->
-            Assert.assertTrueWithMsg(Vector.get(c, seen), "CComb ${c} is never reached"));
+        Vector.range(0, Domino.combCount())
+            |> Vector.forEach(
+                c ->
+                    Assert.assertTrueWithMsg(Vector.get(c, seen), "CComb ${c} is never reached")
+            );
         Assert.assertEq(expected = 0, Domino.combOf(Vector.range(0, 8)));
         Assert.assertEq(expected = 0, Domino.parityOf(Vector.range(0, 8)))
 
@@ -52,16 +69,20 @@ mod TestDomino {
     @Test
     def thePhaseTwoAlphabetIsTheDominoOne(): Unit \ Assert =
         Assert.assertEq(expected = 10, Domino.moveCount());
-        Vector.range(0, 10) |> Vector.forEach(m -> {
-            let move = Domino.moveOfIndex(m);
-            let face = CubeSolve.Model.Move.face(move);
-            let quarter = CubeSolve.Model.Move.amount(move) != 2;
-            let upOrDown =
-                face == CubeSolve.Model.Move.Face.U or face == CubeSolve.Model.Move.Face.D;
-            Assert.assertTrueWithMsg(
-                upOrDown or not quarter,
-                "phase two move ${m} is a quarter turn of a side face")
-        })
+        Vector.range(0, 10)
+            |> Vector.forEach(
+                m -> {
+                    let move = Domino.moveOfIndex(m);
+                    let face = CubeSolve.Model.Move.face(move);
+                    let quarter = CubeSolve.Model.Move.amount(move) != 2;
+                    let upOrDown =
+                        face == CubeSolve.Model.Move.Face.U or face == CubeSolve.Model.Move.Face.D;
+                    Assert.assertTrueWithMsg(
+                        upOrDown or not quarter,
+                        "phase two move ${m} is a quarter turn of a side face"
+                    )
+                }
+            )
 
     /// A solved cube is at the phase-two origin, and a cube outside the domino
     /// group is refused rather than given a meaningless coordinate.
@@ -69,10 +90,12 @@ mod TestDomino {
     def coordinatesExistExactlyInsideTheDominoGroup(): Unit \ Assert =
         Assert.assertEq(
             expected = Ok((0, 0, 0)),
-            Cube.solved(3) |> Result.flatMap(Domino.coordsOf));
+            Cube.solved(3) |> Result.flatMap(Domino.coordsOf)
+        );
         Assert.assertEq(
             expected = Ok(true),
-            Cube.solved(3) |> Result.map(Domino.isSolved));
+            Cube.solved(3) |> Result.map(Domino.isSolved)
+        );
         // R takes a slice edge into the U layer, which leaves the group.
         let outside = Cube.solved(3)
             |> Result.flatMap(c -> Cube.applyNotation("R", c))
@@ -82,9 +105,11 @@ mod TestDomino {
             case Err(e) => Assert.assertTrue(String.contains(substr = "domino group", e))
         };
         // U2 R2 stays inside.
-        Assert.assertOk(Cube.solved(3)
-            |> Result.flatMap(c -> Cube.applyNotation("U2 R2 D' F2", c))
-            |> Result.flatMap(Domino.coordsOf))
+        Assert.assertOk(
+            Cube.solved(3)
+                |> Result.flatMap(c -> Cube.applyNotation("U2 R2 D' F2", c))
+                |> Result.flatMap(Domino.coordsOf)
+        )
 
     // ---------- the tables ----------
 
@@ -100,20 +125,30 @@ mod TestDomino {
     ///   those depths.
     @Test
     def thePhaseTwoTablesAreClosedAndReachTheKnownDepths(): Unit \ Assert + IO =
-        if (Slow.skip("TestDomino.thePhaseTwoTablesAreClosedAndReachTheKnownDepths",
-                "builds and closes the phase-two tables"))
+        if (Slow.skip(
+            "TestDomino.thePhaseTwoTablesAreClosedAndReachTheKnownDepths",
+            "builds and closes the phase-two tables"
+        ))
             ()
         else {
             let p = phase2();
             let k = Domino.moveCount();
 
             let checkClosed = (table, count, what) ->
-                Vector.range(0, count) |> Vector.forEach(r ->
-                    Vector.range(0, k) |> Vector.forEach(m -> {
-                        let there = Table.get(r * k + m, table);
-                        Assert.assertTrueWithMsg(there >= 0 and there < count,
-                            "${what} ${r} under move ${m} left the range")
-                    }));
+                Vector.range(0, count)
+                    |> Vector.forEach(
+                        r ->
+                            Vector.range(0, k)
+                                |> Vector.forEach(
+                                    m -> {
+                                        let there = Table.get(r * k + m, table);
+                                        Assert.assertTrueWithMsg(
+                                            there >= 0 and there < count,
+                                            "${what} ${r} under move ${m} left the range"
+                                        )
+                                    }
+                                )
+                    );
             checkClosed(Domino.cornerPermTable(p), Domino.cornerPermCount(), "corner perm");
             checkClosed(Domino.edgePermTable(p), Domino.edgePermCount(), "edge perm");
             checkClosed(Domino.slicePermTable(p), Domino.slicePermCount(), "slice perm");
@@ -122,21 +157,35 @@ mod TestDomino {
             let checkPruning = (table, count, depth, what) -> {
                 let worst = Vector.range(0, count)
                     |> Vector.foldLeft((acc, i) -> Int32.max(acc, Table.get(i, table)), 0);
-                Assert.assertEqWithMsg(expected = depth, worst,
-                    "${what} should reach depth ${depth} exactly, not ${worst}");
-                Assert.assertEqWithMsg(expected = 0, Table.get(0, table),
-                    "${what} should be zero at the goal");
+                Assert.assertEqWithMsg(
+                    expected = depth,
+                    worst,
+                    "${what} should reach depth ${depth} exactly, not ${worst}"
+                );
+                Assert.assertEqWithMsg(
+                    expected = 0,
+                    Table.get(0, table),
+                    "${what} should be zero at the goal"
+                );
                 let unreached = Vector.range(0, count)
                     |> Vector.count(i -> Table.get(i, table) == Table.widest(8));
-                Assert.assertEqWithMsg(expected = 0, unreached,
-                    "${what} left ${unreached} states unreached")
+                Assert.assertEqWithMsg(
+                    expected = 0,
+                    unreached,
+                    "${what} left ${unreached} states unreached"
+                )
             };
             checkPruning(
                 Domino.cornerSliceTable(p),
-                Domino.cornerPermCount() * Domino.slicePermCount(), 14, "CPerm x MPerm");
+                Domino.cornerPermCount() * Domino.slicePermCount(),
+                14,
+                "CPerm x MPerm"
+            );
             checkPruning(
                 Domino.edgeCombTable(p),
-                Domino.edgePermCount() * Domino.combCount(), 13, "EPerm x CComb")
-
-    }
+                Domino.edgePermCount() * Domino.combCount(),
+                13,
+                "EPerm x CComb"
+            )
         }
+}

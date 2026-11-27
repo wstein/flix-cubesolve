@@ -24,7 +24,7 @@
 /// resolved through it when applied, which is why `y R y'` comes out as `B`
 /// rather than as `R`.
 ///
-mod CubeSolve.Model.Notation {
+pub mod CubeSolve.Model.Notation {
 
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
@@ -70,7 +70,7 @@ mod CubeSolve.Model.Notation {
     ///
     /// A parsed sequence and whatever was left after it.
     ///
-    type alias Parsed = { ops = List[Op], rest = List[Lexeme] }
+    type alias Parsed = {ops = List[Op], rest = List[Lexeme]}
 
     ///
     /// The result of a top-level parse, if nothing was left over.
@@ -132,10 +132,14 @@ mod CubeSolve.Model.Notation {
     /// Square brackets are accepted for grouping.
     ///
     def onItsOwn(c: Char): Option[Lexeme] =
-        if (c == '(' or c == '[') Some(Lexeme.Open)
-        else if (c == ')' or c == ']') Some(Lexeme.Close)
-        else if (c == '\'' or c == '\u2019' or c == '\u2018' or c == '\u2032') Some(Lexeme.Prime)
-        else None
+        if (c == '(' or c == '[')
+            Some(Lexeme.Open)
+        else if (c == ')' or c == ']')
+            Some(Lexeme.Close)
+        else if (c == '\'' or c == '\u2019' or c == '\u2018' or c == '\u2032')
+            Some(Lexeme.Prime)
+        else
+            None
 
     ///
     /// A run of digits or of letters, or a character this notation has no use
@@ -221,9 +225,9 @@ mod CubeSolve.Model.Notation {
     ///
     def sequence(n: Int32, lexemes: List[Lexeme], acc: List[Op]): Result[String, Parsed] =
         match lexemes {
-            case Nil                  => Ok({ ops = List.reverse(acc), rest = Nil })
-            case Lexeme.Close :: _    => Ok({ ops = List.reverse(acc), rest = lexemes })
-            case _                    =>
+            case Nil => Ok({ops = List.reverse(acc), rest = Nil})
+            case Lexeme.Close :: _ => Ok({ops = List.reverse(acc), rest = lexemes})
+            case _ =>
                 forM (
                     item <- item(n, lexemes);
                     done <- sequence(n, item#rest, List.append(List.reverse(item#ops), acc))
@@ -240,14 +244,18 @@ mod CubeSolve.Model.Notation {
                     base <- expand(n, w, w);
                     out <- suffixed(base, rest, w)
                 ) yield out
-            case Lexeme.Open :: rest    => group(n, rest)
-            case Lexeme.Count(k) :: _   =>
-                Err("'${k}' stands on its own: a repeat count has to follow a move "
-                    + "or a bracketed group")
-            case Lexeme.Prime :: _      =>
-                Err("\"'\" stands on its own: an inverse has to follow a move or a "
-                    + "bracketed group")
-            case _                      => Err("nothing to read here")
+            case Lexeme.Open :: rest => group(n, rest)
+            case Lexeme.Count(k) :: _ =>
+                Err(
+                    "'${k}' stands on its own: a repeat count has to follow a move "
+                        + "or a bracketed group"
+                )
+            case Lexeme.Prime :: _ =>
+                Err(
+                    "\"'\" stands on its own: an inverse has to follow a move or a "
+                        + "bracketed group"
+                )
+            case _ => Err("nothing to read here")
         }
 
     ///
@@ -302,7 +310,7 @@ mod CubeSolve.Model.Notation {
         forM (
             read <- readSuffix(lexemes, None, false, what)
         ) yield {
-            ops = applySuffix(ops, read#count |> Option.getWithDefault(1), read#inverted),
+            ops  = applySuffix(ops, read#count |> Option.getWithDefault(1), read#inverted),
             rest = read#rest
         }
 
@@ -314,27 +322,33 @@ mod CubeSolve.Model.Notation {
         count: Option[Int32],
         inverted: Bool,
         what: String
-    ): Result[String, { count = Option[Int32], inverted = Bool, rest = List[Lexeme] }] =
+    ): Result[String, {count = Option[Int32], inverted = Bool, rest = List[Lexeme]}] =
         match lexemes {
             case Lexeme.Count(k) :: rest =>
                 if (Option.isEmpty(count))
                     if (k < 1)
                         Err("a repeat count has to be at least 1, and '${what}' has ${k}")
                     else if (k > repeatCeiling())
-                        Err("a repeat count of ${k} on '${what}' is beyond the "
-                            + "${repeatCeiling()} this notation will expand")
+                        Err(
+                            "a repeat count of ${k} on '${what}' is beyond the "
+                                + "${repeatCeiling()} this notation will expand"
+                        )
                     else
                         readSuffix(rest, Some(k), inverted, what)
                 else
-                    Err("'${what}' has two repeat counts, and one is the most a move "
-                        + "or group can take")
+                    Err(
+                        "'${what}' has two repeat counts, and one is the most a move "
+                            + "or group can take"
+                    )
             case Lexeme.Prime :: rest =>
                 if (inverted)
-                    Err("'${what}' is inverted twice, which says nothing the plain "
-                        + "form does not")
+                    Err(
+                        "'${what}' is inverted twice, which says nothing the plain "
+                            + "form does not"
+                    )
                 else
                     readSuffix(rest, count, true, what)
-            case _ => Ok({ count = count, inverted = inverted, rest = lexemes })
+            case _ => Ok({count = count, inverted = inverted, rest = lexemes})
         }
 
     ///
@@ -363,11 +377,14 @@ mod CubeSolve.Model.Notation {
     /// what they meant.
     ///
     def invert(ops: List[Op]): List[Op] =
-        ops |> List.reverse |> List.map(op -> match op {
-            case Layer(m) => Layer(Move.inverse(m))
-            case Inner(m, d) => Inner(Move.inverse(m), d)
-            case Frame(r) => Frame(Rotation.inverse(r))
-        })
+        ops |> List.reverse
+            |> List.map(
+                op -> match op {
+                    case Layer(m)    => Layer(Move.inverse(m))
+                    case Inner(m, d) => Inner(Move.inverse(m), d)
+                    case Frame(r)    => Frame(Rotation.inverse(r))
+                }
+            )
 
     ///
     /// Only the layer turns of `ops`, in order.
@@ -462,11 +479,14 @@ mod CubeSolve.Model.Notation {
     /// this reason.
     ///
     pub def layersOnly(ops: List[Op]): List[Move.Move] =
-        ops |> List.filterMap(op -> match op {
-            case Layer(m) => Some(m)
-            case Inner(m, _) => Some(m)
-            case Frame(_) => None
-        })
+        ops
+            |> List.filterMap(
+                op -> match op {
+                    case Layer(m)    => Some(m)
+                    case Inner(m, _) => Some(m)
+                    case Frame(_)    => None
+                }
+            )
 
     ///
     /// What one quarter turn of `base` does, as layer turns and a frame rotation.
@@ -474,7 +494,7 @@ mod CubeSolve.Model.Notation {
     def expand(n: Int32, base: String, token: String): Result[String, List[Op]] =
         match expandLayerPrefix(n, base, token) {
             case Some(res) => res
-            case None      => match layerOf(base) {
+            case None => match layerOf(base) {
                 case Some(f) => Ok(Layer(Turn(f, 1)) :: Nil)
                 case None    => expandNonLayer(n, base, token)
             }
@@ -527,8 +547,7 @@ mod CubeSolve.Model.Notation {
         let p2 = Int32.fromString(secondDigits);
         let pf = layerOf(faceStr);
         match (p1, p2, pf) {
-            case (Some(startL), Some(endL), Some(f))
-                if startL >= 1 and endL < n and startL <= endL =>
+            case (Some(startL), Some(endL), Some(f)) if startL >= 1 and endL < n and startL <= endL =>
                 let ops = List.range(startL, endL + 1)
                     |> List.flatMap(l -> expandSingleLayer(n, f, l));
                 Ok(ops)
@@ -600,10 +619,13 @@ mod CubeSolve.Model.Notation {
     def expandInner(n: Int32, base: String, token: String): Result[String, List[Op]] =
         match sliceOf(base) {
             case Some(ops) => middleLayer(n, token, ops)
-            case None      => if (n == 3) expandWide(n, base, token) else match innerFaceOf(base) {
-                case Some(f) => innerLayer(n, token, f)
-                case None    => expandWide(n, base, token)
-            }
+            case None => if (n == 3)
+                expandWide(n, base, token)
+            else
+                match innerFaceOf(base) {
+                    case Some(f) => innerLayer(n, token, f)
+                    case None    => expandWide(n, base, token)
+                }
         }
 
     ///
@@ -705,11 +727,15 @@ mod CubeSolve.Model.Notation {
     /// inner slices while leaving the outer faces in place.
     ///
     def middleLayer(n: Int32, token: String, ops: List[Op]): Result[String, List[Op]] =
-        if (n == 3) Ok(ops)
-        else if (n > 3) Ok(middleSlices(n, baseOf(token)))
+        if (n == 3)
+            Ok(ops)
+        else if (n > 3)
+            Ok(middleSlices(n, baseOf(token)))
         else
-            Err("'${token}' does not name a move on a 2x2x2: a cube with only two layers "
-                + "has no inner slice to turn")
+            Err(
+                "'${token}' does not name a move on a 2x2x2: a cube with only two layers "
+                    + "has no inner slice to turn"
+            )
 
     ///
     /// A wide turn on a 3x3x3 is the whole cube less its opposite face. On a
@@ -729,9 +755,11 @@ mod CubeSolve.Model.Notation {
             let face = Move.opposite(opposite);
             Ok(Layer(Turn(face, 1)) :: Inner(Turn(face, 1), 1) :: Nil)
         else
-            Err("'${token}' does not name a move on a 2x2x2: both of its layers are "
-                + "outer layers, so a wide turn would be the whole cube -- write a "
-                + "rotation instead")
+            Err(
+                "'${token}' does not name a move on a 2x2x2: both of its layers are "
+                    + "outer layers, so a wide turn would be the whole cube -- write a "
+                    + "rotation instead"
+            )
 
     /// The face named by a lower-case inner-slice spelling on a big cube.
     def innerFaceOf(base: String): Option[Face] = match base {
@@ -746,8 +774,10 @@ mod CubeSolve.Model.Notation {
 
     /// One inner slice immediately below the named outer face.
     def innerLayer(n: Int32, token: String, f: Face): Result[String, List[Op]] =
-        if (n > 3) Ok(Inner(Turn(f, 1), 1) :: Nil)
-        else Err("'${token}' does not name an inner slice on a ${n}x${n}x${n}")
+        if (n > 3)
+            Ok(Inner(Turn(f, 1), 1) :: Nil)
+        else
+            Err("'${token}' does not name an inner slice on a ${n}x${n}x${n}")
 
     /// The M, E and S middle slice(s), following L, D and F respectively.
     def middleSlices(n: Int32, base: String): List[Op] =

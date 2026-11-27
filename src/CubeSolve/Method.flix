@@ -11,7 +11,7 @@
 /// solver answers a whole scramble in about twenty. `CubeSolve.Solve.Standard`
 /// is what solves cubes; this is what explains them.
 ///
-mod CubeSolve.Method {
+pub mod CubeSolve.Method {
 
     use CubeSolve.Method.LastLayer
     use CubeSolve.Method.Oll
@@ -30,18 +30,18 @@ mod CubeSolve.Method {
     /// not left to count.
     ///
     pub type alias Stage = {
-        step = String,
-        caseName = String,
-        sequence = String,
+        step       = String,
+        caseName   = String,
+        sequence   = String,
         layerTurns = Int32,
-        note = String
+        note       = String
     }
 
     ///
     /// An answer made of steps.
     ///
     pub type alias Staged = {
-        stages = List[Stage],
+        stages     = List[Stage],
         layerTurns = Int32
     }
 
@@ -94,10 +94,11 @@ mod CubeSolve.Method {
     pub def lastLayer(p: Profile.Profile, c: Cube.Cube): Result[String, Staged] =
         match LastLayer.faultBelowTheTop(c) {
             case Some(why) => Err(why)
-            case None      => forM (
-                oriented <- orientStage(p, c);
-                permuted <- permuteStage(p, oriented#cube)
-            ) yield collect(oriented#stage :: permuted#stage :: Nil)
+            case None =>
+                forM (
+                    oriented <- orientStage(p, c);
+                    permuted <- permuteStage(p, oriented#cube)
+                ) yield collect(oriented#stage :: permuted#stage :: Nil)
         }
 
     ///
@@ -106,16 +107,16 @@ mod CubeSolve.Method {
     def orientStage(
         p: Profile.Profile,
         c: Cube.Cube
-    ): Result[String, { stage = Stage, cube = Cube.Cube }] =
+    ): Result[String, {stage = Stage, cube = Cube.Cube}] =
         if (LastLayer.topIsOriented(c))
-            Ok({ stage = skipped("OLL", "the last layer arrived oriented"), cube = c })
+            Ok({stage = skipped("OLL", "the last layer arrived oriented"), cube = c})
         else
             forM (
                 found <- Oll.recognizeWith(p, c);
                 after <- Cube.applyNotation(found#sequence, c)
             ) yield {
                 stage = stageOf("OLL", found#caseName, found#sequence, found#choice),
-                cube = after
+                cube  = after
             }
 
     ///
@@ -124,16 +125,16 @@ mod CubeSolve.Method {
     def permuteStage(
         p: Profile.Profile,
         c: Cube.Cube
-    ): Result[String, { stage = Stage, cube = Cube.Cube }] =
+    ): Result[String, {stage = Stage, cube = Cube.Cube}] =
         if (Cube.isSolved(c))
-            Ok({ stage = skipped("PLL", "the last layer arrived solved"), cube = c })
+            Ok({stage = skipped("PLL", "the last layer arrived solved"), cube = c})
         else
             forM (
                 found <- Pll.recognizeWith(p, c);
                 after <- Cube.applyNotation(found#sequence, c)
             ) yield {
                 stage = stageOf("PLL", found#caseName, found#sequence, found#choice),
-                cube = after
+                cube  = after
             }
 
     ///
@@ -141,24 +142,26 @@ mod CubeSolve.Method {
     ///
     def stageOf(step: String, caseName: String, sequence: String, choice: Profile.Choice): Stage =
         {
-            step = step,
-            caseName = caseName,
-            sequence = sequence,
+            step       = step,
+            caseName   = caseName,
+            sequence   = sequence,
             layerTurns = Profile.layerTurns(sequence),
-            note = choice#note
+            note       = choice#note
         }
 
     ///
     /// A step that was not needed.
     ///
     def skipped(step: String, why: String): Stage =
-        { step = step, caseName = "skip", sequence = "", layerTurns = 0, note = why }
+        {step = step, caseName = "skip", sequence = "", layerTurns = 0, note = why}
 
     ///
     /// The stages, with what they cost together.
     ///
     def collect(stages: List[Stage]): Staged =
-        { stages = stages,
-          layerTurns = stages |> List.foldLeft((n, s) -> n + s#layerTurns, 0) }
+        {
+            stages     = stages,
+            layerTurns = stages |> List.foldLeft((n, s) -> n + s#layerTurns, 0)
+        }
 
 }

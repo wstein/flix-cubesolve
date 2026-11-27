@@ -19,7 +19,7 @@
 /// below it. Asserting more than that would let a routine that happened to
 /// solve more on one fixture make the extra an undocumented requirement.
 ///
-mod CubeSolve.Method.Beginner.Spec {
+pub mod CubeSolve.Method.Beginner.Spec {
 
     use CubeSolve.Method.Facts
     use CubeSolve.Model.Cube
@@ -55,7 +55,7 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def family(s: Situation): String = match s {
         case Situation.CornerInsertion(_, _) => "corner-insertion"
-        case Situation.MiddleInsert(_, _)   => "middle-insert"
+        case Situation.MiddleInsert(_, _)    => "middle-insert"
     }
 
     ///
@@ -63,15 +63,23 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def caseHolds(s: Situation): Cube.Cube -> Bool = match s {
         case Situation.CornerInsertion(slot, twist) =>
-            c -> preserves(s)(c) and (match Facts.findCorner(c, 4) {
-                case Ok(p)  => p#slot == slot and p#turn == twist
-                case Err(_) => false
-            })
+            c ->
+                preserves(s)(c)
+                    and (
+                        match Facts.findCorner(c, 4) {
+                            case Ok(p)  => p#slot == slot and p#turn == twist
+                            case Err(_) => false
+                        }
+                    )
         case Situation.MiddleInsert(slot, flip) =>
-            c -> preserves(s)(c) and (match Facts.findEdge(c, 8) {
-                case Ok(p)  => p#slot == slot and p#turn == flip
-                case Err(_) => false
-            })
+            c ->
+                preserves(s)(c)
+                    and (
+                        match Facts.findEdge(c, 8) {
+                            case Ok(p)  => p#slot == slot and p#turn == flip
+                            case Err(_) => false
+                        }
+                    )
     }
 
     ///
@@ -94,12 +102,14 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def preserves(s: Situation): Cube.Cube -> Bool = match s {
         case Situation.CornerInsertion(_, _) =>
-            c -> ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
-                and ok(Facts.allHome(c, Vector#{5, 6, 7}, true))
+            c ->
+                ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
+                    and ok(Facts.allHome(c, Vector#{5, 6, 7}, true))
         case Situation.MiddleInsert(_, _) =>
-            c -> ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
-                and ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, true))
-                and ok(Facts.allHome(c, Vector#{9, 10, 11}, false))
+            c ->
+                ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, false))
+                    and ok(Facts.allHome(c, Vector#{4, 5, 6, 7}, true))
+                    and ok(Facts.allHome(c, Vector#{9, 10, 11}, false))
     }
 
     ///
@@ -107,7 +117,7 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def preservesWritten(s: Situation): String = match s {
         case Situation.CornerInsertion(_, _) => "cross; corners DLF, DBL, DRB"
-        case Situation.MiddleInsert(_, _)   => "first layer; edges FL, BL, BR"
+        case Situation.MiddleInsert(_, _)    => "first layer; edges FL, BL, BR"
     }
 
     ///
@@ -115,7 +125,7 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def achievesWritten(s: Situation): String = match s {
         case Situation.CornerInsertion(_, _) => "the DFR corner is home and untwisted"
-        case Situation.MiddleInsert(_, _)   => "the FR edge is home and unflipped"
+        case Situation.MiddleInsert(_, _)    => "the FR edge is home and unflipped"
     }
 
     ///
@@ -127,7 +137,7 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def alphabetWritten(s: Situation): String = match s {
         case Situation.CornerInsertion(_, _) => "R U"
-        case Situation.MiddleInsert(_, _)   => "R U F"
+        case Situation.MiddleInsert(_, _)    => "R U F"
     }
 
     ///
@@ -149,7 +159,7 @@ mod CubeSolve.Method.Beginner.Spec {
     ///
     pub def maxDepth(s: Situation): Int32 = match s {
         case Situation.CornerInsertion(_, _) => 8
-        case Situation.MiddleInsert(_, _)   => 8
+        case Situation.MiddleInsert(_, _)    => 8
     }
 
     ///
@@ -180,8 +190,10 @@ mod CubeSolve.Method.Beginner.Spec {
     pub def classifyCorner(c: Cube.Cube): CornerStep =
         let anyCorner = Situation.CornerInsertion(0, 0);
         if (not preserves(anyCorner)(c))
-            CornerStep.NotReady("the cross and the bottom corners already placed "
-                + "are not all home, so this is not the corner stage yet")
+            CornerStep.NotReady(
+                "the cross and the bottom corners already placed "
+                    + "are not all home, so this is not the corner stage yet"
+            )
         else if (ok(Facts.cornerHome(c, 4)))
             CornerStep.AlreadyDone
         else
@@ -199,10 +211,15 @@ mod CubeSolve.Method.Beginner.Spec {
     /// however many records happen to exist.
     ///
     pub def cornerSituations(): List[Situation] =
-        let top = List.range(0, 4) |> List.flatMap(slot ->
-            List.range(0, 3) |> List.map(t -> Situation.CornerInsertion(slot, t)));
-        List.append(top,
-            Situation.CornerInsertion(4, 1) :: Situation.CornerInsertion(4, 2) :: Nil)
+        let top = List.range(0, 4)
+            |> List.flatMap(
+                slot ->
+                    List.range(0, 3) |> List.map(t -> Situation.CornerInsertion(slot, t))
+            );
+        List.append(
+            top,
+            Situation.CornerInsertion(4, 1) :: Situation.CornerInsertion(4, 2) :: Nil
+        )
 
     ///
     /// A predicate that could not be read is a failure, not a `true`.

@@ -24,7 +24,7 @@
 /// on one machine and read on another must agree, and "whatever the platform
 /// does" is not an agreement.
 ///
-mod CubeSolve.Table.Codec {
+pub mod CubeSolve.Table.Codec {
 
     use CubeSolve.Table
     use CubeSolve.Table.TableView
@@ -44,7 +44,7 @@ mod CubeSolve.Table.Codec {
     ///
     /// A header.
     ///
-    pub def header(fields: { table = String, convention = String, generator = String }): Header =
+    pub def header(fields: {table = String, convention = String, generator = String}): Header =
         Header(fields#table, fields#convention, fields#generator)
 
     ///
@@ -96,17 +96,19 @@ mod CubeSolve.Table.Codec {
         convention: Vector[Int32],
         generator: Vector[Int32]
     ): Vector[Int8] =
-        let body = Vector.flatten(Vector#{
-            magic(),
-            int32Bytes(schema()),
-            text(table),
-            text(convention),
-            text(generator),
-            int32Bytes(Table.entries(t)),
-            int32Bytes(Table.bitsPerEntry(t)),
-            int32Bytes(Table.byteLength(t)),
-            payloadBytes(t)
-        });
+        let body = Vector.flatten(
+            Vector#{
+                magic(),
+                int32Bytes(schema()),
+                text(table),
+                text(convention),
+                text(generator),
+                int32Bytes(Table.entries(t)),
+                int32Bytes(Table.bitsPerEntry(t)),
+                int32Bytes(Table.byteLength(t)),
+                payloadBytes(t)
+            }
+        );
         Vector.append(body, int64Bytes(checksum(body))) |> Vector.map(toByte)
 
     ///
@@ -127,9 +129,11 @@ mod CubeSolve.Table.Codec {
         if (Vector.forAll(c -> c >= 32 and c < 127, codes))
             Ok(codes)
         else
-            Err("${what} must be printable ASCII, but '${s}' is not: a name that "
-                + "encoded differently on two machines would defeat the point of "
-                + "recording it")
+            Err(
+                "${what} must be printable ASCII, but '${s}' is not: a name that "
+                    + "encoded differently on two machines would defeat the point of "
+                    + "recording it"
+            )
 
     ///
     /// The table's payload, byte by byte.
@@ -143,11 +147,15 @@ mod CubeSolve.Table.Codec {
     def rawByte(i: Int32, t: TableView): Int32 =
         let perByte = 8 / Int32.max(1, Int32.min(8, Table.bitsPerEntry(t)));
         if (Table.bitsPerEntry(t) < 8)
-            Vector.range(0, perByte) |> Vector.foldLeft((acc, k) -> {
-                let at = i * perByte + k;
-                let v = if (at < Table.entries(t)) Table.get(at, t) else 0;
-                Int32.bitwiseOr(acc, Int32.leftShift(v, k * Table.bitsPerEntry(t)))
-            }, 0)
+            Vector.range(0, perByte)
+                |> Vector.foldLeft(
+                    (acc, k) -> {
+                        let at = i * perByte + k;
+                        let v = if (at < Table.entries(t)) Table.get(at, t) else 0;
+                        Int32.bitwiseOr(acc, Int32.leftShift(v, k * Table.bitsPerEntry(t)))
+                    },
+                    0
+                )
         else
             let width = Table.bitsPerEntry(t) / 8;
             let v = Table.get(i / width, t);
@@ -163,10 +171,13 @@ mod CubeSolve.Table.Codec {
     /// An `Int64` as eight bytes, least significant first.
     ///
     def int64Bytes(v: Int64): Vector[Int32] =
-        Vector.init(b -> {
-            let shifted = Int64.rightShift(v, b * 8);
-            Int64.tryToInt32(Int64.bitwiseAnd(shifted, 255i64)) |> Option.getWithDefault(0)
-        }, 8)
+        Vector.init(
+            b -> {
+                let shifted = Int64.rightShift(v, b * 8);
+                Int64.tryToInt32(Int64.bitwiseAnd(shifted, 255i64)) |> Option.getWithDefault(0)
+            },
+            8
+        )
 
     ///
     /// A byte value as an `Int8`, wrapping above 127.
@@ -211,22 +222,31 @@ mod CubeSolve.Table.Codec {
     /// describes what this build computes.
     ///
     pub def expect(wanted: Header, bytes: Vector[Int8]): Result[String, TableView] =
-        decode(bytes) |> Result.flatMap(match (found, t) ->
-            if (tableOf(found) != tableOf(wanted))
-                Err("this file holds the table '${tableOf(found)}', but "
-                    + "'${tableOf(wanted)}' was wanted")
-            else if (conventionOf(found) != conventionOf(wanted))
-                Err("this file was built under the convention "
-                    + "'${conventionOf(found)}', but this build reads "
-                    + "'${conventionOf(wanted)}': the two number the cube "
-                    + "differently, so the table describes a different puzzle")
-            else if (generatorOf(found) != generatorOf(wanted))
-                Err("this file was built by '${generatorOf(found)}' and this is "
-                    + "'${generatorOf(wanted)}': what a table contains is decided "
-                    + "by the code that built it, so a table from another build is "
-                    + "rebuilt rather than trusted")
-            else
-                Ok(t))
+        decode(bytes)
+            |> Result.flatMap(
+                match (found, t) ->
+                    if (tableOf(found) != tableOf(wanted))
+                        Err(
+                            "this file holds the table '${tableOf(found)}', but "
+                                + "'${tableOf(wanted)}' was wanted"
+                        )
+                    else if (conventionOf(found) != conventionOf(wanted))
+                        Err(
+                            "this file was built under the convention "
+                                + "'${conventionOf(found)}', but this build reads "
+                                + "'${conventionOf(wanted)}': the two number the cube "
+                                + "differently, so the table describes a different puzzle"
+                        )
+                    else if (generatorOf(found) != generatorOf(wanted))
+                        Err(
+                            "this file was built by '${generatorOf(found)}' and this is "
+                                + "'${generatorOf(wanted)}': what a table contains is decided "
+                                + "by the code that built it, so a table from another build is "
+                                + "rebuilt rather than trusted"
+                        )
+                    else
+                        Ok(t)
+            )
 
     ///
     /// The magic, the schema and the checksum: what must hold before anything
@@ -234,11 +254,15 @@ mod CubeSolve.Table.Codec {
     ///
     def checkFrame(raw: Vector[Int32]): Result[String, Unit] =
         if (Vector.length(raw) < 8 + 4 + 8)
-            Err("this is not a cubesolve table file: it is only "
-                + "${Vector.length(raw)} bytes, shorter than a header")
+            Err(
+                "this is not a cubesolve table file: it is only "
+                    + "${Vector.length(raw)} bytes, shorter than a header"
+            )
         else if (Vector.take(8, raw) != magic())
-            Err("this is not a cubesolve table file: it does not start the way "
-                + "one does")
+            Err(
+                "this is not a cubesolve table file: it does not start the way "
+                    + "one does"
+            )
         else
             checkSchema(raw) |> Result.flatMap(_ -> checkSeal(raw))
 
@@ -250,8 +274,10 @@ mod CubeSolve.Table.Codec {
         if (found == schema())
             Ok(())
         else
-            Err("this file is schema version ${found} and this build reads "
-                + "version ${schema()}: rebuild the table rather than reading it")
+            Err(
+                "this file is schema version ${found} and this build reads "
+                    + "version ${schema()}: rebuild the table rather than reading it"
+            )
 
     ///
     /// The checksum must match everything before it.
@@ -263,9 +289,11 @@ mod CubeSolve.Table.Codec {
         if (checksum(body) == recorded)
             Ok(())
         else
-            Err("this table file is corrupt: its checksum does not match its "
-                + "contents, so it was truncated, damaged, or is still being "
-                + "written")
+            Err(
+                "this table file is corrupt: its checksum does not match its "
+                    + "contents, so it was truncated, damaged, or is still being "
+                    + "written"
+            )
 
     ///
     /// Read the header and the payload, the frame having already been checked.
@@ -275,12 +303,15 @@ mod CubeSolve.Table.Codec {
             afterTable <- readText(12, raw);
             afterConvention <- readText(fst(afterTable), raw);
             afterGenerator <- readText(fst(afterConvention), raw);
-            result <- readTable(fst(afterGenerator), raw,
+            result <- readTable(
+                fst(afterGenerator),
+                raw,
                 header({
-                    table = snd(afterTable),
+                    table      = snd(afterTable),
                     convention = snd(afterConvention),
-                    generator = snd(afterGenerator)
-                }))
+                    generator  = snd(afterGenerator)
+                })
+            )
         ) yield result
 
     ///
@@ -310,11 +341,15 @@ mod CubeSolve.Table.Codec {
             let length = readInt32(at + 8, raw);
             let start = at + 12;
             if (entries < 0 or length < 0 or length != Table.payloadBytes(bits, entries))
-                Err("this table file describes ${entries} entries of ${bits} bits "
-                    + "in ${length} bytes, which do not fit together")
+                Err(
+                    "this table file describes ${entries} entries of ${bits} bits "
+                        + "in ${length} bytes, which do not fit together"
+                )
             else if (start + length != Vector.length(raw) - 8)
-                Err("this table file has ${Vector.length(raw) - 8 - start - length} "
-                    + "bytes of trailing data: something else has been writing to it")
+                Err(
+                    "this table file has ${Vector.length(raw) - 8 - start - length} "
+                        + "bytes of trailing data: something else has been writing to it"
+                )
             else
                 rebuild(bits, entries, start, length, raw) |> Result.map(t -> (h, t))
 
@@ -331,12 +366,17 @@ mod CubeSolve.Table.Codec {
         region rc {
             let payload = Table.emptyPayload(rc, bits, entries);
             if (Array.length(payload) != length)
-                Err("this table file's payload is ${length} bytes where "
-                    + "${entries} entries of ${bits} bits need "
-                    + "${Array.length(payload)}")
+                Err(
+                    "this table file's payload is ${length} bytes where "
+                        + "${entries} entries of ${bits} bits need "
+                        + "${Array.length(payload)}"
+                )
             else {
-                Vector.range(0, length) |> Vector.forEach(i ->
-                    Array.put(toByte(Vector.get(start + i, raw)), i, payload));
+                Vector.range(0, length)
+                    |> Vector.forEach(
+                        i ->
+                            Array.put(toByte(Vector.get(start + i, raw)), i, payload)
+                    );
                 Table.ofPayload(bits, entries, payload)
             }
         }
@@ -365,17 +405,25 @@ mod CubeSolve.Table.Codec {
     /// The `Int32` at `at`, least significant byte first.
     ///
     def readInt32(at: Int32, raw: Vector[Int32]): Int32 =
-        Vector.range(0, 4) |> Vector.foldLeft((acc, b) ->
-            Int32.bitwiseOr(acc, Int32.leftShift(Vector.get(at + b, raw), b * 8)), 0)
+        Vector.range(0, 4)
+            |> Vector.foldLeft(
+                (acc, b) ->
+                    Int32.bitwiseOr(acc, Int32.leftShift(Vector.get(at + b, raw), b * 8)),
+                0
+            )
 
     ///
     /// The `Int64` at `at`, least significant byte first.
     ///
     def readInt64(at: Int32, raw: Vector[Int32]): Int64 =
-        Vector.range(0, 8) |> Vector.foldLeft((acc, b) -> {
-            let byte = Int32.toInt64(Vector.get(at + b, raw));
-            Int64.bitwiseOr(acc, Int64.leftShift(byte, b * 8))
-        }, 0i64)
+        Vector.range(0, 8)
+            |> Vector.foldLeft(
+                (acc, b) -> {
+                    let byte = Int32.toInt64(Vector.get(at + b, raw));
+                    Int64.bitwiseOr(acc, Int64.leftShift(byte, b * 8))
+                },
+                0i64
+            )
 
     ///
     /// `bytes` with a different schema version written into it, resealed.
@@ -386,9 +434,14 @@ mod CubeSolve.Table.Codec {
     pub def withSchemaForTesting(version: Int32, bytes: Vector[Int8]): Vector[Int8] =
         let raw = Vector.map(b -> Int32.bitwiseAnd(Int8.toInt32(b), 255), bytes);
         let cut = Vector.length(raw) - 8;
-        let patched = Vector.init(i ->
-            if (i >= 8 and i < 12) Vector.get(i - 8, int32Bytes(version))
-            else Vector.get(i, raw), cut);
+        let patched = Vector.init(
+            i ->
+                if (i >= 8 and i < 12)
+                    Vector.get(i - 8, int32Bytes(version))
+                else
+                    Vector.get(i, raw),
+            cut
+        );
         Vector.append(patched, int64Bytes(checksum(patched))) |> Vector.map(toByte)
 
 }

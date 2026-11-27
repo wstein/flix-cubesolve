@@ -18,7 +18,7 @@
 /// is a value, and `Spec` answers every question about it, so a record cannot
 /// be checked against the wrong claim by naming it slightly wrong.
 ///
-mod TestRoutines {
+pub mod TestRoutines {
 
     use CubeSolve.Method.Beginner.Routines
     use CubeSolve.Method.Beginner.Spec
@@ -32,7 +32,7 @@ mod TestRoutines {
     @Test
     def everyRoutineIsWhatDerivationSays(): Unit \ Assert =
         match Cube.solved(3) {
-            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
+            case Err(e)     => Assert.assertEqWithMsg(expected = "", e, "solved")
             case Ok(solved) => Routines.all() |> List.forEach(r -> check(solved, r))
         }
 
@@ -41,8 +41,10 @@ mod TestRoutines {
         match Cube.applyNotation(r#setup, solved) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${r#name}' setup")
             case Ok(caseCube) =>
-                Assert.assertTrueWithMsg(Spec.caseHolds(s)(caseCube),
-                    "'${r#name}': the recorded setup should reach its own case");
+                Assert.assertTrueWithMsg(
+                    Spec.caseHolds(s)(caseCube),
+                    "'${r#name}': the recorded setup should reach its own case"
+                );
                 derivesTheSame(solved, r);
                 replayed(r, caseCube)
         }
@@ -54,16 +56,24 @@ mod TestRoutines {
         let s = r#situation;
         match Derive.shortest(solved, Spec.caseHolds(s), Spec.alphabet(s), Spec.maxDepth(s)) {
             case None =>
-                Assert.assertTrueWithMsg(false,
+                Assert.assertTrueWithMsg(
+                    false,
                     "'${r#name}': its case is no longer reachable under "
-                        + "'${Spec.alphabetWritten(s)}' within ${Spec.maxDepth(s)}")
+                        + "'${Spec.alphabetWritten(s)}' within ${Spec.maxDepth(s)}"
+                )
             case Some(setup) =>
                 let derived = Move.showAll(Move.inverseOf(setup));
-                Assert.assertEqWithMsg(expected = derived, r#sequence,
+                Assert.assertEqWithMsg(
+                    expected = derived,
+                    r#sequence,
                     "'${r#name}' is recorded as '${r#sequence}' and derives as "
-                        + "'${derived}'");
-                Assert.assertEqWithMsg(expected = List.length(setup), r#length,
-                    "'${r#name}' records a length that is not its own")
+                        + "'${derived}'"
+                );
+                Assert.assertEqWithMsg(
+                    expected = List.length(setup),
+                    r#length,
+                    "'${r#name}' records a length that is not its own"
+                )
         }
 
     ///
@@ -78,13 +88,19 @@ mod TestRoutines {
         match Cube.applyNotation(r#sequence, caseCube) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${r#name}' replay")
             case Ok(done) =>
-                Assert.assertTrueWithMsg(Spec.achieves(s)(done),
-                    "'${r#name}': afterwards ${Spec.achievesWritten(s)}");
-                Assert.assertTrueWithMsg(Spec.preserves(s)(done),
-                    "'${r#name}': it must leave ${Spec.preservesWritten(s)} alone");
-                Assert.assertTrueWithMsg(Cube.isSolved(done),
+                Assert.assertTrueWithMsg(
+                    Spec.achieves(s)(done),
+                    "'${r#name}': afterwards ${Spec.achievesWritten(s)}"
+                );
+                Assert.assertTrueWithMsg(
+                    Spec.preserves(s)(done),
+                    "'${r#name}': it must leave ${Spec.preservesWritten(s)} alone"
+                );
+                Assert.assertTrueWithMsg(
+                    Cube.isSolved(done),
                     "'${r#name}': its setup is the inverse of it, so the two "
-                        + "together should return to solved")
+                        + "together should return to solved"
+                )
         }
 
     ///
@@ -95,24 +111,34 @@ mod TestRoutines {
     ///
     @Test
     def everySituationFindsItsRoutine(): Unit \ Assert =
-        Routines.all() |> List.forEach(r ->
-            match Routines.forSituation(r#situation) {
-                case None    =>
-                    Assert.assertTrueWithMsg(false,
-                        "'${r#name}' cannot be found by its own situation")
-                case Some(f) =>
-                    Assert.assertEqWithMsg(expected = r#name, f#name,
-                        "two records answer ${r#situation}, so choosing is ambiguous")
-            })
+        Routines.all()
+            |> List.forEach(
+                r -> match Routines.forSituation(r#situation) {
+                    case None =>
+                        Assert.assertTrueWithMsg(
+                            false,
+                            "'${r#name}' cannot be found by its own situation"
+                        )
+                    case Some(f) =>
+                        Assert.assertEqWithMsg(
+                            expected = r#name,
+                            f#name,
+                            "two records answer ${r#situation}, so choosing is ambiguous"
+                        )
+                }
+            )
 
     ///
     /// The corpus says how it was made.
     ///
     @Test
     def theCorpusCarriesItsProvenance(): Unit \ Assert =
-        Assert.assertTrueWithMsg(String.contains(substr = "Derive", Routines.provenance()),
-            "the provenance should name what derived it: ${Routines.provenance()}");
+        Assert.assertTrueWithMsg(
+            String.contains(substr = "Derive", Routines.provenance()),
+            "the provenance should name what derived it: ${Routines.provenance()}"
+        );
         Assert.assertTrueWithMsg(
             String.contains(substr = Routines.policy(), Routines.provenance()),
-            "and the policy it was derived under: ${Routines.provenance()}")
+            "and the policy it was derived under: ${Routines.provenance()}"
+        )
 }

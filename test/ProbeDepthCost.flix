@@ -1,7 +1,8 @@
 ///
 /// What a deeper phase one costs, and what it buys.
 ///
-/// `A_VAs734dSkb` has a seventeen-move solution. Every shipped budget answers
+/// `fqgWd78OpbE` (the cube the retired V1 token `A_VAs734dSkb` named) has a
+/// seventeen-move solution. Every shipped budget answers
 /// nineteen, and the reason is the phase-one depth rather than the handover
 /// limit: the endings leading to a seventeen do not exist at depth twelve, so
 /// enumerating more of them cannot find one. Depth fifteen with a hundred
@@ -51,7 +52,7 @@
 /// java -jar artifact/cubesolve.jar
 /// ```
 ///
-mod ProbeDepthCost {
+pub mod ProbeDepthCost {
 
     use CubeSolve.Model.Holding
     use CubeSolve.Model.Sized
@@ -60,7 +61,7 @@ mod ProbeDepthCost {
     ///
     /// The cube being measured, and the answer known to exist for it.
     ///
-    def token(): String = "A_VAs734dSkb"
+    def token(): String = "fqgWd78OpbE"
 
     def target(): Int32 = 17
 
@@ -72,20 +73,29 @@ mod ProbeDepthCost {
     /// what ships today.
     ///
     def grid(): List[(Int32, Int32)] =
-        (12, 25000) :: (13, 25000) :: (14, 25000) :: (15, 25000)
-            :: (14, 100000) :: (15, 100000) :: Nil
+        (12, 25000)
+            :: (13, 25000)
+            :: (14, 25000)
+            :: (15, 25000)
+            :: (14, 100000)
+            :: (15, 100000)
+            :: Nil
 
     ///
     /// Run the grid, one line per cell.
     ///
     pub def probe(): Unit \ IO =
-        match (Standard.buildTables(),
-               Holding.ofToken(3, token()) |> Result.flatMap(Sized.standardOf)) {
+        match (
+            Standard.buildTables(),
+            Holding.ofToken(3, token()) |> Result.flatMap(Sized.standardOf)
+        ) {
             case (Ok(t), Ok(c)) =>
                 println("cube ${token()}, a ${target()}-move solution is known");
                 println("");
-                println("  depth  handovers   HTM   probes   nodes        seconds"
-                    + "   reaches ${target()}");
+                println(
+                    "  depth  handovers   HTM   probes   nodes        seconds"
+                        + "   reaches ${target()}"
+                );
                 grid() |> List.forEach(match (d, h) -> measure(t, c, d, h))
             case (Err(e), _) => println("tables: ${e}")
             case (_, Err(e)) => println("cube: ${e}")
@@ -101,8 +111,12 @@ mod ProbeDepthCost {
         handovers: Int32
     ): Unit \ IO =
         let b = Standard.budget({
-            minViews = 6, probeFloor = 0, probeMax = 400000, maxDepth = 25,
-            handovers = handovers, phase1Depth = depth
+            minViews    = 6,
+            probeFloor  = 0,
+            probeMax    = 400000,
+            maxDepth    = 25,
+            handovers   = handovers,
+            phase1Depth = depth
         });
         let started = Time.Clock.runWithIO(_ -> Time.Clock.now());
         let out = Standard.solveWithOutcome(t, b, c);
@@ -118,11 +132,13 @@ mod ProbeDepthCost {
         };
         let nodes = out#viewStats
             |> List.foldLeft((a, v) -> a + v#enumerationNodes, 0i64);
-        println("  ${String.padRight(7, ' ', "${depth}")}"
-            + "${String.padRight(12, ' ', "${handovers}")}"
-            + "${String.padRight(6, ' ', htm)}"
-            + "${String.padRight(9, ' ', "${out#probesSpent}")}"
-            + "${String.padRight(13, ' ', "${nodes}")}"
-            + "${String.padRight(10, ' ', "${secs}")}"
-            + "${hit}")
+        println(
+            "  ${String.padRight(7, ' ', "${depth}")}"
+                + "${String.padRight(12, ' ', "${handovers}")}"
+                + "${String.padRight(6, ' ', htm)}"
+                + "${String.padRight(9, ' ', "${out#probesSpent}")}"
+                + "${String.padRight(13, ' ', "${nodes}")}"
+                + "${String.padRight(10, ' ', "${secs}")}"
+                + "${hit}"
+        )
 }

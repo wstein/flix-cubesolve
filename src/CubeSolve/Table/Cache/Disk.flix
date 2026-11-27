@@ -8,7 +8,7 @@
 /// together would give the policy module a dependency on every filesystem
 /// effect it exists to avoid naming.
 ///
-mod CubeSolve.Table.Cache.Disk {
+pub mod CubeSolve.Table.Cache.Disk {
 
     use CubeSolve.Table.Cache
     use CubeSolve.Table.Cache.Store
@@ -29,17 +29,43 @@ mod CubeSolve.Table.Cache.Disk {
     /// that has to be correct, to say "use these files". This is that order,
     /// written once.
     ///
-    pub def withFilesystem(directory: String, f: Unit -> a \ ef): a \
-        (((((((ef - Store) - FileExists) - ReadBytes) - WriteBytes)
-            - MoveFile) - MkTempDir) - Fs.FileTest - Fs.FileRead) - Fs.FileWrite + IO =
-        Fs.FileWrite.runWithIO(_ ->
-            Fs.FileRead.runWithIO(_ ->
-                Fs.FileTest.runWithIO(_ ->
-                    Fs.MkTempDir.runWithFileWrite(_ ->
-                        Fs.MoveFile.runWithFileWrite(_ ->
-                            Fs.WriteBytes.runWithFileWrite(_ ->
-                                Fs.ReadBytes.runWithFileRead(_ ->
-                                    Fs.FileExists.runWithFileTest(_ ->
-                                        Cache.onFilesystem(directory, f)))))))))
+    pub def withFilesystem(directory: String, f: Unit -> a \ ef): a \ (
+        (
+            (
+                ((((ef - Store) - FileExists) - ReadBytes) - WriteBytes)
+                    - MoveFile
+            )
+                - MkTempDir
+        )
+            - Fs.FileTest
+            - Fs.FileRead
+    )
+        - Fs.FileWrite
+        + IO =
+        Fs.FileWrite.runWithIO(
+            _ ->
+                Fs.FileRead.runWithIO(
+                    _ ->
+                        Fs.FileTest.runWithIO(
+                            _ ->
+                                Fs.MkTempDir.runWithFileWrite(
+                                    _ ->
+                                        Fs.MoveFile.runWithFileWrite(
+                                            _ ->
+                                                Fs.WriteBytes.runWithFileWrite(
+                                                    _ ->
+                                                        Fs.ReadBytes.runWithFileRead(
+                                                            _ ->
+                                                                Fs.FileExists.runWithFileTest(
+                                                                    _ ->
+                                                                        Cache.onFilesystem(directory, f)
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                )
+        )
 
 }

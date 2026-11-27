@@ -7,7 +7,7 @@
 /// independent implementation to check a 4x4x4 against, so the check has to be
 /// that the same formula reproduces the sizes that are already trusted.
 ///
-mod TestStickers {
+pub mod TestStickers {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
@@ -19,7 +19,7 @@ mod TestStickers {
     def cubeAt(seed: Int64, n: Int32): Cube.Cube \ Assert =
         match Random.sampleDeterministic(seed, n) {
             case Ok((c, _)) => c
-            case Err(e)     =>
+            case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "seed ${seed}");
                 unreachable!()
         }
@@ -46,20 +46,35 @@ mod TestStickers {
     ///
     @Test
     def theStickerGeometryAgreesWithTheOrbitTables(): Unit \ Assert =
-        Vector#{2, 3} |> Vector.forEach(n ->
-            Vector.range(0, 12) |> Vector.forEach(i -> {
-                let seed = Int32.toInt64(i) + 70000i64;
-                let c = if (i == 0) solvedAt(n) else cubeAt(seed, n);
-                Move.all() |> Vector.forEach(m -> {
-                    let byTable = faceletsOf(turned(m, c));
-                    let byStickers =
-                        Stickers.turn(n, Move.faceIndex(Move.face(m)),
-                            Move.amount(m), faceletsOf(c));
-                    Assert.assertEqWithMsg(expected = byTable, byStickers,
-                        "${n}x${n}x${n}, seed ${seed}, move ${m}: the sticker "
-                            + "geometry and the orbit tables disagree")
-                })
-            }))
+        Vector#{2, 3} |> Vector.forEach(
+            n ->
+                Vector.range(0, 12)
+                    |> Vector.forEach(
+                        i -> {
+                            let seed = Int32.toInt64(i) + 70000i64;
+                            let c = if (i == 0) solvedAt(n) else cubeAt(seed, n);
+                            Move.all()
+                                |> Vector.forEach(
+                                    m -> {
+                                        let byTable = faceletsOf(turned(m, c));
+                                        let byStickers =
+                                            Stickers.turn(
+                                                n,
+                                                Move.faceIndex(Move.face(m)),
+                                                Move.amount(m),
+                                                faceletsOf(c)
+                                            );
+                                        Assert.assertEqWithMsg(
+                                            expected = byTable,
+                                            byStickers,
+                                            "${n}x${n}x${n}, seed ${seed}, move ${m}: the sticker "
+                                                + "geometry and the orbit tables disagree"
+                                        )
+                                    }
+                                )
+                        }
+                    )
+        )
 
     def solvedAt(n: Int32): Cube.Cube \ Assert =
         match Cube.solved(n) {
@@ -77,22 +92,34 @@ mod TestStickers {
     ///
     @Test
     def theGroupLawsHoldAtEverySizeThatTurns(): Unit \ Assert =
-        Vector#{2, 3, 4, 5} |> Vector.forEach(n -> {
-            let solved = solvedAt(n);
-            Move.all() |> Vector.forEach(m -> {
-                let fourTimes = List.foldLeft((c, _) -> turned(m, c), solved,
-                    List.range(0, 4));
-                Assert.assertEqWithMsg(
-                    expected = Cube.orbits(solved), Cube.orbits(fourTimes),
-                    "${n}x${n}x${n}: ${m} four times is not the identity");
-                let opposite = Turn(Move.opposite(Move.face(m)), Move.amount(m));
-                let oneWay = turned(opposite, turned(m, solved));
-                let theOther = turned(m, turned(opposite, solved));
-                Assert.assertEqWithMsg(
-                    expected = Cube.orbits(oneWay), Cube.orbits(theOther),
-                    "${n}x${n}x${n}: ${m} and ${opposite} do not commute")
-            })
-        })
+        Vector#{2, 3, 4, 5} |> Vector.forEach(
+            n -> {
+                let solved = solvedAt(n);
+                Move.all()
+                    |> Vector.forEach(
+                        m -> {
+                            let fourTimes = List.foldLeft(
+                                (c, _) -> turned(m, c),
+                                solved,
+                                List.range(0, 4)
+                            );
+                            Assert.assertEqWithMsg(
+                                expected = Cube.orbits(solved),
+                                Cube.orbits(fourTimes),
+                                "${n}x${n}x${n}: ${m} four times is not the identity"
+                            );
+                            let opposite = Turn(Move.opposite(Move.face(m)), Move.amount(m));
+                            let oneWay = turned(opposite, turned(m, solved));
+                            let theOther = turned(m, turned(opposite, solved));
+                            Assert.assertEqWithMsg(
+                                expected = Cube.orbits(oneWay),
+                                Cube.orbits(theOther),
+                                "${n}x${n}x${n}: ${m} and ${opposite} do not commute"
+                            )
+                        }
+                    )
+            }
+        )
 
     ///
     /// A scramble and its inverse return every size to solved.
@@ -104,20 +131,27 @@ mod TestStickers {
     @Test
     def aScrambleAndItsInverseReturnEverySizeToSolved(): Unit \ Assert =
         let written = "R U R' U' F2 L D B' R2 F L' U2 D B";
-        Vector#{2, 3, 4, 5} |> Vector.forEach(n ->
-            match Move.parse(written) {
+        Vector#{2, 3, 4, 5} |> Vector.forEach(
+            n -> match Move.parse(written) {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "parsing")
                 case Ok(ms) =>
                     let solved = solvedAt(n);
                     let there = List.foldLeft((c, m) -> turned(m, c), solved, ms);
                     Assert.assertTrueWithMsg(
                         Cube.orbits(there) != Cube.orbits(solved) or n == 2,
-                        "${n}x${n}x${n}: the scramble changed nothing");
-                    let back = List.foldLeft((c, m) -> turned(m, c), there,
-                        Move.inverseOf(ms));
+                        "${n}x${n}x${n}: the scramble changed nothing"
+                    );
+                    let back = List.foldLeft(
+                        (c, m) -> turned(m, c),
+                        there,
+                        Move.inverseOf(ms)
+                    );
                     Assert.assertEqWithMsg(
-                        expected = Cube.orbits(solved), Cube.orbits(back),
-                        "${n}x${n}x${n}: the scramble and its inverse did not cancel")
-            })
+                        expected = Cube.orbits(solved),
+                        Cube.orbits(back),
+                        "${n}x${n}x${n}: the scramble and its inverse did not cancel"
+                    )
+            }
+        )
 
 }

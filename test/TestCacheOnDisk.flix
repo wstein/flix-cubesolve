@@ -1,4 +1,4 @@
-mod TestCacheOnDisk {
+pub mod TestCacheOnDisk {
 
     use CubeSolve.Table
     use CubeSolve.Table.Cache
@@ -7,9 +7,9 @@ mod TestCacheOnDisk {
 
     def header(generator: String): Codec.Header =
         Codec.header({
-            table = "pocket.distances",
+            table      = "pocket.distances",
             convention = "kociemba-htm@1",
-            generator = generator
+            generator  = generator
         })
 
     ///
@@ -40,21 +40,32 @@ mod TestCacheOnDisk {
                 Assert.assertTrueWithMsg(false, "could not make a temporary directory")
             case Ok(dir) =>
                 let once = () ->
-                    Disk.withFilesystem(dir, () ->
-                        Cache.table("pocket.distances", header("t"), build));
+                    Disk.withFilesystem(
+                        dir,
+                        () ->
+                            Cache.table("pocket.distances", header("t"), build)
+                    );
                 let first = once();
                 let second = once();
                 Assert.assertOk(first);
                 Assert.assertOk(second);
-                Assert.assertEqWithMsg(expected = 1, Ref.get(builds),
-                    "the second run should have read the file, not rebuilt it");
+                Assert.assertEqWithMsg(
+                    expected = 1,
+                    Ref.get(builds),
+                    "the second run should have read the file, not rebuilt it"
+                );
                 match (first, second) {
                     case (Ok(a), Ok(b)) =>
                         Assert.assertEq(expected = Table.entries(a), Table.entries(b));
-                        Vector.range(0, Table.entries(a)) |> Vector.forEach(i ->
-                            Assert.assertEqWithMsg(
-                                expected = Table.get(i, a), Table.get(i, b),
-                                "entry ${i} came back changed"))
+                        Vector.range(0, Table.entries(a))
+                            |> Vector.forEach(
+                                i ->
+                                    Assert.assertEqWithMsg(
+                                        expected = Table.get(i, a),
+                                        Table.get(i, b),
+                                        "entry ${i} came back changed"
+                                    )
+                            )
                     case _ => Assert.assertTrueWithMsg(false, "both runs should succeed")
                 }
         }
@@ -74,23 +85,33 @@ mod TestCacheOnDisk {
             case Err(_) =>
                 Assert.assertTrueWithMsg(false, "could not make a temporary directory")
             case Ok(dir) =>
-                let seeded = Disk.withFilesystem(dir,
-                    () -> Cache.table("pocket.distances", header("cubesolve 0.0.9"), build));
+                let seeded = Disk.withFilesystem(
+                    dir,
+                    () -> Cache.table("pocket.distances", header("cubesolve 0.0.9"), build)
+                );
                 Assert.assertOk(seeded);
-                let why = Disk.withFilesystem(dir,
-                    () -> Cache.reasonToRebuild("pocket.distances", header("cubesolve 9.9.9")));
+                let why = Disk.withFilesystem(
+                    dir,
+                    () -> Cache.reasonToRebuild("pocket.distances", header("cubesolve 9.9.9"))
+                );
                 match why {
-                    case None    => Assert.assertTrueWithMsg(false, "the build differs")
+                    case None => Assert.assertTrueWithMsg(false, "the build differs")
                     case Some(w) =>
                         Assert.assertTrueWithMsg(
                             String.contains(substr = "0.0.9", w),
-                            "the reason should name the build that wrote it: ${w}")
+                            "the reason should name the build that wrote it: ${w}"
+                        )
                 };
-                let again = Disk.withFilesystem(dir,
-                    () -> Cache.table("pocket.distances", header("cubesolve 9.9.9"), build));
+                let again = Disk.withFilesystem(
+                    dir,
+                    () -> Cache.table("pocket.distances", header("cubesolve 9.9.9"), build)
+                );
                 Assert.assertOk(again);
-                Assert.assertEqWithMsg(expected = 2, Ref.get(builds),
-                    "a file from another build should have forced exactly one rebuild")
+                Assert.assertEqWithMsg(
+                    expected = 2,
+                    Ref.get(builds),
+                    "a file from another build should have forced exactly one rebuild"
+                )
         }
     }
 
@@ -115,10 +136,15 @@ mod TestCacheOnDisk {
                 Assert.assertTrueWithMsg(false, "could not make a temporary directory")
             case Ok(dir) =>
                 let done = Concurrent.Channel.newChannel(2);
-                let racer = () -> Concurrent.Channel.put(
-                    Disk.withFilesystem(dir, () ->
-                        Cache.table("pocket.distances", header("t"), () -> table(0))),
-                    done);
+                let racer = () ->
+                    Concurrent.Channel.put(
+                        Disk.withFilesystem(
+                            dir,
+                            () ->
+                                Cache.table("pocket.distances", header("t"), () -> table(0))
+                        ),
+                        done
+                    );
                 region rc {
                     spawn racer() @ rc;
                     spawn racer() @ rc
@@ -129,16 +155,28 @@ mod TestCacheOnDisk {
                 Assert.assertOk(right);
                 // Whoever published, what is on disk now must decode, and must
                 // be the table both of them built.
-                let after = Disk.withFilesystem(dir, () ->
-                    Cache.table("pocket.distances", header("t"), () ->
-                        Err("the race left nothing readable behind")));
+                let after = Disk.withFilesystem(
+                    dir,
+                    () ->
+                        Cache.table(
+                            "pocket.distances",
+                            header("t"),
+                            () ->
+                                Err("the race left nothing readable behind")
+                        )
+                );
                 match (after, table(0)) {
                     case (Ok(found), Ok(wanted)) =>
                         Assert.assertEq(expected = Table.entries(wanted), Table.entries(found));
-                        Vector.range(0, Table.entries(wanted)) |> Vector.forEach(i ->
-                            Assert.assertEqWithMsg(
-                                expected = Table.get(i, wanted), Table.get(i, found),
-                                "entry ${i} differs from what both racers built"))
+                        Vector.range(0, Table.entries(wanted))
+                            |> Vector.forEach(
+                                i ->
+                                    Assert.assertEqWithMsg(
+                                        expected = Table.get(i, wanted),
+                                        Table.get(i, found),
+                                        "entry ${i} differs from what both racers built"
+                                    )
+                            )
                     case _ =>
                         Assert.assertTrueWithMsg(false, "the race left no valid cache")
                 }

@@ -11,15 +11,15 @@
 /// eighty-one times that. Small enough to hold the exact distance to solved for
 /// every one.
 ///
-mod CubeSolve.Table.FirstLayer {
+pub mod CubeSolve.Table.FirstLayer {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Face
     use CubeSolve.Table
     use CubeSolve.Table.Cache
     use CubeSolve.Table.TableView
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The corners the first layer is made of: `DFR DLF DBL DRB`, slots 4 to 7.
@@ -61,7 +61,7 @@ mod CubeSolve.Table.FirstLayer {
     ///
     pub def encode(c: Cube.Cube): Result[String, Int32] =
         match Cube.orbits(c) {
-            case CornerCoord(cp, co) :: MidgeCoord(_, _) :: Nil =>
+            case Coord.CornerCoord(cp, co) :: Coord.MidgeCoord(_, _) :: Nil =>
                 let places = bottomCorners() |> Vector.map(p -> slotOf(p, cp));
                 if (Vector.exists(s -> s < 0, places))
                     Err("this cube is missing a bottom corner, which cannot happen")
@@ -92,16 +92,23 @@ mod CubeSolve.Table.FirstLayer {
             let idx = List.indexOf(slot, free) |> Option.getWithDefault(0);
             (sofar * (slotCount() - i) + idx, List.filter(x -> x != slot, free))
         };
-        let (placed, _) = Vector.range(0, 4) |> Vector.foldLeft(step,
-            (0, List.range(0, slotCount())));
+        let (placed, _) = Vector.range(0, 4)
+            |> Vector.foldLeft(
+                step,
+                (0, List.range(0, slotCount()))
+            );
         placed * twistCount() + twistDigits(twists)
 
     ///
     /// Four twists as a base-three number.
     ///
     def twistDigits(twists: Vector[Int32]): Int32 =
-        Vector.range(0, 4) |> Vector.foldLeft((acc, i) ->
-            acc * 3 + Vector.get(i, twists), 0)
+        Vector.range(0, 4)
+            |> Vector.foldLeft(
+                (acc, i) ->
+                    acc * 3 + Vector.get(i, twists),
+                0
+            )
 
     ///
     /// The slots and twists a coordinate stands for.
@@ -141,8 +148,11 @@ mod CubeSolve.Table.FirstLayer {
             let slot = List.nth(d, free) |> Option.getWithDefault(0);
             (List.filter(x -> x != slot, free), List.append(out, slot :: Nil))
         };
-        let (_, places) = digits |> List.foldLeft(step,
-            (List.range(0, slotCount()), Nil));
+        let (_, places) = digits
+            |> List.foldLeft(
+                step,
+                (List.range(0, slotCount()), Nil)
+            );
         List.toVector(places)
 
     ///
@@ -150,7 +160,7 @@ mod CubeSolve.Table.FirstLayer {
     ///
     pub def successor(index: Int32, m: Int32): Int32 =
         match Move.ofIndex(m) {
-            case None     => index
+            case None => index
             case Some(mv) =>
                 let (places, twists) = unrank(index);
                 let (moved, turned) = turn(Move.face(mv), Move.amount(mv), places, twists);
@@ -171,13 +181,17 @@ mod CubeSolve.Table.FirstLayer {
         else
             let perm = Move.cornerPermutation(f);
             let delta = Move.cornerTwist(f);
-            let landing = s -> Vector.range(0, slotCount())
-                |> Vector.findLeft(i -> Vector.get(i, perm) == s)
-                |> Option.getWithDefault(s);
+            let landing = s ->
+                Vector.range(0, slotCount())
+                    |> Vector.findLeft(i -> Vector.get(i, perm) == s)
+                    |> Option.getWithDefault(s);
             let moved = places |> Vector.map(landing);
             let added = i -> Vector.get(Vector.get(i, moved), delta);
-            let turnedTwists = Vector.range(0, 4) |> Vector.map(i ->
-                Int32.modulo(Vector.get(i, twists) + added(i), 3));
+            let turnedTwists = Vector.range(0, 4)
+                |> Vector.map(
+                    i ->
+                        Int32.modulo(Vector.get(i, twists) + added(i), 3)
+                );
             turn(f, k - 1, moved, turnedTwists)
 
     ///
@@ -187,8 +201,9 @@ mod CubeSolve.Table.FirstLayer {
     ///
     pub def build(): Result[String, TableView] =
         Table.distancesFrom(
-            { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8 },
-            successor)
+            {states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8},
+            successor
+        )
 
     ///
     /// The same table, read from the cache when one is there.

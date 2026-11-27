@@ -17,7 +17,7 @@
 /// Build them with `pocketOf` and `standardOf`, which check the size and return
 /// the reason when it is wrong.
 ///
-mod CubeSolve.Model.Sized {
+pub mod CubeSolve.Model.Sized {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
@@ -79,7 +79,9 @@ mod CubeSolve.Model.Sized {
         if (Cube.size(c) == n)
             Ok(c)
         else
-            Err("expected a ${n}x${n}x${n} but this is a ${Cube.size(c)}x"
-                + "${Cube.size(c)}x${Cube.size(c)}")
+            Err(
+                "expected a ${n}x${n}x${n} but this is a ${Cube.size(c)}x"
+                    + "${Cube.size(c)}x${Cube.size(c)}"
+            )
 
 }

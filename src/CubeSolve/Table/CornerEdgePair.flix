@@ -20,15 +20,15 @@
 /// eightfold spread that depth cannot explain and restore cost can. The figures
 /// are in `docs/architecture.md`.
 ///
-mod CubeSolve.Table.CornerEdgePair {
+pub mod CubeSolve.Table.CornerEdgePair {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
     use CubeSolve.Table
     use CubeSolve.Table.Cache
     use CubeSolve.Table.FirstLayer
     use CubeSolve.Table.TableView
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
 
     ///
     /// The middle edge this projection watches: `FR`, slot 8.
@@ -84,13 +84,15 @@ mod CubeSolve.Table.CornerEdgePair {
     ///
     pub def encode(c: Cube.Cube): Result[String, Int32] =
         match Cube.orbits(c) {
-            case CornerCoord(_, _) :: MidgeCoord(ep, eo) :: Nil =>
+            case Coord.CornerCoord(_, _) :: Coord.MidgeCoord(ep, eo) :: Nil =>
                 match slotOf(designatedEdge(), ep) {
-                    case -1   => Err("this cube is missing an edge, which cannot happen")
+                    case -1 => Err("this cube is missing an edge, which cannot happen")
                     case slot =>
                         FirstLayer.encode(c)
-                            |> Result.map(corners ->
-                                rank(corners, slot, Vector.get(slot, eo)))
+                            |> Result.map(
+                                corners ->
+                                    rank(corners, slot, Vector.get(slot, eo))
+                            )
                 }
             case _ => Err("this pair is a 3x3x3 coordinate")
         }
@@ -108,7 +110,7 @@ mod CubeSolve.Table.CornerEdgePair {
     ///
     pub def successor(index: Int32, m: Int32): Int32 =
         match Move.ofIndex(m) {
-            case None     => index
+            case None => index
             case Some(mv) =>
                 let (corners, slot, flip) = unrank(index);
                 let (movedSlot, movedFlip) =
@@ -141,8 +143,9 @@ mod CubeSolve.Table.CornerEdgePair {
     ///
     pub def build(): Result[String, TableView] =
         Table.distancesFrom(
-            { states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8 },
-            successor)
+            {states = stateCount(), goal = solvedIndex(), moves = moveCount(), bits = 8},
+            successor
+        )
 
     ///
     /// The same table, read from the cache when one is there.

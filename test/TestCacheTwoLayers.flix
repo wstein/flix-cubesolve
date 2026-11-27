@@ -6,7 +6,7 @@
 /// that module over the coupling threshold. The subject here is one claim about
 /// one set of tables.
 ///
-mod TestCacheTwoLayers {
+pub mod TestCacheTwoLayers {
 
     use CubeSolve.Table.Cache.Store
 
@@ -25,8 +25,10 @@ mod TestCacheTwoLayers {
     ///
     @Test
     def theTwoLayerTablesAreCachedAndNotRebuilt(): Unit \ Assert + IO =
-        if (Slow.skip("TestCacheTwoLayers.theTwoLayerTablesAreCachedAndNotRebuilt",
-                "builds all four first-two-layer tables twice"))
+        if (Slow.skip(
+            "TestCacheTwoLayers.theTwoLayerTablesAreCachedAndNotRebuilt",
+            "builds all four first-two-layer tables twice"
+        ))
             ()
         else
             checkIt()
@@ -50,10 +52,16 @@ mod TestCacheTwoLayers {
         let (first, afterFirst, second) = both;
         Assert.assertOk(first);
         Assert.assertOk(second);
-        Assert.assertEqWithMsg(expected = 4, afterFirst,
-            "the first run should have written all four first-two-layer tables");
-        Assert.assertEqWithMsg(expected = 4, Ref.get(writes),
+        Assert.assertEqWithMsg(
+            expected = 4,
+            afterFirst,
+            "the first run should have written all four first-two-layer tables"
+        );
+        Assert.assertEqWithMsg(
+            expected = 4,
+            Ref.get(writes),
             "the second run should have written nothing, but the total reached "
-                + "${Ref.get(writes)}")
+                + "${Ref.get(writes)}"
+        )
     }
 }

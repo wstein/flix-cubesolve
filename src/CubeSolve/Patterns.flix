@@ -24,7 +24,7 @@
 /// A state appears once per size-specific catalogue; alternate source
 /// algorithms are provenance, not a reason to add a duplicate state record.
 ///
-mod CubeSolve.Patterns {
+pub mod CubeSolve.Patterns {
 
     ///
     /// The URL a source id refers to, across both collections.

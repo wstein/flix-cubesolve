@@ -7,7 +7,7 @@
 /// the slow half and a different set of modules. One module doing both was over
 /// the coupling threshold.
 ///
-mod TestFirstLayerSolutions {
+pub mod TestFirstLayerSolutions {
 
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
@@ -27,20 +27,24 @@ mod TestFirstLayerSolutions {
     @Test
     def everyAnswerSolvesTheFirstLayerAndIsShortEnoughToTeach(): Unit \ Assert + IO =
         if (Slow.skip(
-                "TestFirstLayerSolutions.everyAnswerSolvesTheFirstLayer",
-                "builds the first-layer table and solves a sample"))
+            "TestFirstLayerSolutions.everyAnswerSolvesTheFirstLayer",
+            "builds the first-layer table and solves a sample"
+        ))
             ()
         else {
             match CubeSolve.Solve.FirstLayer.build() {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "building the tables")
-                case Ok(t)  =>
-                    Vector.range(0, 6) |> Vector.forEach(i -> {
-                        let seed = Int32.toInt64(i) + 60000i64;
-                        match Random.sampleDeterministic(seed, 3) |> Result.map(fst) {
-                            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
-                            case Ok(c)  => check(t, seed, c)
-                        }
-                    })
+                case Ok(t) =>
+                    Vector.range(0, 6)
+                        |> Vector.forEach(
+                            i -> {
+                                let seed = Int32.toInt64(i) + 60000i64;
+                                match Random.sampleDeterministic(seed, 3) |> Result.map(fst) {
+                                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
+                                    case Ok(c)  => check(t, seed, c)
+                                }
+                            }
+                        )
             }
         }
 
@@ -51,11 +55,13 @@ mod TestFirstLayerSolutions {
         match CubeSolve.Solve.FirstLayer.solution(t, c, noNodeLimit()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
             case Ok(ms) =>
-                Assert.assertTrueWithMsg(List.length(ms) <= 11,
+                Assert.assertTrueWithMsg(
+                    List.length(ms) <= 11,
                     "seed ${seed}: ${List.length(ms)} moves, longer than the "
-                        + "eleven the corpus measurement worst-cased at");
+                        + "eleven the corpus measurement worst-cased at"
+                );
                 match Cube.applyAll(ms, c) {
-                    case Err(e)    => Assert.assertEqWithMsg(expected = "", e, "replay")
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "replay")
                     case Ok(after) =>
                         // Against the ladder's decoded-model predicate rather than
                         // the coordinates the search was steered by. `isSolved`
@@ -63,10 +69,10 @@ mod TestFirstLayerSolutions {
                         // shared would satisfy it; the ladder reads the cube.
                         Assert.assertTrueWithMsg(
                             Beginner.isComplete(Beginner.Stage.FirstLayer, after),
-                            "seed ${seed}: the answer does not reach the FirstLayer rung")
+                            "seed ${seed}: the answer does not reach the FirstLayer rung"
+                        )
                 }
         }
-
 
     ///
     /// A node budget larger than any search in this module can spend.

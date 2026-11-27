@@ -6,7 +6,7 @@
 /// over that subgroup. `CubeSolve.Table.Domino` holds its coordinates and
 /// tables; `CubeSolve.Solve.Standard` is what puts the two phases together.
 ///
-mod CubeSolve.Solve.Domino {
+pub mod CubeSolve.Solve.Domino {
 
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Solve.IdaStar.Phase

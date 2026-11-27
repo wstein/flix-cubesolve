@@ -7,7 +7,7 @@
 /// `docs/conventions.md` states it in prose as well, and why every generated
 /// table carries it in its header.
 ///
-mod CubeSolve.Model.Move {
+pub mod CubeSolve.Model.Move {
 
     use CubeSolve.Model.Move.Face.{U, R, F, D, L, B}
     use CubeSolve.Model.Move.Move.Turn
@@ -23,7 +23,6 @@ mod CubeSolve.Model.Move {
     pub enum Move with Eq, Order {
         case Turn(Face, Int32)
     }
-
 
     ///
     /// The six faces, in Kociemba order.
@@ -117,8 +116,10 @@ mod CubeSolve.Model.Move {
     /// The move with index `i`, or `None` when `i` names no move.
     ///
     pub def ofIndex(i: Int32): Option[Move] =
-        if (i < 0 or i >= 18) None
-        else faceOfIndex(i / 3) |> Option.map(f -> Turn(f, Int32.modulo(i, 3) + 1))
+        if (i < 0 or i >= 18)
+            None
+        else
+            faceOfIndex(i / 3) |> Option.map(f -> Turn(f, Int32.modulo(i, 3) + 1))
 
     ///
     /// All eighteen half-turn-metric moves, in index order.
@@ -141,12 +142,15 @@ mod CubeSolve.Model.Move {
     ///   opposite faces are three apart, both rules are the one test below.
     ///
     pub def htmPruningAllows(last: Int32, next: Int32): Bool =
-        last < 0 or {
-            let lastFace = last / 3;
-            let nextFace = next / 3;
-            not (Int32.modulo(lastFace, 3) == Int32.modulo(nextFace, 3)
-                 and lastFace >= nextFace)
-        }
+        last < 0
+            or {
+                let lastFace = last / 3;
+                let nextFace = next / 3;
+                not (
+                    Int32.modulo(lastFace, 3) == Int32.modulo(nextFace, 3)
+                        and lastFace >= nextFace
+                )
+            }
 
     ///
     /// The move that undoes `m`.
@@ -163,11 +167,14 @@ mod CubeSolve.Model.Move {
     /// `m` in the usual notation: `U`, `U2`, `U'`.
     ///
     pub def show(m: Move): String =
-        "${face(m)}" + (match amount(m) {
-            case 1 => ""
-            case 2 => "2"
-            case _ => "'"
-        })
+        "${face(m)}"
+            + (
+                match amount(m) {
+                    case 1 => ""
+                    case 2 => "2"
+                    case _ => "'"
+                }
+            )
 
     ///
     /// `ms` with adjacent turns of one face composed into a single turn.
@@ -223,14 +230,18 @@ mod CubeSolve.Model.Move {
         let rest = String.dropLeft(1, token);
         match parseFace(letter) {
             case None =>
-                Err("'${token}' does not name a move: '${letter}' is not one "
-                    + "of U R F D L B")
+                Err(
+                    "'${token}' does not name a move: '${letter}' is not one "
+                        + "of U R F D L B"
+                )
             case Some(f) => match rest {
-                case ""  => Ok(Turn(f, 1))
+                case "" => Ok(Turn(f, 1))
                 case "2" => Ok(Turn(f, 2))
                 case "'" => Ok(Turn(f, 3))
-                case _   => Err("'${token}' does not name a move: expected '${letter}', "
-                              + "'${letter}2' or '${letter}'' but found the suffix '${rest}'")
+                case _ => Err(
+                    "'${token}' does not name a move: expected '${letter}', "
+                        + "'${letter}2' or '${letter}'' but found the suffix '${rest}'"
+                )
             }
         }
 
@@ -272,34 +283,36 @@ mod CubeSolve.Model.Move {
     /// The first entry is the orientation facelet, so a piece's twist is how
     /// far its own first face has rotated away from its slot's.
     ///
-    pub def cornerFaces(): Vector[Vector[Int32]] = Vector#{
-        Vector#{0, 1, 2},
-        Vector#{0, 2, 4},
-        Vector#{0, 4, 5},
-        Vector#{0, 5, 1},
-        Vector#{3, 2, 1},
-        Vector#{3, 4, 2},
-        Vector#{3, 5, 4},
-        Vector#{3, 1, 5}
-    }
+    pub def cornerFaces(): Vector[Vector[Int32]] =
+        Vector#{
+            Vector#{0, 1, 2},
+            Vector#{0, 2, 4},
+            Vector#{0, 4, 5},
+            Vector#{0, 5, 1},
+            Vector#{3, 2, 1},
+            Vector#{3, 4, 2},
+            Vector#{3, 5, 4},
+            Vector#{3, 1, 5}
+        }
 
     ///
     /// The faces each edge slot touches, its orientation facelet first.
     ///
-    pub def edgeFaces(): Vector[Vector[Int32]] = Vector#{
-        Vector#{0, 1},
-        Vector#{0, 2},
-        Vector#{0, 4},
-        Vector#{0, 5},
-        Vector#{3, 1},
-        Vector#{3, 2},
-        Vector#{3, 4},
-        Vector#{3, 5},
-        Vector#{2, 1},
-        Vector#{2, 4},
-        Vector#{5, 4},
-        Vector#{5, 1}
-    }
+    pub def edgeFaces(): Vector[Vector[Int32]] =
+        Vector#{
+            Vector#{0, 1},
+            Vector#{0, 2},
+            Vector#{0, 4},
+            Vector#{0, 5},
+            Vector#{3, 1},
+            Vector#{3, 2},
+            Vector#{3, 4},
+            Vector#{3, 5},
+            Vector#{2, 1},
+            Vector#{2, 4},
+            Vector#{5, 4},
+            Vector#{5, 1}
+        }
 
     ///
     /// Where each corner slot's piece comes from, for one clockwise turn of `f`.

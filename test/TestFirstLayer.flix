@@ -12,8 +12,7 @@
 /// satisfy it. `Method.Beginner` reads the cube instead, and that is what the
 /// public stage boundary means.
 ///
-mod TestFirstLayer {
-
+pub mod TestFirstLayer {
 
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
@@ -31,14 +30,23 @@ mod TestFirstLayer {
     def theCornerTableIsCompleteAndSevenDeep(): Unit \ Assert =
         match CubeSolve.Table.FirstLayer.build() {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "building")
-            case Ok(t)  =>
-                Assert.assertEqWithMsg(expected = stateCount(), Table.entries(t),
-                    "one entry per state");
+            case Ok(t) =>
+                Assert.assertEqWithMsg(
+                    expected = stateCount(),
+                    Table.entries(t),
+                    "one entry per state"
+                );
                 let deepest = Vector.range(0, stateCount())
                     |> Vector.foldLeft((w, i) -> Int32.max(w, Table.get(i, t)), 0);
-                Assert.assertEqWithMsg(expected = 7, deepest,
-                    "the furthest bottom corners are seven moves from home");
-                Assert.assertEqWithMsg(expected = 0, Table.get(solvedIndex(), t),
-                    "solved corners are nought moves from home")
+                Assert.assertEqWithMsg(
+                    expected = 7,
+                    deepest,
+                    "the furthest bottom corners are seven moves from home"
+                );
+                Assert.assertEqWithMsg(
+                    expected = 0,
+                    Table.get(solvedIndex(), t),
+                    "solved corners are nought moves from home"
+                )
         }
 }

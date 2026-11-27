@@ -6,8 +6,7 @@
 /// collisions at worst, and either makes every distance below it a lie. So it
 /// is checked exhaustively rather than sampled.
 ///
-mod TestCross {
-
+pub mod TestCross {
 
     use CubeSolve.Method.Beginner
     use CubeSolve.Model.Cube
@@ -31,12 +30,18 @@ mod TestCross {
         Assert.assertEq(expected = Ok(solvedIndex()), encode(made("")));
         Assert.assertTrue(Cross.isSolved(made("")));
         // the top layer may be anything at all
-        Assert.assertTrueWithMsg(Cross.isSolved(made("U R U' R' F' U F")),
-            "turning the top does not disturb the cross");
-        Assert.assertFalseWithMsg(Cross.isSolved(made("D")),
-            "turning the bottom does");
-        Assert.assertFalseWithMsg(Cross.isSolved(made("F")),
-            "and so does any move that lifts a cross edge")
+        Assert.assertTrueWithMsg(
+            Cross.isSolved(made("U R U' R' F' U F")),
+            "turning the top does not disturb the cross"
+        );
+        Assert.assertFalseWithMsg(
+            Cross.isSolved(made("D")),
+            "turning the bottom does"
+        );
+        Assert.assertFalseWithMsg(
+            Cross.isSolved(made("F")),
+            "and so does any move that lifts a cross edge"
+        )
 
     ///
     /// The table is exact, and eight is as far as a cross ever is.
@@ -49,15 +54,24 @@ mod TestCross {
     def theTableIsCompleteAndTheDiameterIsEight(): Unit \ Assert =
         match Cross.build() {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "building the table")
-            case Ok(t)  =>
-                Assert.assertEqWithMsg(expected = stateCount(), Table.entries(t),
-                    "one entry per state");
+            case Ok(t) =>
+                Assert.assertEqWithMsg(
+                    expected = stateCount(),
+                    Table.entries(t),
+                    "one entry per state"
+                );
                 let deepest = Vector.range(0, stateCount())
                     |> Vector.foldLeft((worst, i) -> Int32.max(worst, Table.get(i, t)), 0);
-                Assert.assertEqWithMsg(expected = Cross.diameter(), deepest,
-                    "the furthest cross should be ${Cross.diameter()} moves out");
-                Assert.assertEqWithMsg(expected = 0, Table.get(solvedIndex(), t),
-                    "a solved cross is nought moves from solved")
+                Assert.assertEqWithMsg(
+                    expected = Cross.diameter(),
+                    deepest,
+                    "the furthest cross should be ${Cross.diameter()} moves out"
+                );
+                Assert.assertEqWithMsg(
+                    expected = 0,
+                    Table.get(solvedIndex(), t),
+                    "a solved cross is nought moves from solved"
+                )
         }
 
     ///
@@ -71,39 +85,44 @@ mod TestCross {
     def everySolutionSolvesTheCrossInTheOptimalNumberOfMoves(): Unit \ Assert =
         match Cross.build() {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "building the table")
-            case Ok(t)  =>
-                Vector.range(0, 60) |> Vector.forEach(i -> {
-                    let seed = Int32.toInt64(i) + 40000i64;
-                    match Random.sampleDeterministic(seed, 3) |> Result.map(fst) {
-                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
-                        case Ok(c)  =>
-                            match (encode(c), Cross.solution(t, c, noNodeLimit())) {
-                                case (Ok(here), Ok(ms)) =>
-                                    Assert.assertEqWithMsg(
-                                        expected = Table.get(here, t), List.length(ms),
-                                        "seed ${seed}: the solution is not the length "
-                                            + "the table says is optimal");
-                                    match Cube.applyAll(ms, c) {
-                                        case Err(e) =>
-                                            Assert.assertEqWithMsg(expected = "", e, "replay")
-                                        case Ok(after) =>
-                                            // Against the ladder's own predicate, not the
-                                            // coordinate the search was steered by: a
-                                            // coordinate bug and a search bug that agreed
-                                            // with each other would satisfy `isSolved` and
-                                            // still leave the cross unsolved.
-                                            Assert.assertTrueWithMsg(
-                                                Beginner.isComplete(Beginner.Stage.Cross, after),
-                                                "seed ${seed}: the answer does not reach "
-                                                    + "the Cross rung")
+            case Ok(t) =>
+                Vector.range(0, 60)
+                    |> Vector.forEach(
+                        i -> {
+                            let seed = Int32.toInt64(i) + 40000i64;
+                            match Random.sampleDeterministic(seed, 3) |> Result.map(fst) {
+                                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "seed ${seed}")
+                                case Ok(c) =>
+                                    match (encode(c), Cross.solution(t, c, noNodeLimit())) {
+                                        case (Ok(here), Ok(ms)) =>
+                                            Assert.assertEqWithMsg(
+                                                expected = Table.get(here, t),
+                                                List.length(ms),
+                                                "seed ${seed}: the solution is not the length "
+                                                    + "the table says is optimal"
+                                            );
+                                            match Cube.applyAll(ms, c) {
+                                                case Err(e) =>
+                                                    Assert.assertEqWithMsg(expected = "", e, "replay")
+                                                case Ok(after) =>
+                                                    // Against the ladder's own predicate, not the
+                                                    // coordinate the search was steered by: a
+                                                    // coordinate bug and a search bug that agreed
+                                                    // with each other would satisfy `isSolved` and
+                                                    // still leave the cross unsolved.
+                                                    Assert.assertTrueWithMsg(
+                                                        Beginner.isComplete(Beginner.Stage.Cross, after),
+                                                        "seed ${seed}: the answer does not reach "
+                                                            + "the Cross rung"
+                                                    )
+                                            }
+                                        case _ =>
+                                            Assert.assertTrueWithMsg(false, "seed ${seed} failed")
                                     }
-                                case _ =>
-                                    Assert.assertTrueWithMsg(false, "seed ${seed} failed")
                             }
-                    }
-                })
+                        }
+                    )
         }
-
 
     ///
     /// A node budget larger than any search in this module can spend.

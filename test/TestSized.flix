@@ -1,4 +1,4 @@
-mod TestSized {
+pub mod TestSized {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Sized
@@ -16,7 +16,7 @@ mod TestSized {
     @Test
     def aCubeOfTheWrongSizeIsRefusedByName(): Unit \ Assert =
         match Cube.solved(3) |> Result.flatMap(Sized.pocketOf) {
-            case Ok(_)  => Assert.assertTrueWithMsg(false, "a 3x3x3 is not a pocket cube")
+            case Ok(_) => Assert.assertTrueWithMsg(false, "a 3x3x3 is not a pocket cube")
             case Err(e) =>
                 Assert.assertTrue(String.contains(substr = "2x2x2", e));
                 Assert.assertTrue(String.contains(substr = "3x3x3", e))
@@ -30,7 +30,7 @@ mod TestSized {
     def wrappingIsLossless(): Unit \ Assert =
         match Cube.solved(2) |> Result.flatMap(c -> Cube.applyNotation("R U F'", c)) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "scramble applies")
-            case Ok(c)  =>
+            case Ok(c) =>
                 Assert.assertEq(
                     expected = Ok(c),
                     Sized.pocketOf(c) |> Result.map(Sized.cubeOfPocket)

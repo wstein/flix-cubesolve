@@ -26,7 +26,7 @@
 /// coordinate the search just wrote -- a search bug that corrupts a coordinate
 /// would otherwise validate itself.
 ///
-mod CubeSolve {
+pub mod CubeSolve {
 
     ///
     /// The cube sizes this engine **solves**, in full.
@@ -54,7 +54,7 @@ mod CubeSolve {
     ///
     /// The floor is the 2x2x2 because a 1x1x1 has nothing to permute. The
     /// ceiling is the 5x5x5 because that is what this project aims at and what
-    /// `TestStickers` exercises. `Orbit64.Orbit.layout` keeps answering above
+    /// `TestStickers` exercises. `CubeSolve.Model.Pieces.layout` keeps answering above
     /// it, and the sticker geometry would probably keep working, but "probably"
     /// is not what this list is for.
     ///

@@ -1,7 +1,7 @@
 ///
 /// Turning an algorithm into a step of a plan.
 ///
-mod TestSteps {
+pub mod TestSteps {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
@@ -37,7 +37,8 @@ mod TestSteps {
                             Facelets.token(a) != Facelets.token(b),
                             "if these agree, flattening is safe and this test is "
                                 + "wrong; they must differ, which is why a step "
-                                + "keeps its notation")
+                                + "keeps its notation"
+                        )
                     case _ => Assert.assertTrueWithMsg(false, "both should apply")
                 }
         }
@@ -55,9 +56,15 @@ mod TestSteps {
                 :: ("(y') R U2 R'", "(y') R U2 R'")
                 :: ("R R R", "R'")
                 :: Nil;
-        cases |> List.forEach(match (given, want) ->
-            Assert.assertEqWithMsg(expected = want, Notation.compact(given),
-                "compacting '${given}'"))
+        cases
+            |> List.forEach(
+                match (given, want) ->
+                    Assert.assertEqWithMsg(
+                        expected = want,
+                        Notation.compact(given),
+                        "compacting '${given}'"
+                    )
+            )
 
     ///
     /// Compacting never changes what a sequence does.
@@ -70,17 +77,23 @@ mod TestSteps {
                 :: "U U y U U"
                 :: "F F F B B B"
                 :: Nil;
-        sequences |> List.forEach(text ->
-            match Cube.solved(3) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
-                case Ok(start) =>
-                    match (Cube.applyNotation(text, start),
-                           Cube.applyNotation(Notation.compact(text), start)) {
-                        case (Ok(a), Ok(b)) =>
-                            Assert.assertEqWithMsg(
-                                expected = Facelets.token(a), Facelets.token(b),
-                                "compacting '${text}' changed what it does")
-                        case _ => Assert.assertTrueWithMsg(false, "applying '${text}'")
-                    }
-            })
+        sequences
+            |> List.forEach(
+                text -> match Cube.solved(3) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved")
+                    case Ok(start) =>
+                        match (
+                            Cube.applyNotation(text, start),
+                            Cube.applyNotation(Notation.compact(text), start)
+                        ) {
+                            case (Ok(a), Ok(b)) =>
+                                Assert.assertEqWithMsg(
+                                    expected = Facelets.token(a),
+                                    Facelets.token(b),
+                                    "compacting '${text}' changed what it does"
+                                )
+                            case _ => Assert.assertTrueWithMsg(false, "applying '${text}'")
+                        }
+                }
+            )
 }

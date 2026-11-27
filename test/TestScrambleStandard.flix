@@ -1,4 +1,4 @@
-mod TestScrambleStandard {
+pub mod TestScrambleStandard {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Sized
@@ -9,7 +9,7 @@ mod TestScrambleStandard {
     /// Every table a 3x3x3 solve needs. Built once; the whole file shares it.
     def tables(): Tables \ Assert =
         match CubeSolve.Solve.Standard.buildTables() {
-            case Ok(t)  => t
+            case Ok(t) => t
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected the tables");
                 unreachable!()
@@ -23,11 +23,13 @@ mod TestScrambleStandard {
         Assert.assertEqWithMsg(
             expected = Ok(Cube.orbits(Sized.cubeOfStandard(Standard.state(s)))),
             built |> Result.map(Cube.orbits),
-            "the scramble did not produce the state it reports");
+            "the scramble did not produce the state it reports"
+        );
         Assert.assertEqWithMsg(
             expected = None,
             Validate.faultOf(Sized.cubeOfStandard(Standard.state(s))),
-            "the scramble produced an unreachable state")
+            "the scramble produced an unreachable state"
+        )
 
     /// Everything the 3x3x3 scrambler must do, over one build of the tables.
     ///
@@ -44,8 +46,10 @@ mod TestScrambleStandard {
     /// - **Seeding is deterministic**, or no scramble could ever be reproduced.
     @Test
     def theStandardScramblerIsSoundCertifiedAndHonest(): Unit \ Assert + IO =
-        if (Slow.skip("TestScrambleStandard.theStandardScramblerIsSoundCertifiedAndHonest",
-                "certifies scrambles through the solver"))
+        if (Slow.skip(
+            "TestScrambleStandard.theStandardScramblerIsSoundCertifiedAndHonest",
+            "certifies scrambles through the solver"
+        ))
             ()
         else {
             let t = tables();
@@ -53,29 +57,38 @@ mod TestScrambleStandard {
 
             // uniform
             def draw(i, seed, acc) =
-                if (i <= 0) acc
-                else match Standard.uniform(t, budget, seed) {
-                    case Err(e) =>
-                        Assert.assertEqWithMsg(expected = "", e, "uniform scramble");
-                        acc
-                    case Ok((s, next)) => draw(i - 1, next, s :: acc)
-                };
+                if (i <= 0)
+                    acc
+                else
+                    match Standard.uniform(t, budget, seed) {
+                        case Err(e) =>
+                            Assert.assertEqWithMsg(expected = "", e, "uniform scramble");
+                            acc
+                        case Ok((s, next)) => draw(i - 1, next, s :: acc)
+                    };
             let drawn = draw(6, 31337i64, Nil);
             Assert.assertEq(expected = 6, List.length(drawn));
-            drawn |> List.forEach(s -> {
-                assertSound(s);
-                Assert.assertEqWithMsg(
-                    expected = Standard.atMostMoves(s), List.length(Standard.moves(s)),
-                    "the upper bound should be the length of the solution that certified it");
-                Assert.assertTrueWithMsg(
-                    Standard.atLeastMoves(s) <= Standard.atMostMoves(s),
-                    "the bounds cross: at least ${Standard.atLeastMoves(s)} but at most "
-                        + "${Standard.atMostMoves(s)}");
-                Assert.assertTrueWithMsg(
-                    Standard.atLeastMoves(s) >= 0 and Standard.atLeastMoves(s) <= 9,
-                    "the lower bound ${Standard.atLeastMoves(s)} is outside what the "
-                        + "phase-one tables can certify")
-            });
+            drawn
+                |> List.forEach(
+                    s -> {
+                        assertSound(s);
+                        Assert.assertEqWithMsg(
+                            expected = Standard.atMostMoves(s),
+                            List.length(Standard.moves(s)),
+                            "the upper bound should be the length of the solution that certified it"
+                        );
+                        Assert.assertTrueWithMsg(
+                            Standard.atLeastMoves(s) <= Standard.atMostMoves(s),
+                            "the bounds cross: at least ${Standard.atLeastMoves(s)} but at most "
+                                + "${Standard.atMostMoves(s)}"
+                        );
+                        Assert.assertTrueWithMsg(
+                            Standard.atLeastMoves(s) >= 0 and Standard.atLeastMoves(s) <= 9,
+                            "the lower bound ${Standard.atLeastMoves(s)} is outside what the "
+                                + "phase-one tables can certify"
+                        )
+                    }
+                );
 
             // atMost
             match Standard.atMost(t, budget, 22, 99i64) {
@@ -85,7 +98,8 @@ mod TestScrambleStandard {
                     Assert.assertTrueWithMsg(
                         Standard.atMostMoves(s) <= 22,
                         "atMost(22) returned a scramble certified at "
-                            + "${Standard.atMostMoves(s)}")
+                            + "${Standard.atMostMoves(s)}"
+                    )
             };
 
             // atLeast, and its ceiling
@@ -95,15 +109,20 @@ mod TestScrambleStandard {
                     Assert.assertTrueWithMsg(
                         Standard.atLeastMoves(s) >= 7,
                         "atLeast(7) returned a scramble certified at only "
-                            + "${Standard.atLeastMoves(s)}")
+                            + "${Standard.atLeastMoves(s)}"
+                    )
             };
             match Standard.atLeast(t, 10, 1i64) {
-                case Ok(_)  => Assert.assertTrueWithMsg(false, "10 is above the ceiling")
+                case Ok(_) => Assert.assertTrueWithMsg(false, "10 is above the ceiling")
                 case Err(e) =>
-                    Assert.assertTrueWithMsg(String.contains(substr = "9", e),
-                        "the refusal should name the ceiling, but said: ${e}");
-                    Assert.assertTrueWithMsg(String.contains(substr = "pruning", e),
-                        "the refusal should say why the ceiling is where it is")
+                    Assert.assertTrueWithMsg(
+                        String.contains(substr = "9", e),
+                        "the refusal should name the ceiling, but said: ${e}"
+                    );
+                    Assert.assertTrueWithMsg(
+                        String.contains(substr = "pruning", e),
+                        "the refusal should say why the ceiling is where it is"
+                    )
             };
 
             // determinism
@@ -112,7 +131,9 @@ mod TestScrambleStandard {
             let twice = Standard.uniform(t, budget, 2024i64)
                 |> Result.map(match (s, _) -> Standard.show(s));
             Assert.assertEqWithMsg(
-                expected = once, twice, "the same seed should give the same scramble")
-
-    }
+                expected = once,
+                twice,
+                "the same seed should give the same scramble"
+            )
         }
+}

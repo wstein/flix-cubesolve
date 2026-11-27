@@ -1,4 +1,4 @@
-mod TestTwoPhase {
+pub mod TestTwoPhase {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -11,7 +11,7 @@ mod TestTwoPhase {
     /// so they are built once and asserted against thoroughly.
     def tables(): Standard.Tables \ Assert =
         match Standard.buildTables() {
-            case Ok(t)  => t
+            case Ok(t) => t
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected the tables");
                 unreachable!()
@@ -22,7 +22,7 @@ mod TestTwoPhase {
             |> Result.flatMap(c -> Cube.applyNotation(notation, c))
             |> Result.flatMap(Sized.standardOf);
         match built {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected a cube");
                 unreachable!()
@@ -30,13 +30,13 @@ mod TestTwoPhase {
 
     /// The corpus. Fixed, so a regression in solution length is visible.
     def corpus(): List[String] =
-        "R" ::
-        "R U R' U'" ::
-        "F R U' R' U' R U R' F'" ::
-        "R U2 F' L D B2 R' U" ::
-        "D2 R' U2 B L F2 D R' B2 U'" ::
-        "U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2" ::
-        Nil
+        "R"
+            :: "R U R' U'"
+            :: "F R U' R' U' R U R' F'"
+            :: "R U2 F' L D B2 R' U"
+            :: "D2 R' U2 B L F2 D R' B2 U'"
+            :: "U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2"
+            :: Nil
 
     // ---------- solving ----------
 
@@ -67,72 +67,107 @@ mod TestTwoPhase {
     /// one.
     @Test
     def theTwoPhaseSolverSolvesReplaysAndRespectsItsBudget(): Unit \ Assert + IO =
-        if (Slow.skip("TestTwoPhase.theTwoPhaseSolverSolvesReplaysAndRespectsItsBudget",
-                "runs the two-phase solver over a corpus"))
+        if (Slow.skip(
+            "TestTwoPhase.theTwoPhaseSolverSolvesReplaysAndRespectsItsBudget",
+            "runs the two-phase solver over a corpus"
+        ))
             ()
         else {
             let t = tables();
             let budget = Standard.defaultBudget();
 
-            corpus() |> List.forEach(alg -> {
-                let cube = scrambled(alg);
-                match Standard.solutionWith(t, budget, cube) {
-                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
-                    case Ok(ms) =>
-                        Assert.assertTrueWithMsg(
-                            List.length(ms) <= 25,
-                            "'${alg}' took ${List.length(ms)} moves, over the budget");
-                        let replayed = Cube.applyAll(ms, Sized.cubeOfStandard(cube))
-                            |> Result.map(Cube.isSolved);
-                        Assert.assertEqWithMsg(
-                            expected = Ok(true), replayed,
-                            "the solution for '${alg}' did not solve it: ${Move.showAll(ms)}")
-                }
-            });
+            corpus()
+                |> List.forEach(
+                    alg -> {
+                        let cube = scrambled(alg);
+                        match Standard.solutionWith(t, budget, cube) {
+                            case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
+                            case Ok(ms) =>
+                                Assert.assertTrueWithMsg(
+                                    List.length(ms) <= 25,
+                                    "'${alg}' took ${List.length(ms)} moves, over the budget"
+                                );
+                                let replayed = Cube.applyAll(ms, Sized.cubeOfStandard(cube))
+                                    |> Result.map(Cube.isSolved);
+                                Assert.assertEqWithMsg(
+                                    expected = Ok(true),
+                                    replayed,
+                                    "the solution for '${alg}' did not solve it: ${Move.showAll(ms)}"
+                                )
+                        }
+                    }
+                );
 
             match Sized.solvedStandard() {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved exists")
-                case Ok(c)  =>
+                case Ok(c) =>
                     Assert.assertEqWithMsg(
-                        expected = Ok(Nil), Standard.solutionWith(t, budget, c),
-                        "a solved cube should need no moves")
+                        expected = Ok(Nil),
+                        Standard.solutionWith(t, budget, c),
+                        "a solved cube should need no moves"
+                    )
             };
 
-            let starved = Standard.budget(
-                { minViews = 1, probeFloor = 0, probeMax = 1, maxDepth = 4, handovers = 300,
-                            phase1Depth = 12 });
+            let starved = Standard.budget({
+                minViews    = 1,
+                probeFloor  = 0,
+                probeMax    = 1,
+                maxDepth    = 4,
+                handovers   = 300,
+                phase1Depth = 12
+            });
             let hard = scrambled("U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2");
             match Standard.solutionWith(t, starved, hard) {
                 case Ok(ms) =>
-                    Assert.assertTrueWithMsg(false,
-                        "four moves cannot solve that: ${Move.showAll(ms)}")
+                    Assert.assertTrueWithMsg(
+                        false,
+                        "four moves cannot solve that: ${Move.showAll(ms)}"
+                    )
                 case Err(e) =>
-                    Assert.assertTrueWithMsg(String.contains(substr = "probes", e),
-                        "the refusal should name the probe budget, but said: ${e}")
+                    Assert.assertTrueWithMsg(
+                        String.contains(substr = "probes", e),
+                        "the refusal should name the probe budget, but said: ${e}"
+                    )
             };
 
-            let quick = Standard.budget(
-                { minViews = 1, probeFloor = 0, probeMax = 40, maxDepth = 25, handovers = 300,
-                            phase1Depth = 12 });
-            let patient = Standard.budget(
-                { minViews = 4, probeFloor = 0, probeMax = 400, maxDepth = 25, handovers = 300,
-                            phase1Depth = 12 });
+            let quick = Standard.budget({
+                minViews    = 1,
+                probeFloor  = 0,
+                probeMax    = 40,
+                maxDepth    = 25,
+                handovers   = 300,
+                phase1Depth = 12
+            });
+            let patient = Standard.budget({
+                minViews    = 4,
+                probeFloor  = 0,
+                probeMax    = 400,
+                maxDepth    = 25,
+                handovers   = 300,
+                phase1Depth = 12
+            });
             // Three of the corpus rather than all six: this solves each scramble
             // twice, and the property is about the budget rather than about any
             // particular cube.
-            corpus() |> List.take(3) |> List.forEach(alg -> {
-                let cube = scrambled(alg);
-                match (Standard.solutionWith(t, quick, cube),
-                       Standard.solutionWith(t, patient, cube)) {
-                    case (Ok(fast), Ok(slow)) =>
-                        Assert.assertTrueWithMsg(
-                            List.length(slow) <= List.length(fast),
-                            "'${alg}': more probes gave ${List.length(slow)} moves "
-                                + "against ${List.length(fast)}")
-                    case _ =>
-                        Assert.assertTrueWithMsg(false, "both budgets should solve '${alg}'")
-                }
-            });
+            corpus() |> List.take(3)
+                |> List.forEach(
+                    alg -> {
+                        let cube = scrambled(alg);
+                        match (
+                            Standard.solutionWith(t, quick, cube),
+                            Standard.solutionWith(t, patient, cube)
+                        ) {
+                            case (Ok(fast), Ok(slow)) =>
+                                Assert.assertTrueWithMsg(
+                                    List.length(slow) <= List.length(fast),
+                                    "'${alg}': more probes gave ${List.length(slow)} moves "
+                                        + "against ${List.length(fast)}"
+                                )
+                            case _ =>
+                                Assert.assertTrueWithMsg(false, "both budgets should solve '${alg}'")
+                        }
+                    }
+                );
 
             // ---- superflip, the known worst case ----
             //
@@ -153,22 +188,30 @@ mod TestTwoPhase {
                 case Err(e) => Assert.assertEqWithMsg(expected = "", e, "superflip solves")
                 case Ok(ms) =>
                     let n = List.length(ms);
-                    Assert.assertTrueWithMsg(n >= 20,
-                        "superflip cannot be solved in ${n} moves: its optimum is 20");
-                    Assert.assertTrueWithMsg(n <= 22,
-                        "superflip took ${n} moves, over the recorded 22");
+                    Assert.assertTrueWithMsg(
+                        n >= 20,
+                        "superflip cannot be solved in ${n} moves: its optimum is 20"
+                    );
+                    Assert.assertTrueWithMsg(
+                        n <= 22,
+                        "superflip took ${n} moves, over the recorded 22"
+                    );
                     Assert.assertEqWithMsg(
                         expected = Ok(true),
                         Cube.applyAll(ms, Sized.cubeOfStandard(superflip))
                             |> Result.map(Cube.isSolved),
-                        "the superflip solution did not solve it")
+                        "the superflip solution did not solve it"
+                    )
             };
 
             let repeatable = scrambled("R U2 F' L D B2 R' U");
             let once = Standard.solutionWith(t, budget, repeatable) |> Result.map(Move.showAll);
             let twice = Standard.solutionWith(t, budget, repeatable) |> Result.map(Move.showAll);
             Assert.assertEqWithMsg(
-                expected = once, twice, "the same budget should give the same solution");
+                expected = once,
+                twice,
+                "the same budget should give the same solution"
+            );
 
             // ---- the quality baseline ----
             //
@@ -199,35 +242,42 @@ mod TestTwoPhase {
             // improvement does not have to update the test.
             let samples = 16;
             def loop(i, seed, total, worst) =
-                if (i <= 0) (total, worst)
-                else match Random.sampleDeterministic(seed, 3) {
-                    case Err(e) =>
-                        Assert.assertEqWithMsg(expected = "", e, "sampling");
-                        (total, worst)
-                    case Ok((c, next)) =>
-                        let solved = Sized.standardOf(c)
-                            |> Result.flatMap(s -> Standard.solutionWith(t, budget, s));
-                        match solved {
-                            case Err(e) =>
-                                Assert.assertEqWithMsg(expected = "", e, "solving a uniform state");
-                                (total, worst)
-                            case Ok(ms) =>
-                                let n = List.length(ms);
-                                loop(i - 1, next, total + n, Int32.max(worst, n))
-                        }
-                };
+                if (i <= 0)
+                    (total, worst)
+                else
+                    match Random.sampleDeterministic(seed, 3) {
+                        case Err(e) =>
+                            Assert.assertEqWithMsg(expected = "", e, "sampling");
+                            (total, worst)
+                        case Ok((c, next)) =>
+                            let solved = Sized.standardOf(c)
+                                |> Result.flatMap(s -> Standard.solutionWith(t, budget, s));
+                            match solved {
+                                case Err(e) =>
+                                    Assert.assertEqWithMsg(expected = "", e, "solving a uniform state");
+                                    (total, worst)
+                                case Ok(ms) =>
+                                    let n = List.length(ms);
+                                    loop(i - 1, next, total + n, Int32.max(worst, n))
+                            }
+                    };
             let (total, worst) = loop(samples, 4242i64, 0, 0);
             // tenths, to avoid floating point in a gate
             let mean = total * 10 / samples;
-            Assert.assertTrueWithMsg(mean <= 207,
+            Assert.assertTrueWithMsg(
+                mean <= 207,
                 "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
-                    + "above the recorded baseline of 20.4 by more than the margin");
-            Assert.assertTrueWithMsg(mean >= 150,
+                    + "above the recorded baseline of 20.4 by more than the margin"
+            );
+            Assert.assertTrueWithMsg(
+                mean >= 150,
                 "the mean solution length is ${mean / 10}.${Int32.modulo(mean, 10)}, "
                     + "below the true optimum of about 17.7 -- which is impossible, so "
-                    + "something is not solving what it claims");
-            Assert.assertTrueWithMsg(worst <= 23,
-                "the worst solution was ${worst} moves, over the recorded worst of 22")
-
-    }
+                    + "something is not solving what it claims"
+            );
+            Assert.assertTrueWithMsg(
+                worst <= 23,
+                "the worst solution was ${worst} moves, over the recorded worst of 22"
+            )
         }
+}

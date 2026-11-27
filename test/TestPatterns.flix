@@ -1,4 +1,4 @@
-mod TestPatterns {
+pub mod TestPatterns {
 
     use CubeSolve.Patterns
     use CubeSolve.Model.Cube
@@ -10,7 +10,7 @@ mod TestPatterns {
     /// The cube `alg` makes from solved, failing the test if it does not parse.
     def made(what: String, alg: String): Cube.Cube \ Assert =
         match Cube.solved(3) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "${what}: '${alg}'");
                 unreachable!()
@@ -49,48 +49,71 @@ mod TestPatterns {
     @Test
     def theCollectionIsSoundCompleteAndTranslated(): Unit \ Assert =
         let all = Patterns.Standard.all();
-        Assert.assertEqWithMsg(expected = 112, Vector.length(all),
-            "the collection should hold 112 distinct patterns");
+        Assert.assertEqWithMsg(
+            expected = 112,
+            Vector.length(all),
+            "the collection should hold 112 distinct patterns"
+        );
         let names = all |> Vector.map(Patterns.Standard.name) |> Vector.toList;
         Assert.assertEqWithMsg(
-            expected = List.length(names), List.length(List.distinct(names)),
-            "two patterns share a name");
+            expected = List.length(names),
+            List.length(List.distinct(names)),
+            "two patterns share a name"
+        );
         let ids = all |> Vector.map(Patterns.Standard.canonical) |> Vector.toList;
         Assert.assertEqWithMsg(
-            expected = List.length(ids), List.length(List.distinct(ids)),
-            "two patterns in the collection are the same pattern");
+            expected = List.length(ids),
+            List.length(List.distinct(ids)),
+            "two patterns in the collection are the same pattern"
+        );
 
-        all |> Vector.forEach(p -> {
-            let name = Patterns.Standard.name(p);
-            Assert.assertTrueWithMsg(
-                Patterns.Standard.url(Patterns.Standard.source(p)) != "unknown",
-                "'${name}' cites an unknown source '${Patterns.Standard.source(p)}'");
-
-            let published = made(name, Patterns.Standard.notation(p));
-            Assert.assertEqWithMsg(
-                expected = Patterns.Standard.canonical(p), identityOf(published),
-                "'${name}' does not reach its recorded pattern");
-            Assert.assertEqWithMsg(
-                expected = None, Validate.faultOf(published),
-                "'${name}' reaches a state turning cannot");
-
-            match Move.parse(Patterns.Standard.faceTurns(p)) {
-                case Err(e) =>
-                    Assert.assertEqWithMsg(expected = "", e,
-                        "'${name}' half-turn form is not face turns")
-                case Ok(ms) =>
+        all
+            |> Vector.forEach(
+                p -> {
+                    let name = Patterns.Standard.name(p);
                     Assert.assertTrueWithMsg(
-                        List.forAll(m -> Vector.memberOf(m, Move.all()), ms),
-                        "'${name}' uses something outside the face-turn alphabet")
-            };
-            let translated = made(name, Patterns.Standard.faceTurns(p));
-            Assert.assertEqWithMsg(
-                expected = Patterns.Standard.canonical(p), identityOf(translated),
-                "'${name}' half-turn form makes a different pattern");
-            Assert.assertEqWithMsg(
-                expected = Rotation.identity(), Cube.orientation(translated),
-                "'${name}' half-turn form rotated the cube")
-        })
+                        Patterns.Standard.url(Patterns.Standard.source(p)) != "unknown",
+                        "'${name}' cites an unknown source '${Patterns.Standard.source(p)}'"
+                    );
+
+                    let published = made(name, Patterns.Standard.notation(p));
+                    Assert.assertEqWithMsg(
+                        expected = Patterns.Standard.canonical(p),
+                        identityOf(published),
+                        "'${name}' does not reach its recorded pattern"
+                    );
+                    Assert.assertEqWithMsg(
+                        expected = None,
+                        Validate.faultOf(published),
+                        "'${name}' reaches a state turning cannot"
+                    );
+
+                    match Move.parse(Patterns.Standard.faceTurns(p)) {
+                        case Err(e) =>
+                            Assert.assertEqWithMsg(
+                                expected = "",
+                                e,
+                                "'${name}' half-turn form is not face turns"
+                            )
+                        case Ok(ms) =>
+                            Assert.assertTrueWithMsg(
+                                List.forAll(m -> Vector.memberOf(m, Move.all()), ms),
+                                "'${name}' uses something outside the face-turn alphabet"
+                            )
+                    };
+                    let translated = made(name, Patterns.Standard.faceTurns(p));
+                    Assert.assertEqWithMsg(
+                        expected = Patterns.Standard.canonical(p),
+                        identityOf(translated),
+                        "'${name}' half-turn form makes a different pattern"
+                    );
+                    Assert.assertEqWithMsg(
+                        expected = Rotation.identity(),
+                        Cube.orientation(translated),
+                        "'${name}' half-turn form rotated the cube"
+                    )
+                }
+            )
 
     /// A few patterns everyone knows, pinned by the name this collection uses.
     ///
@@ -102,23 +125,43 @@ mod TestPatterns {
     def thePatternsEveryoneKnowsAreHereUnderTheirSpeedsolvingNames(): Unit \ Assert =
         let all = Patterns.Standard.all();
         let named = n -> Vector.findLeft(p -> Patterns.Standard.name(p) == n, all);
-        List.forEach(n ->
-            Assert.assertTrueWithMsg(Option.nonEmpty(named(n)),
-                "the collection is missing '${n}'"),
-            "Superflip" :: "Pons Asinorum" :: "6-Spot" :: "4-Spot"
-                :: "Two-face checkerboard" :: "Cube in the cube" :: "Tetris"
-                :: "4 crosses" :: "4 crosses (second list)" :: Nil);
-        List.forEach(n ->
-            Assert.assertTrueWithMsg(Option.isEmpty(named(n)),
-                "'${n}' is a ruwix name for a pattern speedsolving already names"),
-            "The Superflip" :: "The easy checkerboard" :: "Six spots"
-                :: "Four spots" :: "Facing checkerboards" :: Nil);
+        List.forEach(
+            n ->
+                Assert.assertTrueWithMsg(
+                    Option.nonEmpty(named(n)),
+                    "the collection is missing '${n}'"
+                ),
+            "Superflip"
+                :: "Pons Asinorum"
+                :: "6-Spot"
+                :: "4-Spot"
+                :: "Two-face checkerboard"
+                :: "Cube in the cube"
+                :: "Tetris"
+                :: "4 crosses"
+                :: "4 crosses (second list)"
+                :: Nil
+        );
+        List.forEach(
+            n ->
+                Assert.assertTrueWithMsg(
+                    Option.isEmpty(named(n)),
+                    "'${n}' is a ruwix name for a pattern speedsolving already names"
+                ),
+            "The Superflip"
+                :: "The easy checkerboard"
+                :: "Six spots"
+                :: "Four spots"
+                :: "Facing checkerboards"
+                :: Nil
+        );
         match named("Superflip") {
-            case None    => Assert.assertTrueWithMsg(false, "no superflip")
+            case None => Assert.assertTrueWithMsg(false, "no superflip")
             case Some(p) =>
                 let twice = "${Patterns.Standard.faceTurns(p)} ${Patterns.Standard.faceTurns(p)}";
                 Assert.assertTrueWithMsg(
                     Cube.isSolved(made("superflip twice", twice)),
-                    "the superflip should be its own inverse")
+                    "the superflip should be its own inverse"
+                )
         }
 }

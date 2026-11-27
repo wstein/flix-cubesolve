@@ -1,4 +1,4 @@
-mod TestPocketSearchLimits {
+pub mod TestPocketSearchLimits {
 
     use CubeSolve.Solve.IdaStar
     use CubeSolve.Table
@@ -11,13 +11,16 @@ mod TestPocketSearchLimits {
     @Test
     def theEdgesOfTheSearchAreReportedProperly(): Unit \ Assert =
         let t = PocketSearchTestSupport.tables();
-        PocketSearchTestSupport.deepestStates(t) |> Vector.take(1) |> Vector.forEach(s ->
-            match IdaStar.search(CubeSolve.Solve.Pocket.phaseOf(t), s, 5, IdaStar.unbounded()) {
-                case Ok(_)  => Assert.assertTrueWithMsg(false, "state ${s} needs 11 moves")
-                case Err(e) => Assert.assertTrueWithMsg(
-                    String.contains(substr = "5", e),
-                    "the refusal should name the depth reached, but said: ${e}")
-            });
+        PocketSearchTestSupport.deepestStates(t) |> Vector.take(1)
+            |> Vector.forEach(
+                s -> match IdaStar.search(CubeSolve.Solve.Pocket.phaseOf(t), s, 5, IdaStar.unbounded()) {
+                    case Ok(_) => Assert.assertTrueWithMsg(false, "state ${s} needs 11 moves")
+                    case Err(e) => Assert.assertTrueWithMsg(
+                        String.contains(substr = "5", e),
+                        "the refusal should name the depth reached, but said: ${e}"
+                    )
+                }
+            );
         match CubeSolve.Solve.Pocket.solutionForState(t, Table.Pocket.solvedIndex()) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "solved is solvable")
             case Ok(ms) => Assert.assertEq(expected = Nil, ms)
@@ -34,13 +37,19 @@ mod TestPocketSearchLimits {
         let t = PocketSearchTestSupport.tables();
         let state = 1234;
         match IdaStar.search(CubeSolve.Solve.Pocket.phaseOf(t), state, 11, 1i64) {
-            case Ok(_) => Assert.assertTrueWithMsg(false,
-                "a budget of one node should not have solved it")
+            case Ok(_) => Assert.assertTrueWithMsg(
+                false,
+                "a budget of one node should not have solved it"
+            )
             case Err(why) =>
-                Assert.assertTrueWithMsg(String.contains(substr = "exhausted", why),
-                    "the failure should name exhaustion, not a depth: ${why}");
-                Assert.assertTrueWithMsg(String.contains(substr = "nodes", why),
-                    "and should report the node count: ${why}")
+                Assert.assertTrueWithMsg(
+                    String.contains(substr = "exhausted", why),
+                    "the failure should name exhaustion, not a depth: ${why}"
+                );
+                Assert.assertTrueWithMsg(
+                    String.contains(substr = "nodes", why),
+                    "and should report the node count: ${why}"
+                )
         }
 
     /// A budget large enough changes nothing about the answer.
@@ -51,16 +60,25 @@ mod TestPocketSearchLimits {
     def aGenerousBudgetLeavesTheAnswerAlone(): Unit \ Assert =
         let t = PocketSearchTestSupport.tables();
         let phase = CubeSolve.Solve.Pocket.phaseOf(t);
-        Vector.range(0, 40) |> Vector.forEach(s ->
-            match (IdaStar.search(phase, s, 11, IdaStar.unbounded()),
-                   IdaStar.search(phase, s, 11, 100_000_000i64)) {
-                case (Ok(a), Ok(b)) =>
-                    Assert.assertEqWithMsg(expected = IdaStar.moves(a), IdaStar.moves(b),
-                        "state ${s} answered differently under a budget")
-                case (Err(_), Err(_)) => ()
-                case _ => Assert.assertTrueWithMsg(false,
-                    "state ${s}: one found a solution and the other did not")
-            })
+        Vector.range(0, 40)
+            |> Vector.forEach(
+                s -> match (
+                    IdaStar.search(phase, s, 11, IdaStar.unbounded()),
+                    IdaStar.search(phase, s, 11, 100_000_000i64)
+                ) {
+                    case (Ok(a), Ok(b)) =>
+                        Assert.assertEqWithMsg(
+                            expected = IdaStar.moves(a),
+                            IdaStar.moves(b),
+                            "state ${s} answered differently under a budget"
+                        )
+                    case (Err(_), Err(_)) => ()
+                    case _ => Assert.assertTrueWithMsg(
+                        false,
+                        "state ${s}: one found a solution and the other did not"
+                    )
+                }
+            )
 
     /// Enumeration has its own node envelope: yielding no handover cannot make
     /// an outer target search look cheap or run without bound.

@@ -6,7 +6,7 @@
 /// A ranking that collides puts two crosses at one table entry and makes every
 /// distance below it a lie, so it is checked exhaustively rather than sampled.
 ///
-mod TestCrossCoordinate {
+pub mod TestCrossCoordinate {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -28,15 +28,24 @@ mod TestCrossCoordinate {
     ///
     @Test
     def everyCoordinateRoundTrips(): Unit \ Assert =
-        let bad = Vector.range(0, stateCount()) |> Vector.count(i -> {
-            let (places, flips) = unrank(i);
-            rank(places, flips) != i
-        });
-        Assert.assertEqWithMsg(expected = 0, bad,
-            "coordinates that do not survive unrank then rank");
+        let bad = Vector.range(0, stateCount())
+            |> Vector.count(
+                i -> {
+                    let (places, flips) = unrank(i);
+                    rank(places, flips) != i
+                }
+            );
+        Assert.assertEqWithMsg(
+            expected = 0,
+            bad,
+            "coordinates that do not survive unrank then rank"
+        );
         // and no two coordinates decode to the same arrangement
-        Assert.assertEqWithMsg(expected = 190080, stateCount(),
-            "12 x 11 x 10 x 9 arrangements, each with four flips")
+        Assert.assertEqWithMsg(
+            expected = 190080,
+            stateCount(),
+            "12 x 11 x 10 x 9 arrangements, each with four flips"
+        )
 
     ///
     /// The coordinate agrees with the model about what a move does.
@@ -47,21 +56,37 @@ mod TestCrossCoordinate {
     ///
     @Test
     def theSuccessorAgreesWithTheModel(): Unit \ Assert =
-        let seeds = Vector#{"", "R", "R U", "F2 L' D", "R U R' U' F2 L D B'",
-            "M2 E2 S2", "D2 R2 L F B' U"};
-        seeds |> Vector.forEach(alg -> {
-            let c = made(alg);
-            match encode(c) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
-                case Ok(here) =>
-                    Move.all() |> Vector.forEach(m -> {
-                        let byModel = Cube.apply(m, c) |> Result.flatMap(encode);
-                        let byCoord = successor(here, Move.index(m));
-                        Assert.assertEqWithMsg(expected = Ok(byCoord), byModel,
-                            "'${alg}' then ${m}: the coordinate and the model "
-                                + "disagree about where the cross went")
-                    })
-            }
-        })
+        let seeds = Vector#{
+            "",
+            "R",
+            "R U",
+            "F2 L' D",
+            "R U R' U' F2 L D B'",
+            "M2 E2 S2",
+            "D2 R2 L F B' U"
+        };
+        seeds
+            |> Vector.forEach(
+                alg -> {
+                    let c = made(alg);
+                    match encode(c) {
+                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
+                        case Ok(here) =>
+                            Move.all()
+                                |> Vector.forEach(
+                                    m -> {
+                                        let byModel = Cube.apply(m, c) |> Result.flatMap(encode);
+                                        let byCoord = successor(here, Move.index(m));
+                                        Assert.assertEqWithMsg(
+                                            expected = Ok(byCoord),
+                                            byModel,
+                                            "'${alg}' then ${m}: the coordinate and the model "
+                                                + "disagree about where the cross went"
+                                        )
+                                    }
+                                )
+                    }
+                }
+            )
 
 }

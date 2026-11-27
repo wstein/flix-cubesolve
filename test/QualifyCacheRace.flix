@@ -15,7 +15,7 @@
 ///
 /// Driven by `scripts/qualify-cache-race.sh`; see that script for the sequence.
 ///
-mod QualifyCacheRace {
+pub mod QualifyCacheRace {
 
     use CubeSolve.Table
     use CubeSolve.Table.TableView
@@ -33,16 +33,20 @@ mod QualifyCacheRace {
     /// to start generating simultaneously after JVM initialization.
     ///
     pub def qualify(): Unit \ IO =
-        Sys.Exit.runWithIO(_ ->
-            Sys.Env.runWithIO(_ -> match Sys.Env.getArgs() {
-                case "child" :: dir :: Nil  => finish(generate(dir))
-                case "child" :: dir :: barrierDir :: childId :: Nil =>
-                    finish(generateWithBarrier(dir, barrierDir, childId))
-                case "verify" :: dir :: Nil => finish(readBack(dir))
-                case _                      =>
-                    println("usage: child <dir> [<barrier-dir> <child-id>] | verify <dir>");
-                    Sys.Exit.exit(2)
-            }))
+        Sys.Exit.runWithIO(
+            _ ->
+                Sys.Env.runWithIO(
+                    _ -> match Sys.Env.getArgs() {
+                        case "child" :: dir :: Nil => finish(generate(dir))
+                        case "child" :: dir :: barrierDir :: childId :: Nil =>
+                            finish(generateWithBarrier(dir, barrierDir, childId))
+                        case "verify" :: dir :: Nil => finish(readBack(dir))
+                        case _ =>
+                            println("usage: child <dir> [<barrier-dir> <child-id>] | verify <dir>");
+                            Sys.Exit.exit(2)
+                    }
+                )
+        )
 
     ///
     /// Synchronize on a barrier before generating: signal ready, wait for release ('go').
@@ -73,7 +77,7 @@ mod QualifyCacheRace {
     ///
     def finish(outcome: Result[String, String]): Unit \ IO + Sys.Exit =
         match outcome {
-            case Ok(what)  => println("ok: ${what}"); Sys.Exit.exit(0)
+            case Ok(what) => println("ok: ${what}"); Sys.Exit.exit(0)
             case Err(why) => println("failed: ${why}"); Sys.Exit.exit(1)
         }
 
@@ -101,11 +105,16 @@ mod QualifyCacheRace {
     ///
     def readBack(dir: String): Result[String, String] \ IO =
         forM (
-            fromDisk <- Disk.withFilesystem(dir, () ->
-                Cache.table("pocket.distances", Pocket.headerFor("pocket.distances"),
-                    () -> Err("nothing readable survived the race")));
-            fresh <- Pocket.build() |> Result.map(Pocket.distanceTable)
-            ;
+            fromDisk <- Disk.withFilesystem(
+                dir,
+                () ->
+                    Cache.table(
+                        "pocket.distances",
+                        Pocket.headerFor("pocket.distances"),
+                        () -> Err("nothing readable survived the race")
+                    )
+            );
+            fresh <- Pocket.build() |> Result.map(Pocket.distanceTable);
             checked <- verdict(fresh, fromDisk)
         ) yield checked
 
@@ -113,8 +122,8 @@ mod QualifyCacheRace {
     /// Whether two tables agree entry for entry.
     ///
     def sameTable(a: TableView, b: TableView): Bool =
-        Table.entries(a) == Table.entries(b) and
-            Vector.range(0, Table.entries(a))
+        Table.entries(a) == Table.entries(b)
+            and Vector.range(0, Table.entries(a))
                 |> Vector.forAll(i -> Table.get(i, a) == Table.get(i, b))
 
     ///
@@ -127,10 +136,14 @@ mod QualifyCacheRace {
     ///
     def verdict(fresh: TableView, fromDisk: TableView): Result[String, String] =
         if (sameTable(fresh, fromDisk))
-            Ok("the published table matches a fresh build, "
-                + "${Table.entries(fresh)} entries")
+            Ok(
+                "the published table matches a fresh build, "
+                    + "${Table.entries(fresh)} entries"
+            )
         else
-            Err("BUG: the published table decoded but differs from a fresh "
-                + "build -- the digest passed, so this is not a torn write")
+            Err(
+                "BUG: the published table decoded but differs from a fresh "
+                    + "build -- the digest passed, so this is not a torn write"
+            )
 
 }

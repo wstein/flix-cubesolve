@@ -9,7 +9,7 @@
 /// That exact mistake has been made in this codebase before, in
 /// `Cube.reframeSolution`, and nothing but a replay caught it.
 ///
-mod TestPatternRecognition {
+pub mod TestPatternRecognition {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Holding
@@ -19,7 +19,7 @@ mod TestPatternRecognition {
 
     def made(size: Int32, what: String, alg: String): Cube.Cube \ Assert =
         match Cube.solved(size) |> Result.flatMap(c -> Cube.applyNotation(alg, c)) {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "${what}: '${alg}'");
                 unreachable!()
@@ -36,42 +36,53 @@ mod TestPatternRecognition {
     ///
     @Test
     def everyStandardPatternIsRecognisedHoweverItIsHeld(): Unit \ Assert =
-        Patterns.Standard.all() |> Vector.forEach(p -> {
-            let name = Patterns.Standard.name(p);
-            let upright = made(3, name, Patterns.Standard.faceTurns(p));
-            Rotation.all() |> Vector.forEach(r -> {
-                let held = match Cube.conjugate(r, upright) {
-                    case Ok(x)  => x
-                    case Err(e) =>
-                        Assert.assertEqWithMsg(expected = "", e, "conjugating");
-                        upright
-                };
-                match Patterns.Standard.recognize(held) {
-                    case None =>
-                        Assert.assertTrueWithMsg(false,
-                            "'${name}' held as ${r} was not recognised")
-                    case Some((found, witness)) =>
-                        Assert.assertEqWithMsg(
-                            expected = Patterns.Standard.canonical(p),
-                            Patterns.Standard.canonical(found),
-                            "'${name}' held as ${r} was recognised as "
-                                + "'${Patterns.Standard.name(found)}'");
-                        match Patterns.Standard.solutionFor(found, witness) {
-                            case Err(e) =>
-                                Assert.assertEqWithMsg(expected = "", e, "'${name}' as ${r}")
-                            case Ok(ms) =>
-                                match Cube.applyAll(ms, held) {
+        Patterns.Standard.all()
+            |> Vector.forEach(
+                p -> {
+                    let name = Patterns.Standard.name(p);
+                    let upright = made(3, name, Patterns.Standard.faceTurns(p));
+                    Rotation.all()
+                        |> Vector.forEach(
+                            r -> {
+                                let held = match Cube.conjugate(r, upright) {
+                                    case Ok(x) => x
                                     case Err(e) =>
-                                        Assert.assertEqWithMsg(expected = "", e, "'${name}'")
-                                    case Ok(after) =>
-                                        Assert.assertTrueWithMsg(isSolved(after),
-                                            "'${name}' held as ${r}: the witnessed "
-                                                + "solution did not solve it")
+                                        Assert.assertEqWithMsg(expected = "", e, "conjugating");
+                                        upright
+                                };
+                                match Patterns.Standard.recognize(held) {
+                                    case None =>
+                                        Assert.assertTrueWithMsg(
+                                            false,
+                                            "'${name}' held as ${r} was not recognised"
+                                        )
+                                    case Some((found, witness)) =>
+                                        Assert.assertEqWithMsg(
+                                            expected = Patterns.Standard.canonical(p),
+                                            Patterns.Standard.canonical(found),
+                                            "'${name}' held as ${r} was recognised as "
+                                                + "'${Patterns.Standard.name(found)}'"
+                                        );
+                                        match Patterns.Standard.solutionFor(found, witness) {
+                                            case Err(e) =>
+                                                Assert.assertEqWithMsg(expected = "", e, "'${name}' as ${r}")
+                                            case Ok(ms) =>
+                                                match Cube.applyAll(ms, held) {
+                                                    case Err(e) =>
+                                                        Assert.assertEqWithMsg(expected = "", e, "'${name}'")
+                                                    case Ok(after) =>
+                                                        Assert.assertTrueWithMsg(
+                                                            isSolved(after),
+                                                            "'${name}' held as ${r}: the witnessed "
+                                                                + "solution did not solve it"
+                                                        )
+                                                }
+                                        }
                                 }
-                        }
+                            }
+                        )
                 }
-            })
-        })
+            )
 
     ///
     /// The same for the 2x2x2, under its own equivalence.
@@ -82,42 +93,53 @@ mod TestPatternRecognition {
     ///
     @Test
     def everyPocketPatternIsRecognisedHoweverItIsHeld(): Unit \ Assert =
-        Patterns.Pocket.all() |> Vector.forEach(p -> {
-            let name = Patterns.Pocket.name(p);
-            let upright = made(2, name, Patterns.Pocket.optimal(p));
-            Holding.reorientations() |> Vector.forEach(match (r, word) -> {
-                let held = match Cube.applyNotation(word, upright) {
-                    case Ok(c)  => c
-                    case Err(e) =>
-                        Assert.assertEqWithMsg(expected = "", e, "'${name}' as '${word}'");
-                        upright
-                };
-                match Patterns.Pocket.recognize(held) {
-                    case None =>
-                        Assert.assertTrueWithMsg(false,
-                            "'${name}' held as ${r} was not recognised")
-                    case Some((found, witness)) =>
-                        Assert.assertEqWithMsg(
-                            expected = Patterns.Pocket.canonical(p),
-                            Patterns.Pocket.canonical(found),
-                            "'${name}' held as ${r} was recognised as "
-                                + "'${Patterns.Pocket.name(found)}'");
-                        match Patterns.Pocket.solutionFor(found, witness) {
-                            case Err(e) =>
-                                Assert.assertEqWithMsg(expected = "", e, "'${name}' as ${r}")
-                            case Ok(ms) =>
-                                match Cube.applyAll(ms, held) {
+        Patterns.Pocket.all()
+            |> Vector.forEach(
+                p -> {
+                    let name = Patterns.Pocket.name(p);
+                    let upright = made(2, name, Patterns.Pocket.optimal(p));
+                    Holding.reorientations()
+                        |> Vector.forEach(
+                            match (r, word) -> {
+                                let held = match Cube.applyNotation(word, upright) {
+                                    case Ok(c) => c
                                     case Err(e) =>
-                                        Assert.assertEqWithMsg(expected = "", e, "'${name}'")
-                                    case Ok(after) =>
-                                        Assert.assertTrueWithMsg(isSolved(after),
-                                            "'${name}' held as ${r}: the witnessed "
-                                                + "solution did not solve it")
+                                        Assert.assertEqWithMsg(expected = "", e, "'${name}' as '${word}'");
+                                        upright
+                                };
+                                match Patterns.Pocket.recognize(held) {
+                                    case None =>
+                                        Assert.assertTrueWithMsg(
+                                            false,
+                                            "'${name}' held as ${r} was not recognised"
+                                        )
+                                    case Some((found, witness)) =>
+                                        Assert.assertEqWithMsg(
+                                            expected = Patterns.Pocket.canonical(p),
+                                            Patterns.Pocket.canonical(found),
+                                            "'${name}' held as ${r} was recognised as "
+                                                + "'${Patterns.Pocket.name(found)}'"
+                                        );
+                                        match Patterns.Pocket.solutionFor(found, witness) {
+                                            case Err(e) =>
+                                                Assert.assertEqWithMsg(expected = "", e, "'${name}' as ${r}")
+                                            case Ok(ms) =>
+                                                match Cube.applyAll(ms, held) {
+                                                    case Err(e) =>
+                                                        Assert.assertEqWithMsg(expected = "", e, "'${name}'")
+                                                    case Ok(after) =>
+                                                        Assert.assertTrueWithMsg(
+                                                            isSolved(after),
+                                                            "'${name}' held as ${r}: the witnessed "
+                                                                + "solution did not solve it"
+                                                        )
+                                                }
+                                        }
                                 }
-                        }
+                            }
+                        )
                 }
-            })
-        })
+            )
 
     ///
     /// An ordinary scramble is not a published pattern, and recognition says so.
@@ -127,14 +149,22 @@ mod TestPatternRecognition {
     ///
     @Test
     def anUnremarkableScrambleIsNotRecognised(): Unit \ Assert =
-        Assert.assertEq(expected = None,
-            Patterns.Standard.recognize(made(3, "scramble", "R U R' U' F' L F2 D B2")));
-        Assert.assertEq(expected = None,
-            Patterns.Pocket.recognize(made(2, "scramble", "R U' F R2 U F'")));
-        Assert.assertEq(expected = None,
-            Patterns.Standard.recognize(made(3, "solved", "")));
-        Assert.assertEq(expected = None,
-            Patterns.Pocket.recognize(made(2, "solved", "")))
+        Assert.assertEq(
+            expected = None,
+            Patterns.Standard.recognize(made(3, "scramble", "R U R' U' F' L F2 D B2"))
+        );
+        Assert.assertEq(
+            expected = None,
+            Patterns.Pocket.recognize(made(2, "scramble", "R U' F R2 U F'"))
+        );
+        Assert.assertEq(
+            expected = None,
+            Patterns.Standard.recognize(made(3, "solved", ""))
+        );
+        Assert.assertEq(
+            expected = None,
+            Patterns.Pocket.recognize(made(2, "solved", ""))
+        )
 
     ///
     /// The 24 pocket re-holdings are distinct, compose the way their rotations
@@ -173,32 +203,51 @@ mod TestPatternRecognition {
     @Test
     def thePocketReHoldingsAreTwentyFourComposingTurns(): Unit \ Assert =
         let table = Holding.reorientations();
-        Assert.assertEqWithMsg(expected = 24, Vector.length(table),
-            "a centreless cube can be held 24 ways");
+        Assert.assertEqWithMsg(
+            expected = 24,
+            Vector.length(table),
+            "a centreless cube can be held 24 ways"
+        );
         let rotations = table |> Vector.map(fst) |> Vector.toList;
-        Assert.assertEqWithMsg(expected = 24, List.length(List.distinct(rotations)),
-            "two entries name the same rotation");
+        Assert.assertEqWithMsg(
+            expected = 24,
+            List.length(List.distinct(rotations)),
+            "two entries name the same rotation"
+        );
         let words = table |> Vector.map(snd) |> Vector.toList;
-        Assert.assertEqWithMsg(expected = 24, List.length(List.distinct(words)),
-            "two entries use the same word");
+        Assert.assertEqWithMsg(
+            expected = 24,
+            List.length(List.distinct(words)),
+            "two entries use the same word"
+        );
 
         let probe = made(2, "probe", "R U' F2 R U R' F U2");
         let reached = word -> match Cube.applyNotation(word, probe) {
             case Ok(c)  => Cube.orbits(c)
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${word}'"); Nil
         };
-        table |> Vector.forEach(match (r1, w1) ->
-            table |> Vector.forEach(match (r2, w2) -> {
-                let combined = Rotation.andThen(r1, r2);
-                match Patterns.Pocket.wordFor(combined) {
-                    case None =>
-                        Assert.assertTrueWithMsg(false,
-                            "${r1} then ${r2} is not in the table")
-                    case Some(w) =>
-                        Assert.assertEqWithMsg(
-                            expected = reached(w), reached("${w1} ${w2}"),
-                            "'${w1}' then '${w2}' should reach the same state as '${w}'")
-                }
-            }))
+        table
+            |> Vector.forEach(
+                match (r1, w1) ->
+                    table
+                        |> Vector.forEach(
+                            match (r2, w2) -> {
+                                let combined = Rotation.andThen(r1, r2);
+                                match Patterns.Pocket.wordFor(combined) {
+                                    case None =>
+                                        Assert.assertTrueWithMsg(
+                                            false,
+                                            "${r1} then ${r2} is not in the table"
+                                        )
+                                    case Some(w) =>
+                                        Assert.assertEqWithMsg(
+                                            expected = reached(w),
+                                            reached("${w1} ${w2}"),
+                                            "'${w1}' then '${w2}' should reach the same state as '${w}'"
+                                        )
+                                }
+                            }
+                        )
+            )
 
 }

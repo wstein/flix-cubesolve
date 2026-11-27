@@ -1,4 +1,4 @@
-mod TestStandardSearch {
+pub mod TestStandardSearch {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -11,7 +11,7 @@ mod TestStandardSearch {
     /// thoroughly.
     def phase1(): Tables \ Assert =
         match CubeSolve.Table.Standard.build() {
-            case Ok(p)  => p
+            case Ok(p) => p
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected the phase-one tables");
                 unreachable!()
@@ -22,7 +22,7 @@ mod TestStandardSearch {
             |> Result.flatMap(c -> Cube.applyNotation(notation, c))
             |> Result.flatMap(Sized.standardOf);
         match built {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected a cube");
                 unreachable!()
@@ -37,15 +37,22 @@ mod TestStandardSearch {
     def thePackedStateRoundTripsAcrossTheWholeRange(): Unit \ Assert =
         Assert.assertEq(expected = 2217093120i64, Phase1.stateCount());
         let corners =
-            (0, 0, 0) :: (2186, 2047, 494) :: (1, 2, 3)
-                :: (2186, 0, 494) :: (0, 2047, 0) :: Nil;
-        corners |> List.forEach(match (twist, flip, slice) -> {
-            let packed = Phase1.pack(twist, flip, slice);
-            Assert.assertTrueWithMsg(packed >= 0i64, "packing ${twist} ${flip} ${slice} wrapped");
-            Assert.assertEqWithMsg(expected = twist, Phase1.twistOf(packed), "twist back");
-            Assert.assertEqWithMsg(expected = flip, Phase1.flipOf(packed), "flip back");
-            Assert.assertEqWithMsg(expected = slice, Phase1.sliceOf(packed), "slice back")
-        })
+            (0, 0, 0)
+                :: (2186, 2047, 494)
+                :: (1, 2, 3)
+                :: (2186, 0, 494)
+                :: (0, 2047, 0)
+                :: Nil;
+        corners
+            |> List.forEach(
+                match (twist, flip, slice) -> {
+                    let packed = Phase1.pack(twist, flip, slice);
+                    Assert.assertTrueWithMsg(packed >= 0i64, "packing ${twist} ${flip} ${slice} wrapped");
+                    Assert.assertEqWithMsg(expected = twist, Phase1.twistOf(packed), "twist back");
+                    Assert.assertEqWithMsg(expected = flip, Phase1.flipOf(packed), "flip back");
+                    Assert.assertEqWithMsg(expected = slice, Phase1.sliceOf(packed), "slice back")
+                }
+            )
 
     /// Phase one really does reach the subgroup, checked from decoded model
     /// state rather than from the coordinate the search wrote.
@@ -58,38 +65,47 @@ mod TestStandardSearch {
     /// reached the goal in coordinates but not on the cube fails here.
     @Test
     def phaseOneSolutionsReachTheSubgroupOnTheRealCube(): Unit \ Assert + IO =
-        if (Slow.skip("TestStandardSearch.phaseOneSolutionsReachTheSubgroupOnTheRealCube",
-                "builds the phase-one tables and searches"))
+        if (Slow.skip(
+            "TestStandardSearch.phaseOneSolutionsReachTheSubgroupOnTheRealCube",
+            "builds the phase-one tables and searches"
+        ))
             ()
         else {
             let p = phase1();
-            List.forEach(alg -> {
-                let cube = scrambled(alg);
-                match Phase1.phase1Solution(p, cube) {
-                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
-                    case Ok(ms) =>
-                        Assert.assertTrueWithMsg(
-                            List.length(ms) <= Phase1.maxDepth(),
-                            "'${alg}' needed ${List.length(ms)} moves, over the bound");
-                        let after = Cube.applyAll(ms, Sized.cubeOfStandard(cube));
-                        match after {
-                            case Err(e) =>
-                                Assert.assertEqWithMsg(expected = "", e, "replay of '${alg}'")
-                            case Ok(c)  =>
-                                Assert.assertTrueWithMsg(
-                                    CubeSolve.Table.Standard.isPhase1Solved(c),
-                                    "'${alg}' plus its phase-one solution did not "
-                                        + "reach the subgroup: "
-                                        + Move.showAll(ms))
-                        }
-                }
-            },
-            "R" :: "R U F" :: "R U2 F' L D B2 R' U" :: "F U R2 B' L D2 F' U' R"
-                :: "U2 D2 R2 L2 F2 B2" :: ""
-                // The superflip: solved in permutation, every edge flipped. A good
-                // case because the goal test must be "inside the subgroup" and not
-                // "solved" -- a cube can be one without being the other.
-                :: "R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U" :: Nil)
-
-    }
+            List.forEach(
+                alg -> {
+                    let cube = scrambled(alg);
+                    match Phase1.phase1Solution(p, cube) {
+                        case Err(e) => Assert.assertEqWithMsg(expected = "", e, "'${alg}'")
+                        case Ok(ms) =>
+                            Assert.assertTrueWithMsg(
+                                List.length(ms) <= Phase1.maxDepth(),
+                                "'${alg}' needed ${List.length(ms)} moves, over the bound"
+                            );
+                            let after = Cube.applyAll(ms, Sized.cubeOfStandard(cube));
+                            match after {
+                                case Err(e) =>
+                                    Assert.assertEqWithMsg(expected = "", e, "replay of '${alg}'")
+                                case Ok(c) =>
+                                    Assert.assertTrueWithMsg(
+                                        CubeSolve.Table.Standard.isPhase1Solved(c),
+                                        "'${alg}' plus its phase-one solution did not "
+                                            + "reach the subgroup: "
+                                            + Move.showAll(ms)
+                                    )
+                            }
+                    }
+                },
+                "R"
+                    :: "R U F"
+                    :: "R U2 F' L D B2 R' U"
+                    :: "F U R2 B' L D2 F' U' R"
+                    :: "U2 D2 R2 L2 F2 B2"
+                    :: ""
+                        // The superflip: solved in permutation, every edge flipped. A good
+                        // case because the goal test must be "inside the subgroup" and not
+                        // "solved" -- a cube can be one without being the other.
+                        :: "R L U2 F U' D F2 R2 B2 L U2 F' B' U R2 D F2 U R2 U" :: Nil
+            )
         }
+}

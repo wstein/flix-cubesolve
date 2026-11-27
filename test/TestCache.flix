@@ -1,4 +1,4 @@
-mod TestCache {
+pub mod TestCache {
 
     use CubeSolve.Table
     use CubeSolve.Table.Cache
@@ -7,9 +7,9 @@ mod TestCache {
 
     def header(): Codec.Header =
         Codec.header({
-            table = "pocket.distances",
+            table      = "pocket.distances",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.4.5"
+            generator  = "cubesolve 0.4.5"
         })
 
     def table(seed: Int32): Result[String, Table.TableView] =
@@ -44,22 +44,37 @@ mod TestCache {
     def theSecondCallReadsTheCacheInsteadOfBuilding(): Unit \ Assert = region rc {
         let builds = Ref.fresh(rc, 0);
         let build = () -> { Ref.put(Ref.get(builds) + 1, builds); table(0) };
-        let (results, writes) = inMemory(rc, () -> {
-            let first = Cache.table("pocket.distances", header(), build);
-            let second = Cache.table("pocket.distances", header(), build);
-            (first, second)
-        });
+        let (results, writes) = inMemory(
+            rc,
+            () -> {
+                let first = Cache.table("pocket.distances", header(), build);
+                let second = Cache.table("pocket.distances", header(), build);
+                (first, second)
+            }
+        );
         let (first, second) = results;
-        Assert.assertEqWithMsg(expected = 1, Ref.get(builds),
-            "the table should have been built once, not ${Ref.get(builds)} times");
-        Assert.assertEqWithMsg(expected = 1, writes,
-            "the table should have been written once, not ${writes} times");
+        Assert.assertEqWithMsg(
+            expected = 1,
+            Ref.get(builds),
+            "the table should have been built once, not ${Ref.get(builds)} times"
+        );
+        Assert.assertEqWithMsg(
+            expected = 1,
+            writes,
+            "the table should have been written once, not ${writes} times"
+        );
         match (first, second) {
             case (Ok(a), Ok(b)) =>
                 Assert.assertEq(expected = Table.entries(a), Table.entries(b));
-                Vector.range(0, Table.entries(a)) |> Vector.forEach(i ->
-                    Assert.assertEqWithMsg(
-                        expected = Table.get(i, a), Table.get(i, b), "entry ${i}"))
+                Vector.range(0, Table.entries(a))
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEqWithMsg(
+                                expected = Table.get(i, a),
+                                Table.get(i, b),
+                                "entry ${i}"
+                            )
+                    )
             case _ => Assert.assertTrueWithMsg(false, "both calls should succeed")
         }
     }
@@ -67,8 +82,11 @@ mod TestCache {
     /// An empty cache reports a miss rather than an error.
     @Test
     def anEmptyCacheIsAMissAndSaysSo(): Unit \ Assert = region rc {
-        let (reason, _) = inMemory(rc, () ->
-            Cache.reasonToRebuild("pocket.distances", header()));
+        let (reason, _) = inMemory(
+            rc,
+            () ->
+                Cache.reasonToRebuild("pocket.distances", header())
+        );
         match reason {
             case None    => Assert.assertTrueWithMsg(false, "an empty cache is a miss")
             case Some(w) => Assert.assertTrue(String.contains(substr = "nothing is cached", w))
@@ -80,26 +98,32 @@ mod TestCache {
     @Test
     def aCacheFromAnotherConventionIsRebuiltAndTheReasonGiven(): Unit \ Assert = region rc {
         let foreign = Codec.header({
-            table = "pocket.distances",
+            table      = "pocket.distances",
             convention = "some-other-numbering@1",
-            generator = "cubesolve 0.4.5"
+            generator  = "cubesolve 0.4.5"
         });
         let builds = Ref.fresh(rc, 0);
         let build = () -> { Ref.put(Ref.get(builds) + 1, builds); table(0) };
-        let (reason, _) = inMemory(rc, () -> {
-            // seed the cache under the wrong convention
-            let _seeded = Cache.table("pocket.distances", foreign, build);
-            let why = Cache.reasonToRebuild("pocket.distances", header());
-            // and confirm it is rebuilt rather than refused
-            let _rebuilt = Cache.table("pocket.distances", header(), build);
-            why
-        });
+        let (reason, _) = inMemory(
+            rc,
+            () -> {
+                // seed the cache under the wrong convention
+                let _seeded = Cache.table("pocket.distances", foreign, build);
+                let why = Cache.reasonToRebuild("pocket.distances", header());
+                // and confirm it is rebuilt rather than refused
+                let _rebuilt = Cache.table("pocket.distances", header(), build);
+                why
+            }
+        );
         match reason {
             case None    => Assert.assertTrueWithMsg(false, "the convention differs")
             case Some(w) => Assert.assertTrue(String.contains(substr = "convention", w))
         };
-        Assert.assertEqWithMsg(expected = 2, Ref.get(builds),
-            "the foreign cache should have forced exactly one rebuild")
+        Assert.assertEqWithMsg(
+            expected = 2,
+            Ref.get(builds),
+            "the foreign cache should have forced exactly one rebuild"
+        )
     }
 
     /// A damaged cache is a miss too. A half-written file should cost a rebuild
@@ -123,26 +147,36 @@ mod TestCache {
             }
         };
         Assert.assertOk(outcome);
-        Assert.assertEqWithMsg(expected = 2, Ref.get(builds),
-            "a damaged cache should force a rebuild every time it is read")
+        Assert.assertEqWithMsg(
+            expected = 2,
+            Ref.get(builds),
+            "a damaged cache should force a rebuild every time it is read"
+        )
     }
 
     /// A store that keeps nothing still works. The engine is slow without a
     /// cache, not broken, and `withoutCache` is the honest way to say so.
     @Test
     def theEngineWorksWithNoCacheAtAll(): Unit \ Assert =
-        let built = Cache.withoutCache(() ->
-            Cache.table("pocket.distances", header(), () -> table(0)));
+        let built = Cache.withoutCache(
+            () ->
+                Cache.table("pocket.distances", header(), () -> table(0))
+        );
         Assert.assertOk(built);
-        let missed = Cache.withoutCache(() ->
-            Cache.reasonToRebuild("pocket.distances", header()));
+        let missed = Cache.withoutCache(
+            () ->
+                Cache.reasonToRebuild("pocket.distances", header())
+        );
         Assert.assertSome(missed)
 
     /// A failure to build is reported rather than cached.
     @Test
     def aBuildThatFailsIsNotCached(): Unit \ Assert = region rc {
-        let (outcome, writes) = inMemory(rc, () ->
-            Cache.table("pocket.distances", header(), () -> Err("the build failed")));
+        let (outcome, writes) = inMemory(
+            rc,
+            () ->
+                Cache.table("pocket.distances", header(), () -> Err("the build failed"))
+        );
         Assert.assertErr(outcome);
         Assert.assertEqWithMsg(expected = 0, writes, "a failed build should keep nothing")
     }
@@ -152,7 +186,6 @@ mod TestCache {
     ///
     /// Counted rather than timed: the second run must write nothing, which is
     /// only true if every one of the five was found and accepted.
-
     @Test
     def theRealTablesAreCachedAndNotRebuilt(): Unit \ Assert = region rc {
         let kept = Ref.fresh(rc, Map#{});
@@ -173,21 +206,32 @@ mod TestCache {
         let (first, afterFirst, second) = both;
         Assert.assertOk(first);
         Assert.assertOk(second);
-        Assert.assertEqWithMsg(expected = 5, afterFirst,
-            "the first run should have written all five 2x2x2 tables");
-        Assert.assertEqWithMsg(expected = 5, Ref.get(writes),
+        Assert.assertEqWithMsg(
+            expected = 5,
+            afterFirst,
+            "the first run should have written all five 2x2x2 tables"
+        );
+        Assert.assertEqWithMsg(
+            expected = 5,
+            Ref.get(writes),
             "the second run should have written nothing, but the total reached "
-                + "${Ref.get(writes)}");
+                + "${Ref.get(writes)}"
+        );
         // and the cached tables really are the same tables
         match (first, second) {
             case (Ok(a), Ok(b)) =>
                 let da = CubeSolve.Table.Pocket.distanceTable(a);
                 let db = CubeSolve.Table.Pocket.distanceTable(b);
                 Assert.assertEq(expected = Table.entries(da), Table.entries(db));
-                Vector.range(0, 5000) |> Vector.forEach(i ->
-                    Assert.assertEqWithMsg(
-                        expected = Table.get(i, da), Table.get(i, db),
-                        "cached distance ${i}"))
+                Vector.range(0, 5000)
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEqWithMsg(
+                                expected = Table.get(i, da),
+                                Table.get(i, db),
+                                "cached distance ${i}"
+                            )
+                    )
             case _ => Assert.assertTrueWithMsg(false, "both runs should succeed")
         }
     }

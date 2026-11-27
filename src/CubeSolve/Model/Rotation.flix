@@ -18,7 +18,7 @@
 /// else. That is sound because the action is faithful -- only the identity
 /// fixes every face -- and it is asserted rather than assumed.
 ///
-mod CubeSolve.Model.Rotation {
+pub mod CubeSolve.Model.Rotation {
 
     use CubeSolve.Model.Move
     use CubeSolve.Model.Move.Move.Turn
@@ -116,7 +116,7 @@ mod CubeSolve.Model.Rotation {
     def close(found: List[Rotation], frontier: List[Rotation]): List[Rotation] =
         match frontier {
             case Nil => List.reverse(found)
-            case _   =>
+            case _ =>
                 let generators = x() :: y() :: z() :: Nil;
                 let step = r -> generators |> List.map(g -> andThen(r, g));
                 let grown = frontier |> List.flatMap(step);
@@ -180,8 +180,11 @@ mod CubeSolve.Model.Rotation {
     def slotMap(faces: Vector[Vector[Int32]], r: Rotation): Vector[Int32] =
         let n = Vector.length(faces);
         let arrivals = Vector.init(source -> destinationOf(faces, r, source), n);
-        Vector.init(dest ->
-            Vector.indexOf(dest, arrivals) |> Option.getWithDefault(dest), n)
+        Vector.init(
+            dest ->
+                Vector.indexOf(dest, arrivals) |> Option.getWithDefault(dest),
+            n
+        )
 
     ///
     /// The slot the piece at `source` lands in, under `r`.
@@ -220,12 +223,15 @@ mod CubeSolve.Model.Rotation {
     ): Vector[Int32] =
         let n = Vector.length(faces);
         let comingFrom = slotMap(faces, r);
-        Vector.init(dest -> {
-            let source = Vector.get(dest, comingFrom);
-            let primary = facePositionOf(Vector.get(0, Vector.get(source, faces)), r);
-            Vector.indexOf(primary, Vector.get(dest, faces))
-                |> Option.getWithDefault(0)
-                |> (i -> Int32.modulo(i, modulus))
-        }, n)
+        Vector.init(
+            dest -> {
+                let source = Vector.get(dest, comingFrom);
+                let primary = facePositionOf(Vector.get(0, Vector.get(source, faces)), r);
+                Vector.indexOf(primary, Vector.get(dest, faces))
+                    |> Option.getWithDefault(0)
+                    |> (i -> Int32.modulo(i, modulus))
+            },
+            n
+        )
 
 }

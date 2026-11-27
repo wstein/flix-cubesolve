@@ -12,7 +12,7 @@
 /// loudly -- it quietly returns longer answers, or claims a state is unreachable
 /// when it is not.
 ///
-mod TestSweepBuilder {
+pub mod TestSweepBuilder {
 
     use CubeSolve.Table
 
@@ -24,16 +24,21 @@ mod TestSweepBuilder {
     ///
     @Test
     def theSweepAgreesWithTheFrontierOnTheCrossTable(): Unit \ Assert + IO =
-        if (Slow.skip("TestSweepBuilder.theSweepAgreesWithTheFrontierOnTheCrossTable",
-                "builds the cross table twice"))
+        if (Slow.skip(
+            "TestSweepBuilder.theSweepAgreesWithTheFrontierOnTheCrossTable",
+            "builds the cross table twice"
+        ))
             ()
         else
             agreeOn(
-                { states = CubeSolve.Table.Cross.stateCount(),
-                  goal = CubeSolve.Table.Cross.solvedIndex(),
-                  moves = CubeSolve.Table.Cross.moveCount(),
-                  bits = 4 },
-                CubeSolve.Table.Cross.successor)
+                {
+                    states = CubeSolve.Table.Cross.stateCount(),
+                    goal   = CubeSolve.Table.Cross.solvedIndex(),
+                    moves  = CubeSolve.Table.Cross.moveCount(),
+                    bits   = 4
+                },
+                CubeSolve.Table.Cross.successor
+            )
 
     ///
     /// And on the first-layer corners, which is a different shape of space.
@@ -44,34 +49,47 @@ mod TestSweepBuilder {
     ///
     @Test
     def theSweepAgreesWithTheFrontierOnTheFirstLayerTable(): Unit \ Assert + IO =
-        if (Slow.skip("TestSweepBuilder.theSweepAgreesWithTheFrontierOnTheFirstLayerTable",
-                "builds the first-layer table twice"))
+        if (Slow.skip(
+            "TestSweepBuilder.theSweepAgreesWithTheFrontierOnTheFirstLayerTable",
+            "builds the first-layer table twice"
+        ))
             ()
         else
             agreeOn(
-                { states = CubeSolve.Table.FirstLayer.stateCount(),
-                  goal = CubeSolve.Table.FirstLayer.solvedIndex(),
-                  moves = CubeSolve.Table.FirstLayer.moveCount(),
-                  bits = 4 },
-                CubeSolve.Table.FirstLayer.successor)
+                {
+                    states = CubeSolve.Table.FirstLayer.stateCount(),
+                    goal   = CubeSolve.Table.FirstLayer.solvedIndex(),
+                    moves  = CubeSolve.Table.FirstLayer.moveCount(),
+                    bits   = 4
+                },
+                CubeSolve.Table.FirstLayer.successor
+            )
 
     ///
     /// Both builders, every entry compared.
     ///
     def agreeOn(
-        shape: { states = Int32, goal = Int32, moves = Int32, bits = Int32 },
+        shape: {states = Int32, goal = Int32, moves = Int32, bits = Int32},
         successor: (Int32, Int32) -> Int32
     ): Unit \ Assert =
-        match (Table.distancesFrom(shape, successor),
-               Table.distancesBySweep(shape, successor)) {
+        match (
+            Table.distancesFrom(shape, successor),
+            Table.distancesBySweep(shape, successor)
+        ) {
             case (Ok(a), Ok(b)) =>
-                Assert.assertEqWithMsg(expected = Table.entries(a), Table.entries(b),
-                    "the two builders should fill the same number of entries");
+                Assert.assertEqWithMsg(
+                    expected = Table.entries(a),
+                    Table.entries(b),
+                    "the two builders should fill the same number of entries"
+                );
                 let differing = Vector.range(0, shape#states)
                     |> Vector.count(i -> Table.get(i, a) != Table.get(i, b));
-                Assert.assertEqWithMsg(expected = 0, differing,
+                Assert.assertEqWithMsg(
+                    expected = 0,
+                    differing,
                     "${differing} entries differ between the frontier builder and "
-                        + "the sweep")
+                        + "the sweep"
+                )
             case (Err(e), _) => Assert.assertEqWithMsg(expected = "", e, "frontier build")
             case (_, Err(e)) => Assert.assertEqWithMsg(expected = "", e, "sweep build")
         }

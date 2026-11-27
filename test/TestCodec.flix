@@ -1,13 +1,13 @@
-mod TestCodec {
+pub mod TestCodec {
 
     use CubeSolve.Table
     use CubeSolve.Table.Codec
 
     def header(): Codec.Header =
         Codec.header({
-            table = "pocket.distances",
+            table      = "pocket.distances",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.4.5"
+            generator  = "cubesolve 0.4.5"
         })
 
     def sample(bits: Int32, count: Int32): Table.TableView \ Assert =
@@ -16,7 +16,7 @@ mod TestCodec {
         // otherwise cause, since widest(32) is Int32's maximum.
         let modulus = Int32.max(1, Int32.min(count, Table.widest(bits)));
         match Table.ofValues(bits, Vector.init(i -> Int32.modulo(i, modulus), count)) {
-            case Ok(t)  => t
+            case Ok(t) => t
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected a table");
                 unreachable!()
@@ -25,7 +25,7 @@ mod TestCodec {
     def encoded(bits: Int32, count: Int32): Vector[Int8] \ Assert =
         match Codec.encode(header(), sample(bits, count)) {
             case Ok(bytes) => bytes
-            case Err(e)    =>
+            case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected bytes");
                 unreachable!()
         }
@@ -33,9 +33,11 @@ mod TestCodec {
     /// `bytes` with entry `at` changed, so the payload is corrupt but the
     /// length is not.
     def corrupt(at: Int32, bytes: Vector[Int8]): Vector[Int8] =
-        Vector.init(i ->
-            if (i == at) Vector.get(i, bytes) + 1i8 else Vector.get(i, bytes),
-            Vector.length(bytes))
+        Vector.init(
+            i ->
+                if (i == at) Vector.get(i, bytes) + 1i8 else Vector.get(i, bytes),
+            Vector.length(bytes)
+        )
 
     // ---------- round trip ----------
 
@@ -43,35 +45,54 @@ mod TestCodec {
     /// its header intact.
     @Test
     def everyWidthRoundTripsThroughTheCodec(): Unit \ Assert =
-        List.forEach(bits -> {
-            let original = sample(bits, 300);
-            match Codec.encode(header(), original) |> Result.flatMap(Codec.decode) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "${bits} bits")
-                case Ok((h, back)) =>
-                    Assert.assertEqWithMsg(
-                        expected = header(), h, "the header at ${bits} bits");
-                    Assert.assertEqWithMsg(
-                        expected = Table.bitsPerEntry(original), Table.bitsPerEntry(back),
-                        "the width at ${bits} bits");
-                    Assert.assertEqWithMsg(
-                        expected = Table.entries(original), Table.entries(back),
-                        "the entry count at ${bits} bits");
-                    Vector.range(0, Table.entries(original)) |> Vector.forEach(i ->
+        List.forEach(
+            bits -> {
+                let original = sample(bits, 300);
+                match Codec.encode(header(), original) |> Result.flatMap(Codec.decode) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "${bits} bits")
+                    case Ok((h, back)) =>
                         Assert.assertEqWithMsg(
-                            expected = Table.get(i, original), Table.get(i, back),
-                            "entry ${i} at ${bits} bits"))
-            }
-        }, 2 :: 4 :: 8 :: 16 :: 32 :: Nil)
+                            expected = header(),
+                            h,
+                            "the header at ${bits} bits"
+                        );
+                        Assert.assertEqWithMsg(
+                            expected = Table.bitsPerEntry(original),
+                            Table.bitsPerEntry(back),
+                            "the width at ${bits} bits"
+                        );
+                        Assert.assertEqWithMsg(
+                            expected = Table.entries(original),
+                            Table.entries(back),
+                            "the entry count at ${bits} bits"
+                        );
+                        Vector.range(0, Table.entries(original))
+                            |> Vector.forEach(
+                                i ->
+                                    Assert.assertEqWithMsg(
+                                        expected = Table.get(i, original),
+                                        Table.get(i, back),
+                                        "entry ${i} at ${bits} bits"
+                                    )
+                            )
+                }
+            },
+            2 :: 4 :: 8 :: 16 :: 32 :: Nil
+        )
 
     /// Encoding is deterministic, so a cache written twice from the same table
     /// is byte-identical and a digest over it means something.
     @Test
     def encodingIsByteIdentical(): Unit \ Assert =
-        List.forEach(bits ->
-            Assert.assertEqWithMsg(
-                expected = encoded(bits, 257), encoded(bits, 257),
-                "encoding at ${bits} bits should be deterministic"),
-            2 :: 4 :: 8 :: 16 :: 32 :: Nil)
+        List.forEach(
+            bits ->
+                Assert.assertEqWithMsg(
+                    expected = encoded(bits, 257),
+                    encoded(bits, 257),
+                    "encoding at ${bits} bits should be deterministic"
+                ),
+            2 :: 4 :: 8 :: 16 :: 32 :: Nil
+        )
 
     @Test
     def anEmptyTableRoundTrips(): Unit \ Assert =
@@ -88,11 +109,14 @@ mod TestCodec {
     @Test
     def truncationIsDetected(): Unit \ Assert =
         let bytes = encoded(8, 200);
-        List.forEach(keep ->
-            Assert.assertTrueWithMsg(
-                Result.isErr(Codec.decode(Vector.take(keep, bytes))),
-                "a file truncated to ${keep} bytes should be refused"),
-            0 :: 1 :: 8 :: 20 :: 100 :: (Vector.length(bytes) - 1) :: Nil)
+        List.forEach(
+            keep ->
+                Assert.assertTrueWithMsg(
+                    Result.isErr(Codec.decode(Vector.take(keep, bytes))),
+                    "a file truncated to ${keep} bytes should be refused"
+                ),
+            0 :: 1 :: 8 :: 20 :: 100 :: (Vector.length(bytes) - 1) :: Nil
+        )
 
     /// Corruption anywhere is caught by the checksum, including in the payload,
     /// where nothing else would notice.
@@ -100,11 +124,14 @@ mod TestCodec {
     def corruptionIsDetected(): Unit \ Assert =
         let bytes = encoded(8, 200);
         let last = Vector.length(bytes) - 1;
-        List.forEach(at ->
-            Assert.assertTrueWithMsg(
-                Result.isErr(Codec.decode(corrupt(at, bytes))),
-                "a byte changed at ${at} should be refused"),
-            10 :: 40 :: 100 :: (last - 20) :: last :: Nil)
+        List.forEach(
+            at ->
+                Assert.assertTrueWithMsg(
+                    Result.isErr(Codec.decode(corrupt(at, bytes))),
+                    "a byte changed at ${at} should be refused"
+                ),
+            10 :: 40 :: 100 :: (last - 20) :: last :: Nil
+        )
 
     /// Trailing bytes are refused rather than ignored. A file that grew is a
     /// file something else has been writing to.
@@ -145,9 +172,9 @@ mod TestCodec {
     @Test
     def aTableFromAnotherConventionIsRefused(): Unit \ Assert =
         let other = Codec.header({
-            table = "pocket.distances",
+            table      = "pocket.distances",
             convention = "some-other-numbering@1",
-            generator = "cubesolve 0.4.5"
+            generator  = "cubesolve 0.4.5"
         });
         let read = b -> Codec.expect(header(), b);
         match Codec.encode(other, sample(8, 50)) |> Result.flatMap(read) {
@@ -160,9 +187,9 @@ mod TestCodec {
     @Test
     def aCacheOfADifferentTableIsRefused(): Unit \ Assert =
         let other = Codec.header({
-            table = "standard.flipTwist",
+            table      = "standard.flipTwist",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.4.5"
+            generator  = "cubesolve 0.4.5"
         });
         let read = b -> Codec.expect(header(), b);
         match Codec.encode(other, sample(8, 50)) |> Result.flatMap(read) {
@@ -181,13 +208,13 @@ mod TestCodec {
     @Test
     def aCacheFromAnotherBuildIsRefused(): Unit \ Assert =
         let older = Codec.header({
-            table = "pocket.distances",
+            table      = "pocket.distances",
             convention = "kociemba-htm@1",
-            generator = "cubesolve 0.0.9"
+            generator  = "cubesolve 0.0.9"
         });
         let read = b -> Codec.expect(header(), b);
         match Codec.encode(older, sample(8, 50)) |> Result.flatMap(read) {
-            case Ok(_)  => Assert.assertTrueWithMsg(false, "the build differs")
+            case Ok(_) => Assert.assertTrueWithMsg(false, "the build differs")
             case Err(e) =>
                 Assert.assertTrue(String.contains(substr = "cubesolve 0.0.9", e));
                 Assert.assertTrue(String.contains(substr = "code that built it", e))

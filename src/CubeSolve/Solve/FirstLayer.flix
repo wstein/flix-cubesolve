@@ -19,7 +19,7 @@
 /// state it cannot finish inside that bound comes back as an error naming the
 /// bound.
 ///
-mod CubeSolve.Solve.FirstLayer {
+pub mod CubeSolve.Solve.FirstLayer {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Move
@@ -122,12 +122,20 @@ mod CubeSolve.Solve.FirstLayer {
         let Tables.Tables(crossTable, cornerTable) = t;
         IdaStar.phase(
             Cross.moveCount(),
-            (s, m) -> pack(Cross.successor(crossOf(s), m),
-                FirstLayer.successor(cornersOf(s), m)),
-            s -> Int32.max(Table.get(crossOf(s), crossTable),
-                Table.get(cornersOf(s), cornerTable)),
-            s -> crossOf(s) == Cross.solvedIndex()
-                and cornersOf(s) == FirstLayer.solvedIndex(),
-            Move.htmPruningAllows)
+            (s, m) ->
+                pack(
+                    Cross.successor(crossOf(s), m),
+                    FirstLayer.successor(cornersOf(s), m)
+                ),
+            s ->
+                Int32.max(
+                    Table.get(crossOf(s), crossTable),
+                    Table.get(cornersOf(s), cornerTable)
+                ),
+            s ->
+                crossOf(s) == Cross.solvedIndex()
+                    and cornersOf(s) == FirstLayer.solvedIndex(),
+            Move.htmPruningAllows
+        )
 
 }

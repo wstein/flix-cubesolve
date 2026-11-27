@@ -6,7 +6,7 @@
 ///
 /// - **Is this a cube at all?** Are the permutations permutations, are the
 ///   twists in range, do the orientations sum as they must. That is
-///   `Orbit64.Coord.faultOf`, and this module defers to it rather than
+///   `CubeSolve.Model.Pieces.faultOf`, and this module defers to it rather than
 ///   restating it.
 /// - **Is this reachable by turning?** Everything above can hold of a cube that
 ///   no sequence of turns produces -- a physical cube taken apart and
@@ -18,12 +18,11 @@
 /// such constraint, and a 4x4x4's wing permutation is unconstrained relative to
 /// its corners, which is why OLL and PLL parity exist at all.
 ///
-mod CubeSolve.Model.Validate {
+pub mod CubeSolve.Model.Validate {
 
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Cube.Cube
-    use Orbit64.Coord.Coord
-    use Orbit64.Coord.Coord.{CornerCoord, MidgeCoord}
+    use CubeSolve.Model.Pieces.Coord
 
     ///
     /// The first rule `c` breaks, or nothing when turning can reach it.
@@ -33,7 +32,7 @@ mod CubeSolve.Model.Validate {
     /// rule it broke, and "state 1082564 is invalid" tells it nothing.
     ///
     pub def faultOf(c: Cube): Option[String] =
-        match List.filterMap(Orbit64.Coord.faultOf, Cube.orbits(c)) {
+        match List.filterMap(CubeSolve.Model.Pieces.faultOf, Cube.orbits(c)) {
             case why :: _ => Some(why)
             case Nil      => reachabilityFaultOf(c)
         }
@@ -62,9 +61,11 @@ mod CubeSolve.Model.Validate {
         else if (n == 3)
             parityFaultOf(Cube.orbits(c))
         else
-            Some("whether a ${n}x${n}x${n} is reachable is not implemented: this "
-                + "engine derives reachability invariants for the 2x2x2 and 3x3x3 "
-                + "only, and reporting no fault would claim more than it knows")
+            Some(
+                "whether a ${n}x${n}x${n} is reachable is not implemented: this "
+                    + "engine derives reachability invariants for the 2x2x2 and 3x3x3 "
+                    + "only, and reporting no fault would claim more than it knows"
+            )
 
     ///
     /// The 3x3x3 coupling: corner and edge permutations have the same parity.
@@ -76,14 +77,16 @@ mod CubeSolve.Model.Validate {
     ///
     def parityFaultOf(orbits: List[Coord]): Option[String] =
         match orbits {
-            case CornerCoord(cp, _) :: MidgeCoord(ep, _) :: Nil =>
+            case Coord.CornerCoord(cp, _) :: Coord.MidgeCoord(ep, _) :: Nil =>
                 if (parityOf(cp) == parityOf(ep))
                     None
                 else
-                    Some("the corner and edge permutations have opposite parity, "
-                        + "which no sequence of turns can produce: every face turn "
-                        + "is a 4-cycle of each, so it changes both parities "
-                        + "together")
+                    Some(
+                        "the corner and edge permutations have opposite parity, "
+                            + "which no sequence of turns can produce: every face turn "
+                            + "is a 4-cycle of each, so it changes both parities "
+                            + "together"
+                    )
             case _ => Some("a 3x3x3 has a corner orbit and a midge orbit, in that order")
         }
 
@@ -96,9 +99,12 @@ mod CubeSolve.Model.Validate {
     def parityOf(p: Vector[Int32]): Int32 =
         let n = Vector.length(p);
         let inversions =
-            Vector.range(0, n) |> Vector.map(i ->
-                Vector.range(i + 1, n)
-                    |> Vector.count(j -> Vector.get(i, p) > Vector.get(j, p)))
+            Vector.range(0, n)
+                |> Vector.map(
+                    i ->
+                        Vector.range(i + 1, n)
+                            |> Vector.count(j -> Vector.get(i, p) > Vector.get(j, p))
+                )
                 |> Vector.sum;
         Int32.modulo(inversions, 2)
 

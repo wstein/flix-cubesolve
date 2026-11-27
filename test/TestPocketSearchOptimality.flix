@@ -1,4 +1,4 @@
-mod TestPocketSearchOptimality {
+pub mod TestPocketSearchOptimality {
 
     use CubeSolve.Table
 
@@ -26,28 +26,44 @@ mod TestPocketSearchOptimality {
     /// matches the oracle but does not actually solve the cube fails here.
     @Test
     def theStratifiedSampleIsSolvedOptimally(): Unit \ Assert + IO =
-        if (Slow.skip("TestPocketSearchOptimality.theStratifiedSampleIsSolvedOptimally",
-                "solves a stratified sample optimally"))
+        if (Slow.skip(
+            "TestPocketSearchOptimality.theStratifiedSampleIsSolvedOptimally",
+            "solves a stratified sample optimally"
+        ))
             ()
         else {
             let t = PocketSearchTestSupport.tables();
             let d = Table.Pocket.distanceTable(t);
             let shallow = Vector.range(0, Table.Pocket.stateCount())
                 |> Vector.filter(i -> Table.get(i, d) <= 4);
-            Assert.assertEqWithMsg(expected = 2232, Vector.length(shallow),
-                "the classes within four moves should hold 2,232 states");
+            Assert.assertEqWithMsg(
+                expected = 2232,
+                Vector.length(shallow),
+                "the classes within four moves should hold 2,232 states"
+            );
             shallow |> Vector.forEach(s -> PocketSearchTestSupport.assertOptimal(t, s));
 
             let stride = 3673;
-            Vector.range(0, 600) |> Vector.forEach(step ->
-                PocketSearchTestSupport.assertOptimal(t,
-                    Int32.modulo(step * stride + 7, Table.Pocket.stateCount())));
+            Vector.range(0, 600)
+                |> Vector.forEach(
+                    step ->
+                        PocketSearchTestSupport.assertOptimal(
+                            t,
+                            Int32.modulo(step * stride + 7, Table.Pocket.stateCount())
+                        )
+                );
 
             let deepest = PocketSearchTestSupport.deepestStates(t);
-            Assert.assertEqWithMsg(expected = 2644, Vector.length(deepest),
-                "there should be 2,644 states at distance 11");
-            deepest |> Vector.take(60) |> Vector.forEach(s ->
-                PocketSearchTestSupport.assertOptimal(t, s))
+            Assert.assertEqWithMsg(
+                expected = 2644,
+                Vector.length(deepest),
+                "there should be 2,644 states at distance 11"
+            );
+            deepest |> Vector.take(60)
+                |> Vector.forEach(
+                    s ->
+                        PocketSearchTestSupport.assertOptimal(t, s)
+                )
         }
 
 }

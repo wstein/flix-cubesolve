@@ -13,7 +13,7 @@
 /// is not the half-turn metric, and it is not a claim about how long anybody
 /// takes to execute the sequence.
 ///
-mod CubeSolve.Method.Profile {
+pub mod CubeSolve.Method.Profile {
 
     use CubeSolve.Method.Profile.Profile.{SourceFirst, Shortest, NoRotations}
     use CubeSolve.Method.Profile.Status.{Chosen, FellBack}
@@ -47,10 +47,10 @@ mod CubeSolve.Method.Profile {
     /// What a profile picked, and whether it got what it asked for.
     ///
     pub type alias Choice = {
-        algorithm = String,
+        algorithm  = String,
         layerTurns = Int32,
-        status = Status,
-        note = String
+        status     = Status,
+        note       = String
     }
 
     ///
@@ -88,14 +88,16 @@ mod CubeSolve.Method.Profile {
         let first = Vector.get(0, variants);
         match p {
             case SourceFirst => picked(first, "the first the source lists")
-            case Shortest    => picked(shortestOf(variants),
-                "fewest parsed layer turns, rotations not counted")
+            case Shortest => picked(
+                shortestOf(variants),
+                "fewest parsed layer turns, rotations not counted"
+            )
             case NoRotations => match rotationFree(variants) {
                 case Some(a) => picked(a, "the first recorded variant with no rotation")
-                case None    => {
-                    algorithm = first,
+                case None => {
+                    algorithm  = first,
                     layerTurns = layerTurns(first),
-                    status = FellBack,
+                    status     = FellBack,
                     note = "no rotation-free variant is recorded for this case, so "
                         + "the first the source lists was used"
                 }
@@ -106,15 +108,23 @@ mod CubeSolve.Method.Profile {
     /// A choice the rule made, as opposed to one it fell back to.
     ///
     def picked(algorithm: String, note: String): Choice =
-        { algorithm = algorithm, layerTurns = layerTurns(algorithm),
-          status = Chosen, note = note }
+        {
+            algorithm  = algorithm,
+            layerTurns = layerTurns(algorithm),
+            status     = Chosen,
+            note       = note
+        }
 
     ///
     /// The variant with fewest layer turns, earliest winning a tie.
     ///
     def shortestOf(variants: Vector[String]): String =
-        variants |> Vector.foldLeft((best, v) ->
-            if (layerTurns(v) < layerTurns(best)) v else best, Vector.get(0, variants))
+        variants
+            |> Vector.foldLeft(
+                (best, v) ->
+                    if (layerTurns(v) < layerTurns(best)) v else best,
+                Vector.get(0, variants)
+            )
 
     ///
     /// The first variant containing no whole-cube rotation.
@@ -131,11 +141,17 @@ mod CubeSolve.Method.Profile {
     ///
     pub def turnsTheCube(alg: String): Bool =
         Notation.parse(3, alg)
-            |> Result.map(ops -> ops |> List.exists(op -> match op {
-                case Frame(_) => true
-                case Inner(_, _) => false
-                case Layer(_) => false
-            }))
+            |> Result.map(
+                ops ->
+                    ops
+                        |> List.exists(
+                            op -> match op {
+                                case Frame(_)    => true
+                                case Inner(_, _) => false
+                                case Layer(_)    => false
+                            }
+                        )
+            )
             |> Result.getWithDefault(true)
 
     ///

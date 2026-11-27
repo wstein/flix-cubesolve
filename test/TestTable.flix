@@ -1,4 +1,4 @@
-mod TestTable {
+pub mod TestTable {
 
     use CubeSolve.Table
 
@@ -6,7 +6,7 @@ mod TestTable {
     def rising(bits: Int32, count: Int32, modulus: Int32): Table.TableView \ Assert =
         let values = Vector.init(i -> Int32.modulo(i, modulus), count);
         match Table.ofValues(bits, values) {
-            case Ok(t)  => t
+            case Ok(t) => t
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected a table");
                 unreachable!()
@@ -18,16 +18,22 @@ mod TestTable {
     /// packing exists to preserve and the one a shifted mask breaks silently.
     @Test
     def everyEntryRoundTripsAtEveryWidth(): Unit \ Assert =
-        List.forEach(match (bits, modulus) -> {
-            let count = 1000;
-            let t = rising(bits, count, modulus);
-            Vector.range(0, count) |> Vector.forEach(i ->
-                Assert.assertEqWithMsg(
-                    expected = Int32.modulo(i, modulus),
-                    Table.get(i, t),
-                    "entry ${i} at ${bits} bits"
-                ))
-        }, (8, 100) :: (4, 16) :: (2, 4) :: Nil)
+        List.forEach(
+            match (bits, modulus) -> {
+                let count = 1000;
+                let t = rising(bits, count, modulus);
+                Vector.range(0, count)
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEqWithMsg(
+                                expected = Int32.modulo(i, modulus),
+                                Table.get(i, t),
+                                "entry ${i} at ${bits} bits"
+                            )
+                    )
+            },
+            (8, 100) :: (4, 16) :: (2, 4) :: Nil
+        )
 
     /// Move tables hold coordinates, not distances: a 2x2x2 permutation index
     /// reaches 5039 and a 3x3x3 edge permutation index reaches 40319. Those need
@@ -38,10 +44,13 @@ mod TestTable {
         let wide = Vector#{0, 1, 5039, 32767, 32768, 40319, 65535};
         match Table.ofValues(16, wide) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
-            case Ok(t)  =>
+            case Ok(t) =>
                 Assert.assertEq(expected = 14, Table.byteLength(t));
-                Vector.range(0, Vector.length(wide)) |> Vector.forEach(i ->
-                    Assert.assertEq(expected = Vector.get(i, wide), Table.get(i, t)))
+                Vector.range(0, Vector.length(wide))
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEq(expected = Vector.get(i, wide), Table.get(i, t))
+                    )
         }
 
     @Test
@@ -49,10 +58,13 @@ mod TestTable {
         let wide = Vector#{0, 1, 3674159, 2147483647};
         match Table.ofValues(32, wide) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
-            case Ok(t)  =>
+            case Ok(t) =>
                 Assert.assertEq(expected = 16, Table.byteLength(t));
-                Vector.range(0, Vector.length(wide)) |> Vector.forEach(i ->
-                    Assert.assertEq(expected = Vector.get(i, wide), Table.get(i, t)))
+                Vector.range(0, Vector.length(wide))
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEq(expected = Vector.get(i, wide), Table.get(i, t))
+                    )
         }
 
     @Test
@@ -64,18 +76,24 @@ mod TestTable {
     /// alternating extremes is where an off-by-one shift shows up.
     @Test
     def neighbouringEntriesDoNotBleed(): Unit \ Assert =
-        List.forEach(match (bits, high) -> {
-            let values = Vector.init(i -> if (Int32.modulo(i, 2) == 0) 0 else high, 64);
-            match Table.ofValues(bits, values) {
-                case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
-                case Ok(t)  =>
-                    Vector.range(0, 64) |> Vector.forEach(i ->
-                        Assert.assertEq(
-                            expected = if (Int32.modulo(i, 2) == 0) 0 else high,
-                            Table.get(i, t)
-                        ))
-            }
-        }, (8, 127) :: (4, 15) :: (2, 3) :: Nil)
+        List.forEach(
+            match (bits, high) -> {
+                let values = Vector.init(i -> if (Int32.modulo(i, 2) == 0) 0 else high, 64);
+                match Table.ofValues(bits, values) {
+                    case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
+                    case Ok(t) =>
+                        Vector.range(0, 64)
+                            |> Vector.forEach(
+                                i ->
+                                    Assert.assertEq(
+                                        expected = if (Int32.modulo(i, 2) == 0) 0 else high,
+                                        Table.get(i, t)
+                                    )
+                            )
+                }
+            },
+            (8, 127) :: (4, 15) :: (2, 3) :: Nil
+        )
 
     // ---------- size ----------
 
@@ -118,9 +136,12 @@ mod TestTable {
         let values = Vector#{0, 1, 127, 128, 200, 255};
         match Table.ofValues(8, values) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
-            case Ok(t)  =>
-                Vector.range(0, Vector.length(values)) |> Vector.forEach(i ->
-                    Assert.assertEq(expected = Vector.get(i, values), Table.get(i, t)))
+            case Ok(t) =>
+                Vector.range(0, Vector.length(values))
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEq(expected = Vector.get(i, values), Table.get(i, t))
+                    )
         }
 
     @Test
@@ -174,16 +195,22 @@ mod TestTable {
         let expected = rising(4, count, 16);
         let built = region rc {
             let payload = Table.emptyPayload(rc, 4, count);
-            Vector.range(0, count) |> Vector.forEach(i ->
-                Table.putEntry(payload, 4, i, Int32.modulo(i, 16)));
+            Vector.range(0, count)
+                |> Vector.forEach(
+                    i ->
+                        Table.putEntry(payload, 4, i, Int32.modulo(i, 16))
+                );
             Table.ofPayload(4, count, payload)
         };
         match built {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "expected a table")
-            case Ok(t)  =>
+            case Ok(t) =>
                 Assert.assertEq(expected = Table.byteLength(expected), Table.byteLength(t));
-                Vector.range(0, count) |> Vector.forEach(i ->
-                    Assert.assertEq(expected = Table.get(i, expected), Table.get(i, t)))
+                Vector.range(0, count)
+                    |> Vector.forEach(
+                        i ->
+                            Assert.assertEq(expected = Table.get(i, expected), Table.get(i, t))
+                    )
         }
 
 }

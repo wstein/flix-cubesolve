@@ -1,4 +1,4 @@
-mod TestRotation {
+pub mod TestRotation {
 
     use CubeSolve.Model.Move
     use CubeSolve.Model.Rotation
@@ -21,60 +21,83 @@ mod TestRotation {
 
     @Test
     def everyGeneratorHasOrderFour(): Unit \ Assert =
-        Vector#{Rotation.x(), Rotation.y(), Rotation.z()} |> Vector.forEach(g -> {
-            let g2 = Rotation.andThen(g, g);
-            let g4 = Rotation.andThen(g2, g2);
-            Assert.assertNeq(unexpected = Rotation.identity(), g2);
-            Assert.assertEq(expected = Rotation.identity(), g4)
-        })
+        Vector#{Rotation.x(), Rotation.y(), Rotation.z()} |> Vector.forEach(
+            g -> {
+                let g2 = Rotation.andThen(g, g);
+                let g4 = Rotation.andThen(g2, g2);
+                Assert.assertNeq(unexpected = Rotation.identity(), g2);
+                Assert.assertEq(expected = Rotation.identity(), g4)
+            }
+        )
 
     @Test
     def identityIsNeutralOnBothSides(): Unit \ Assert =
         let i = Rotation.identity();
-        Rotation.all() |> Vector.forEach(r -> {
-            Assert.assertEq(expected = r, Rotation.andThen(r, i));
-            Assert.assertEq(expected = r, Rotation.andThen(i, r))
-        })
+        Rotation.all()
+            |> Vector.forEach(
+                r -> {
+                    Assert.assertEq(expected = r, Rotation.andThen(r, i));
+                    Assert.assertEq(expected = r, Rotation.andThen(i, r))
+                }
+            )
 
     @Test
     def everyRotationHasAnInverse(): Unit \ Assert =
-        Rotation.all() |> Vector.forEach(r -> {
-            let inv = Rotation.inverse(r);
-            Assert.assertEq(expected = Rotation.identity(), Rotation.andThen(r, inv));
-            Assert.assertEq(expected = Rotation.identity(), Rotation.andThen(inv, r));
-            Assert.assertEq(expected = r, Rotation.inverse(Rotation.inverse(r)))
-        })
+        Rotation.all()
+            |> Vector.forEach(
+                r -> {
+                    let inv = Rotation.inverse(r);
+                    Assert.assertEq(expected = Rotation.identity(), Rotation.andThen(r, inv));
+                    Assert.assertEq(expected = Rotation.identity(), Rotation.andThen(inv, r));
+                    Assert.assertEq(expected = r, Rotation.inverse(Rotation.inverse(r)))
+                }
+            )
 
     /// Composition stays inside the group. A face map that escaped would mean
     /// the generators were wrong.
     @Test
     def compositionIsClosed(): Unit \ Assert =
-        Rotation.all() |> Vector.forEach(a ->
-            Rotation.all() |> Vector.forEach(b ->
-                Assert.assertTrue(Vector.memberOf(Rotation.andThen(a, b), Rotation.all()))))
+        Rotation.all()
+            |> Vector.forEach(
+                a ->
+                    Rotation.all()
+                        |> Vector.forEach(
+                            b ->
+                                Assert.assertTrue(Vector.memberOf(Rotation.andThen(a, b), Rotation.all()))
+                        )
+            )
 
     /// The action on the six faces is faithful: only the identity fixes every
     /// face. This is what lets a rotation be represented by its face map alone.
     @Test
     def onlyTheIdentityFixesEveryFace(): Unit \ Assert =
-        Rotation.all() |> Vector.forEach(r ->
-            Assert.assertEq(
-                expected = r == Rotation.identity(),
-                Rotation.faceMap(r) == Vector.range(0, 6)
-            ))
+        Rotation.all()
+            |> Vector.forEach(
+                r ->
+                    Assert.assertEq(
+                        expected = r == Rotation.identity(),
+                        Rotation.faceMap(r) == Vector.range(0, 6)
+                    )
+            )
 
     /// A rotation never turns a face into a face it is not adjacent to in the
     /// right way: opposite faces stay opposite.
     @Test
     def rotationsPreserveOppositeFacePairs(): Unit \ Assert =
-        Rotation.all() |> Vector.forEach(r -> {
-            let m = Rotation.faceMap(r);
-            Vector.range(0, 6) |> Vector.forEach(i ->
-                Assert.assertEq(
-                    expected = Int32.modulo(Vector.get(i, m) + 3, 6),
-                    Vector.get(Int32.modulo(i + 3, 6), m)
-                ))
-        })
+        Rotation.all()
+            |> Vector.forEach(
+                r -> {
+                    let m = Rotation.faceMap(r);
+                    Vector.range(0, 6)
+                        |> Vector.forEach(
+                            i ->
+                                Assert.assertEq(
+                                    expected = Int32.modulo(Vector.get(i, m) + 3, 6),
+                                    Vector.get(Int32.modulo(i + 3, 6), m)
+                                )
+                        )
+                }
+            )
 
     /// x carries the front face onto the top, which is the direction an R turn
     /// goes. Pins the generator's sense, which the group laws cannot.
@@ -110,21 +133,33 @@ mod TestRotation {
         let m = Rotation.reframe(Turn(U, 2), Rotation.x());
         Assert.assertEq(expected = F, Move.face(m));
         Assert.assertEq(expected = 2, Move.amount(m));
-        Rotation.all() |> Vector.forEach(r ->
-            Move.all() |> Vector.forEach(mv ->
-                Assert.assertEq(
-                    expected = Move.amount(mv),
-                    Move.amount(Rotation.reframe(mv, r))
-                )))
+        Rotation.all()
+            |> Vector.forEach(
+                r ->
+                    Move.all()
+                        |> Vector.forEach(
+                            mv ->
+                                Assert.assertEq(
+                                    expected = Move.amount(mv),
+                                    Move.amount(Rotation.reframe(mv, r))
+                                )
+                        )
+            )
 
     /// Reframing by a rotation and then by its inverse is a no-op.
     @Test
     def reframingRoundTrips(): Unit \ Assert =
-        Rotation.all() |> Vector.forEach(r ->
-            Move.all() |> Vector.forEach(mv ->
-                Assert.assertEq(
-                    expected = mv,
-                    Rotation.reframe(Rotation.reframe(mv, r), Rotation.inverse(r))
-                )))
+        Rotation.all()
+            |> Vector.forEach(
+                r ->
+                    Move.all()
+                        |> Vector.forEach(
+                            mv ->
+                                Assert.assertEq(
+                                    expected = mv,
+                                    Rotation.reframe(Rotation.reframe(mv, r), Rotation.inverse(r))
+                                )
+                        )
+            )
 
 }

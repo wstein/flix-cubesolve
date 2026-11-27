@@ -7,7 +7,7 @@
 /// returned the right case with the wrong AUF would name the case correctly and
 /// hand back something that does not work.
 ///
-mod TestPll {
+pub mod TestPll {
 
     use CubeSolve.Method.Pll
     use CubeSolve.Model.Cube
@@ -39,28 +39,45 @@ mod TestPll {
     ///
     @Test
     def everyCaseIsRecognisedFromEveryAngleAndItsAnswerSolves(): Unit \ Assert =
-        Assert.assertEqWithMsg(expected = 21, Vector.length(Pll.all()),
-            "PLL has 21 cases");
-        Pll.all() |> Vector.forEach(one ->
-            Vector.range(0, 4) |> Vector.forEach(auf -> {
-                let c = inCase(one, auf);
-                match Pll.recognize(c) {
-                    case Err(e) =>
-                        Assert.assertEqWithMsg(expected = "", e,
-                            "'${Pll.name(one)}' turned ${auf} should be recognised")
-                    case Ok(found) =>
-                        Assert.assertEqWithMsg(expected = Pll.name(one), found#caseName,
-                            "turned ${auf}, recognised as the wrong case");
-                        match Cube.applyNotation(found#sequence, c) {
-                            case Err(e) =>
-                                Assert.assertEqWithMsg(expected = "", e, "replaying")
-                            case Ok(after) =>
-                                Assert.assertTrueWithMsg(Cube.isSolved(after),
-                                    "'${Pll.name(one)}' turned ${auf}: the answer "
-                                        + "'${found#sequence}' does not solve it")
-                        }
-                }
-            }))
+        Assert.assertEqWithMsg(
+            expected = 21,
+            Vector.length(Pll.all()),
+            "PLL has 21 cases"
+        );
+        Pll.all()
+            |> Vector.forEach(
+                one ->
+                    Vector.range(0, 4)
+                        |> Vector.forEach(
+                            auf -> {
+                                let c = inCase(one, auf);
+                                match Pll.recognize(c) {
+                                    case Err(e) =>
+                                        Assert.assertEqWithMsg(
+                                            expected = "",
+                                            e,
+                                            "'${Pll.name(one)}' turned ${auf} should be recognised"
+                                        )
+                                    case Ok(found) =>
+                                        Assert.assertEqWithMsg(
+                                            expected = Pll.name(one),
+                                            found#caseName,
+                                            "turned ${auf}, recognised as the wrong case"
+                                        );
+                                        match Cube.applyNotation(found#sequence, c) {
+                                            case Err(e) =>
+                                                Assert.assertEqWithMsg(expected = "", e, "replaying")
+                                            case Ok(after) =>
+                                                Assert.assertTrueWithMsg(
+                                                    Cube.isSolved(after),
+                                                    "'${Pll.name(one)}' turned ${auf}: the answer "
+                                                        + "'${found#sequence}' does not solve it"
+                                                )
+                                        }
+                                }
+                            }
+                        )
+            )
 
     ///
     /// Every recorded algorithm parses, and is at least as long as the optimum
@@ -72,20 +89,30 @@ mod TestPll {
     ///
     @Test
     def everyAlgorithmParsesAndIsNoShorterThanTheOptimum(): Unit \ Assert =
-        Pll.all() |> Vector.forEach(one -> {
-            match CubeSolve.Model.Notation.parse(3, Pll.algorithm(one)) {
-                case Err(e) =>
-                    Assert.assertEqWithMsg(expected = "", e,
-                        "'${Pll.name(one)}' does not parse")
-                case Ok(ops) =>
-                    let turns = List.length(CubeSolve.Model.Notation.layersOnly(ops));
-                    Assert.assertTrueWithMsg(turns >= Pll.optimalHtm(one),
-                        "'${Pll.name(one)}' is ${turns} layer turns against a stated "
-                            + "optimum of ${Pll.optimalHtm(one)}")
-            };
-            Assert.assertTrueWithMsg(Pll.optimalHtm(one) > 0,
-                "'${Pll.name(one)}' has no recorded optimum")
-        })
+        Pll.all()
+            |> Vector.forEach(
+                one -> {
+                    match CubeSolve.Model.Notation.parse(3, Pll.algorithm(one)) {
+                        case Err(e) =>
+                            Assert.assertEqWithMsg(
+                                expected = "",
+                                e,
+                                "'${Pll.name(one)}' does not parse"
+                            )
+                        case Ok(ops) =>
+                            let turns = List.length(CubeSolve.Model.Notation.layersOnly(ops));
+                            Assert.assertTrueWithMsg(
+                                turns >= Pll.optimalHtm(one),
+                                "'${Pll.name(one)}' is ${turns} layer turns against a stated "
+                                    + "optimum of ${Pll.optimalHtm(one)}"
+                            )
+                    };
+                    Assert.assertTrueWithMsg(
+                        Pll.optimalHtm(one) > 0,
+                        "'${Pll.name(one)}' has no recorded optimum"
+                    )
+                }
+            )
 
     ///
     /// A solved cube is not a PLL case to solve, and is not refused either.
@@ -103,16 +130,19 @@ mod TestPll {
     ///
     @Test
     def statesThatAreNotPllAreRefusedByReason(): Unit \ Assert =
-        let refused = (what, alg, expected) ->
-            match Pll.recognize(made(alg)) {
-                case Ok(found) =>
-                    Assert.assertTrueWithMsg(false,
-                        "${what} should be refused, not recognised as "
-                            + "'${found#caseName}'")
-                case Err(why) =>
-                    Assert.assertTrueWithMsg(String.contains(substr = expected, why),
-                        "${what} should be refused for ${expected}, not: ${why}")
-            };
+        let refused = (what, alg, expected) -> match Pll.recognize(made(alg)) {
+            case Ok(found) =>
+                Assert.assertTrueWithMsg(
+                    false,
+                    "${what} should be refused, not recognised as "
+                        + "'${found#caseName}'"
+                )
+            case Err(why) =>
+                Assert.assertTrueWithMsg(
+                    String.contains(substr = expected, why),
+                    "${what} should be refused for ${expected}, not: ${why}"
+                )
+        };
         // F2L broken: a single R turn moves bottom and middle pieces.
         refused("a cube with unsolved F2L", "R", "first two layers");
         // OLL but not PLL: Sune leaves the top layer unoriented.
@@ -127,9 +157,9 @@ mod TestPll {
     def aPocketCubeIsRefusedBySize(): Unit \ Assert =
         match Cube.solved(2) {
             case Err(e) => Assert.assertEqWithMsg(expected = "", e, "a solved 2x2x2")
-            case Ok(c)  =>
+            case Ok(c) =>
                 match Pll.precondition(c) {
-                    case None      => Assert.assertTrueWithMsg(false, "a 2x2x2 has no PLL")
+                    case None => Assert.assertTrueWithMsg(false, "a 2x2x2 has no PLL")
                     case Some(why) =>
                         Assert.assertTrue(String.contains(substr = "2x2x2", why))
                 }

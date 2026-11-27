@@ -20,7 +20,7 @@
 /// whole pattern collection. Both default to the honest thing: full unless you
 /// ask for less, and the largest gate only when you ask for more.
 ///
-mod Slow {
+pub mod Slow {
 
     ///
     /// Whether to leave this test out, saying so if it does.
@@ -32,9 +32,11 @@ mod Slow {
     pub def skip(name: String, why: String): Bool \ IO =
         match Sys.Env.handle(_ -> Sys.Env.getVar("CUBESOLVE_FAST"))(()) {
             case Some("1") =>
-                println("${name}: SKIPPED under CUBESOLVE_FAST -- ${why}. "
-                    + "Unset CUBESOLVE_FAST to run it; CI runs it on every "
-                    + "release and nightly.");
+                println(
+                    "${name}: SKIPPED under CUBESOLVE_FAST -- ${why}. "
+                        + "Unset CUBESOLVE_FAST to run it; CI runs it on every "
+                        + "release and nightly."
+                );
                 true
             case _ => false
         }

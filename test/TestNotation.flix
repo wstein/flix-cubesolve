@@ -1,5 +1,6 @@
-mod TestNotation {
+pub mod TestNotation {
 
+    use CubeSolve.Model.Pieces.Coord
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
     use CubeSolve.Model.Notation.Op.{Layer, Inner}
@@ -11,7 +12,7 @@ mod TestNotation {
     /// anything refuses.
     def afterMoves(n: Int32, notation: String): Cube.Cube \ Assert =
         match Result.flatMap(c -> Cube.applyNotation(notation, c), Cube.solved(n)) {
-            case Ok(c)  => c
+            case Ok(c) => c
             case Err(e) =>
                 Assert.assertEqWithMsg(expected = "", e, "expected a cube");
                 unreachable!()
@@ -23,10 +24,16 @@ mod TestNotation {
     def same(n: Int32, a: String, b: String): Unit \ Assert =
         let x = afterMoves(n, a);
         let y = afterMoves(n, b);
-        Assert.assertEqWithMsg(expected = Cube.orbits(x), Cube.orbits(y),
-            "'${a}' and '${b}' should arrange the pieces alike");
-        Assert.assertEqWithMsg(expected = Cube.orientation(x), Cube.orientation(y),
-            "'${a}' and '${b}' should leave the same frame")
+        Assert.assertEqWithMsg(
+            expected = Cube.orbits(x),
+            Cube.orbits(y),
+            "'${a}' and '${b}' should arrange the pieces alike"
+        );
+        Assert.assertEqWithMsg(
+            expected = Cube.orientation(x),
+            Cube.orientation(y),
+            "'${a}' and '${b}' should leave the same frame"
+        )
 
     // ---------- rotations ----------
 
@@ -34,8 +41,10 @@ mod TestNotation {
     /// cube stays solved. It is the frame that changed.
     @Test
     def rotatingASolvedCubeLeavesItSolved(): Unit \ Assert =
-        List.forEach(r -> Assert.assertTrue(Cube.isSolved(afterMoves(3, r))),
-            "x" :: "y" :: "z" :: "x2" :: "y'" :: "z2 y x'" :: Nil)
+        List.forEach(
+            r -> Assert.assertTrue(Cube.isSolved(afterMoves(3, r))),
+            "x" :: "y" :: "z" :: "x2" :: "y'" :: "z2 y x'" :: Nil
+        )
 
     @Test
     def rotatingChangesTheFrame(): Unit \ Assert =
@@ -111,8 +120,12 @@ mod TestNotation {
     def middleMovesOnAnEvenCubeTurnBothMiddleSlices(): Unit \ Assert =
         Assert.assertEq(
             expected = Ok(
-                Inner(Turn(L, 1), 1) :: Inner(Turn(R, 3), 1)
-                    :: Inner(Turn(L, 1), 1) :: Inner(Turn(R, 3), 1) :: Nil),
+                Inner(Turn(L, 1), 1)
+                    :: Inner(Turn(R, 3), 1)
+                    :: Inner(Turn(L, 1), 1)
+                    :: Inner(Turn(R, 3), 1)
+                    :: Nil
+            ),
             Notation.parse(4, "M2")
         )
 
@@ -125,17 +138,25 @@ mod TestNotation {
 
     @Test
     def sliceAndWideMovesHaveOrderFour(): Unit \ Assert =
-        List.forEach(t -> {
-            let c = afterMoves(3, "${t} ${t} ${t} ${t}");
-            Assert.assertTrueWithMsg(Cube.isSolved(c), "${t} four times should solve");
-            Assert.assertEqWithMsg(expected = Rotation.identity(), Cube.orientation(c),
-                "${t} four times should restore the frame")
-        }, "M" :: "E" :: "S" :: "r" :: "u" :: "f" :: Nil)
+        List.forEach(
+            t -> {
+                let c = afterMoves(3, "${t} ${t} ${t} ${t}");
+                Assert.assertTrueWithMsg(Cube.isSolved(c), "${t} four times should solve");
+                Assert.assertEqWithMsg(
+                    expected = Rotation.identity(),
+                    Cube.orientation(c),
+                    "${t} four times should restore the frame"
+                )
+            },
+            "M" :: "E" :: "S" :: "r" :: "u" :: "f" :: Nil
+        )
 
     @Test
     def aSliceMoveAndItsInverseCancel(): Unit \ Assert =
-        List.forEach(t -> Assert.assertTrue(Cube.isSolved(afterMoves(3, "${t} ${t}'"))),
-            "M" :: "E" :: "S" :: "r" :: "l" :: "u" :: "d" :: "f" :: "b" :: "x" :: "y" :: "z" :: Nil)
+        List.forEach(
+            t -> Assert.assertTrue(Cube.isSolved(afterMoves(3, "${t} ${t}'"))),
+            "M" :: "E" :: "S" :: "r" :: "l" :: "u" :: "d" :: "f" :: "b" :: "x" :: "y" :: "z" :: Nil
+        )
 
     /// A slice move really does disturb the cube -- a wrong expansion that
     /// cancelled to nothing would pass every test above.
@@ -159,7 +180,6 @@ mod TestNotation {
     /// motion and "fixes" it fails this test and reads this comment.
     @Test
     def aSliceMoveShowsAsOuterLayersInCanonicalCoordinates(): Unit \ Assert =
-        use Orbit64.Coord.Coord.CornerCoord;
         same(3, "M", "R L' x'");
         // the arrangement alone does not identify the move: M and R L' agree on
         // it and differ only in the frame.
@@ -173,7 +193,7 @@ mod TestNotation {
         );
         // and all eight corners really have moved in this representation
         match Cube.orbits(afterMoves(3, "M")) {
-            case CornerCoord(cp, _) :: _ =>
+            case Coord.CornerCoord(cp, _) :: _ =>
                 Assert.assertEq(
                     expected = 8,
                     Vector.count(i -> Vector.get(i, cp) != i, Vector.range(0, 8))
