@@ -1,6 +1,9 @@
 pub mod TestNotation {
 
+    use CubeSolve.Model.Facelets
+    use CubeSolve.Model.Pieces
     use CubeSolve.Model.Pieces.Coord
+    use CubeSolve.Model.Stickers
     use CubeSolve.Model.Cube
     use CubeSolve.Model.Notation
     use CubeSolve.Model.Notation.Op.{Layer, Inner}
@@ -52,6 +55,69 @@ pub mod TestNotation {
         Assert.assertEq(expected = Rotation.y(), Cube.orientation(afterMoves(3, "y")));
         Assert.assertEq(expected = Rotation.z(), Cube.orientation(afterMoves(3, "z")));
         Assert.assertEq(expected = Rotation.identity(), Cube.orientation(afterMoves(3, "x x x x")))
+
+    /// The canonical token of turning the layer `depth` 2 in from face `f`
+    /// by `k` quarter turns. Face indexes follow `U R F D L B`.
+    def centerToken(f: Int32, k: Int32): Result[String, String] \ Assert =
+        match Cube.solved(5) {
+            case Err(e) =>
+                Assert.assertEqWithMsg(expected = "", e, "solved 5x5x5");
+                Err(e)
+            case Ok(s) =>
+                match Facelets.of(s) {
+                    case Err(e) =>
+                        Assert.assertEqWithMsg(expected = "", e, "solved facelets");
+                        Err(e)
+                    case Ok(fs) =>
+                        let turned = Stickers.turnInner(5, f, 2, k, fs);
+                        match Pieces.fromFacelets(5, turned) {
+                            case Err(e) =>
+                                Assert.assertEqWithMsg(expected = "", e, "center slice");
+                                Err(e)
+                            case Ok(os) =>
+                                match Cube.ofOrbits(5, os) {
+                                    case Err(e) =>
+                                        Assert.assertEqWithMsg(expected = "", e, "center cube");
+                                        Err(e)
+                                    case Ok(c) => Facelets.token(c)
+                                }
+                        }
+                }
+        }
+
+    /// `M E M' E'` as four center-layer turns, normalized once at the end.
+    def centerDots(): Result[String, String] \ Assert =
+        match Cube.solved(5) {
+            case Err(e) =>
+                Assert.assertEqWithMsg(expected = "", e, "solved 5x5x5");
+                Err(e)
+            case Ok(s) =>
+                match Facelets.of(s) {
+                    case Err(e) =>
+                        Assert.assertEqWithMsg(expected = "", e, "solved facelets");
+                        Err(e)
+                    case Ok(fs0) =>
+                        let fs = Stickers.turnInner(5, 3, 2, 3, Stickers.turnInner(
+                            5,
+                            4,
+                            2,
+                            3,
+                            Stickers.turnInner(5, 3, 2, 1, Stickers.turnInner(5, 4, 2, 1, fs0))
+                        ));
+                        match Pieces.fromFacelets(5, fs) {
+                            case Err(e) =>
+                                Assert.assertEqWithMsg(expected = "", e, "center dots");
+                                Err(e)
+                            case Ok(os) =>
+                                match Cube.ofOrbits(5, os) {
+                                    case Err(e) =>
+                                        Assert.assertEqWithMsg(expected = "", e, "center dots cube");
+                                        Err(e)
+                                    case Ok(c) => Facelets.token(c)
+                                }
+                        }
+                }
+        }
 
     /// Conjugating a turn by a rotation renames the face. After `y` the face on
     /// the right is the one that was at the back, so `y R y'` is `B`. This is
@@ -165,6 +231,18 @@ pub mod TestNotation {
         Assert.assertFalse(Cube.isSolved(afterMoves(3, "M")));
         Assert.assertFalse(Cube.isSolved(afterMoves(3, "E")));
         Assert.assertFalse(Cube.isSolved(afterMoves(3, "S")))
+
+    /// On a 5x5x5, `M`, `E` and `S` are the single center layer, following `L`,
+    /// `D` and `F`. The token is that layer once the fixed centers are home.
+    /// `M2` is the half turn. `M E M' E'` is those center layers in order, with
+    /// one normalization at the end, which is the center-dots pattern.
+    @Test
+    def aFiveByFiveSliceIsTheCenterLayer(): Unit \ Assert =
+        Assert.assertEq(expected = Facelets.token(afterMoves(5, "M")), centerToken(4, 1));
+        Assert.assertEq(expected = Facelets.token(afterMoves(5, "M2")), centerToken(4, 2));
+        Assert.assertEq(expected = Facelets.token(afterMoves(5, "E")), centerToken(3, 1));
+        Assert.assertEq(expected = Facelets.token(afterMoves(5, "S")), centerToken(2, 1));
+        Assert.assertEq(expected = Facelets.token(afterMoves(5, "M E M' E'")), centerDots())
 
     /// A slice move shows up in the coordinates as two *outer* layer turns, and
     /// that is not a bug.
