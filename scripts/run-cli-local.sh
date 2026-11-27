@@ -91,7 +91,8 @@ echo "consumer: disposable local overlay"
 
 ./flixw build-pkg > /dev/null
 
-FPKG="${ROOT_DIR}/artifact/flix-cubesolve.fpkg"
+# Flix 0.80 writes the package as artifact/package.fpkg.
+FPKG="${ROOT_DIR}/artifact/package.fpkg"
 if [ ! -f "${FPKG}" ]; then
     echo "Error: expected package artifact not found at ${FPKG}" >&2
     exit 1
