@@ -12,10 +12,11 @@
 ///
 pub mod TestPatternsBigCubes {
 
-    use CubeSolve.Patterns
+    use CubeSolve.Model.Cube
     use CubeSolve.Model.Facelets
+    use CubeSolve.Patterns
 
-    /// The 4x4x4 catalogue has one record per token; Kewbz rows replay to their derived tokens.
+    /// The 4x4x4 catalogue has one record per token, and every row replays to it.
     @Test
     def fourByFourPatternsApplySoundly(): Unit \ Assert =
         let all = Patterns.Revenge.all();
@@ -33,28 +34,35 @@ pub mod TestPatternsBigCubes {
                     Patterns.Revenge.url(Patterns.Revenge.source(p)) != "unknown",
                     "4x4 pattern '${name}' has no provenance URL"
                 );
-                match res {
-                    case Ok(c) =>
-                        if (Patterns.Revenge.source(p) == "kewbz4")
-                            Assert.assertEqWithMsg(
-                                expected = Ok(Patterns.Revenge.canonical(p)),
-                                Facelets.token(c),
-                                "4x4 Kewbz pattern '${name}' does not reach its recorded state"
-                            )
-                        else
-                            ()
-                    case Err(why) =>
+                match (res, Cube.solved(4)) {
+                    case (Ok(c), Ok(solved)) =>
+                        Assert.assertEqWithMsg(
+                            expected = Ok(Patterns.Revenge.canonical(p)),
+                            Facelets.token(c),
+                            "4x4 pattern '${name}' does not reach its recorded state"
+                        );
+                        Assert.assertTrueWithMsg(
+                            Facelets.token(c) != Facelets.token(solved),
+                            "4x4 pattern '${name}' is the solved cube"
+                        )
+                    case (Err(why), _) =>
                         Assert.assertEqWithMsg(
                             expected = "",
                             why,
                             "4x4 pattern '${name}' failed to apply"
+                        )
+                    case (_, Err(why)) =>
+                        Assert.assertEqWithMsg(
+                            expected = "",
+                            why,
+                            "4x4 solved cube could not be built"
                         )
                 }
             },
             all
         )
 
-    /// The 5x5x5 catalogue has one record per token; Kewbz rows replay to their derived tokens.
+    /// The 5x5x5 catalogue has one record per token, and every row replays to it.
     @Test
     def fiveByFivePatternsApplySoundly(): Unit \ Assert =
         let all = Patterns.Professor.all();
@@ -72,21 +80,28 @@ pub mod TestPatternsBigCubes {
                     Patterns.Professor.url(Patterns.Professor.source(p)) != "unknown",
                     "5x5 pattern '${name}' has no provenance URL"
                 );
-                match res {
-                    case Ok(c) =>
-                        if (Patterns.Professor.source(p) == "kewbz5")
-                            Assert.assertEqWithMsg(
-                                expected = Ok(Patterns.Professor.canonical(p)),
-                                Facelets.token(c),
-                                "5x5 Kewbz pattern '${name}' does not reach its recorded state"
-                            )
-                        else
-                            ()
-                    case Err(why) =>
+                match (res, Cube.solved(5)) {
+                    case (Ok(c), Ok(solved)) =>
+                        Assert.assertEqWithMsg(
+                            expected = Ok(Patterns.Professor.canonical(p)),
+                            Facelets.token(c),
+                            "5x5 pattern '${name}' does not reach its recorded state"
+                        );
+                        Assert.assertTrueWithMsg(
+                            Facelets.token(c) != Facelets.token(solved),
+                            "5x5 pattern '${name}' is the solved cube"
+                        )
+                    case (Err(why), _) =>
                         Assert.assertEqWithMsg(
                             expected = "",
                             why,
                             "5x5 pattern '${name}' failed to apply"
+                        )
+                    case (_, Err(why)) =>
+                        Assert.assertEqWithMsg(
+                            expected = "",
+                            why,
+                            "5x5 solved cube could not be built"
                         )
                 }
             },
