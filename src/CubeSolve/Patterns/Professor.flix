@@ -56,23 +56,24 @@ pub mod CubeSolve.Patterns.Professor {
                 "speedsolving",
                 "M E M' E'"
             ),
+            // Half-turning every layer on each axis (the inner slices, the middle
+            // slices, and the outer faces) is three whole-cube half turns, so it
+            // solves the cube. The six inner-slice half turns are the six-face
+            // checkerboard. `Rw2 R2 Lw2 L2 Uw2 U2 Dw2 D2 Fw2 F2 Bw2 B2` and the
+            // speedsolving wide form `4Rw2 3Rw2' Rw2 R2' 4Fw2 3Fw2' 2Fw2 F2'
+            // 4Dw2 3Dw2' Dw2 D2'` reach the same facelets. That state was also
+            // listed as Diagonal Stripes; it is this one row.
             Pattern(
                 "Checkerboard",
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "AAAAAAAAAAACPR2HcicIJEuUV4nBPf0Nh_oEEbIKVu",
                 "speedsolving",
-                "2R2 2L2 2U2 2D2 2F2 2B2 M2 E2 S2 R2 L2 U2 D2 F2 B2"
+                "2R2 2L2 2U2 2D2 2F2 2B2"
             ),
             Pattern(
                 "Crosses",
                 "AAAAAQt92g5ZPGhcewsh84W8BfUQmbDJO9FqxOZC0A",
                 "speedsolving",
                 "2R2 2L2 2U2 2D2 2F2 2B2 M2 E2 S2"
-            ),
-            Pattern(
-                "Diagonal Stripes",
-                "AAAAAAAAAAACPR2HcicIJEuUV4nBPf0Nh_oEEbIKVu",
-                "speedsolving",
-                "2R2 2L2 2U2 2D2 2F2 2B2"
             )
         }
 
