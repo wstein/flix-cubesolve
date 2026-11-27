@@ -49,11 +49,14 @@ pub mod CubeSolve.Patterns.Revenge {
                 "ruwix1",
                 "B' M2 U2 M2 B F2 R U' R U R2 U R2 F' U F' Uw Lw Uw' Fw2 Dw Rw' Uw Fw Dw2 Rw2"
             ),
+            // Speedsolving's 4x4x4 pattern: U and D stay one color and the four
+            // side faces are checkerboards. `Rw2 Lw2 U2 D2 Fw2 Bw2` leaves two
+            // opposite-color bands on those sides.
             Pattern(
                 "Checkerboard",
-                "AAAAAAAAAz9HDY8ahsZPn-Rntua",
+                "AE28Oe_wDgg9V2kTxRWxil7w2l7",
                 "speedsolving",
-                "Rw2 Lw2 U2 D2 Fw2 Bw2"
+                "3Rw2 Rw2' R2 3Fw2 2Fw2' F2 3Rw2 Rw2' R2 3Dw2 Dw2' D2"
             ),
             // On a 4x4x4 the parser reads lowercase `r` as the inner slice, the
             // same layer as `2R`, so `r2 l2 u2 d2 f2 b2` and
